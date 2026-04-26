@@ -24,9 +24,32 @@ def compute_degrees(edges: List[Dict[str, str]]) -> Tuple[Counter, Counter]:
     return in_degree, out_degree
 
 
+def compute_degrees_by_type(edges: List[Dict[str, str]]) -> Dict[str, Tuple[Counter, Counter]]:
+    """Compute in/out-degree counters grouped by edge type."""
+    degrees_by_type: Dict[str, Tuple[Counter, Counter]] = {}
+    for edge in edges:
+        edge_type = edge.get("type", "UNKNOWN")
+        if edge_type not in degrees_by_type:
+            degrees_by_type[edge_type] = (Counter(), Counter())
+        in_deg, out_deg = degrees_by_type[edge_type]
+        out_deg[edge["source"]] += 1
+        in_deg[edge["target"]] += 1
+    return degrees_by_type
+
+
 def node_path_map(nodes: List[Dict[str, str]]) -> Dict[str, str]:
     """Map node id to display path."""
     return {node["id"]: node.get("path", node["id"]) for node in nodes}
+
+
+def graph_name_from_path(graph_path: Path) -> str:
+    """Extract a compact repository/graph name from the path."""
+    stem = graph_path.stem
+    if stem.endswith("_imports_graph"):
+        return stem[: -len("_imports_graph")]
+    if stem.endswith("_graph"):
+        return stem[: -len("_graph")]
+    return stem
 
 
 def top_k(counter: Counter, k: int) -> List[Tuple[str, int]]:
@@ -42,12 +65,30 @@ def graph_edge_type_label(edges: List[Dict[str, str]]) -> str:
     return f"{'+'.join(edge_types)} graph"
 
 
+def format_top_nodes_section(
+    title: str,
+    items: List[Tuple[str, int]],
+    path_by_id: Dict[str, str],
+) -> List[str]:
+    lines: List[str] = []
+    lines.append(title)
+    if items:
+        for node_id, score in items:
+            lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
+    else:
+        lines.append("- None")
+    return lines
+
+
 def format_analysis_report(
     graph_path: Path,
     nodes: List[Dict[str, str]],
     edges: List[Dict[str, str]],
-    top_imported: List[Tuple[str, int]],
-    top_importing: List[Tuple[str, int]],
+    edge_type_counts: Dict[str, int],
+    imports_in: List[Tuple[str, int]],
+    imports_out: List[Tuple[str, int]],
+    in_file_in: List[Tuple[str, int]],
+    in_file_out: List[Tuple[str, int]],
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
@@ -59,13 +100,41 @@ def format_analysis_report(
     lines.append(f"Total nodes: {len(nodes)}")
     lines.append(f"Total edges: {len(edges)}")
     lines.append("")
-    lines.append(f"Top {top_k_value} nodes by incoming edges (high in-degree):")
-    for node_id, score in top_imported:
-        lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
+    lines.append("Edge counts by type:")
+    for edge_type, count in sorted(edge_type_counts.items()):
+        lines.append(f"- {edge_type}: {count}")
     lines.append("")
-    lines.append(f"Top {top_k_value} nodes by outgoing edges (high out-degree):")
-    for node_id, score in top_importing:
-        lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by incoming IMPORTS edges:",
+            imports_in,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by outgoing IMPORTS edges:",
+            imports_out,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by incoming IN_FILE edges:",
+            in_file_in,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by outgoing IN_FILE edges:",
+            in_file_out,
+            path_by_id,
+        )
+    )
     return "\n".join(lines)
 
 
@@ -85,6 +154,11 @@ def main() -> None:
     args = parser.parse_args()
 
     graph_path = Path(args.graph).resolve()
+    report_path = (
+        Path(args.save_report).resolve()
+        if args.save_report
+        else Path(f"results/reports/{graph_name_from_path(graph_path)}_graph_analysis.txt").resolve()
+    )
     graph = load_graph(graph_path)
 
     nodes = graph.get("nodes", [])
@@ -92,26 +166,30 @@ def main() -> None:
     path_by_id = node_path_map(nodes)
 
     in_degree, out_degree = compute_degrees(edges)
-    top_imported = top_k(in_degree, args.top_k)
-    top_importing = top_k(out_degree, args.top_k)
+    degrees_by_type = compute_degrees_by_type(edges)
+    edge_type_counts = Counter(edge.get("type", "UNKNOWN") for edge in edges)
+
+    imports_in, imports_out = degrees_by_type.get("IMPORTS", (Counter(), Counter()))
+    in_file_in, in_file_out = degrees_by_type.get("IN_FILE", (Counter(), Counter()))
 
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
         edges=edges,
-        top_imported=top_imported,
-        top_importing=top_importing,
+        edge_type_counts=edge_type_counts,
+        imports_in=top_k(imports_in, args.top_k),
+        imports_out=top_k(imports_out, args.top_k),
+        in_file_in=top_k(in_file_in, args.top_k),
+        in_file_out=top_k(in_file_out, args.top_k),
         path_by_id=path_by_id,
         top_k_value=args.top_k,
     )
     print(report)
 
-    if args.save_report:
-        report_path = Path(args.save_report).resolve()
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(report + "\n", encoding="utf-8")
-        print("")
-        print(f"Report saved to: {report_path}")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report + "\n", encoding="utf-8")
+    print("")
+    print(f"Report saved to: {report_path}")
 
 
 if __name__ == "__main__":
