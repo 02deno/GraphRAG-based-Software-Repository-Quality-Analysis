@@ -40,11 +40,16 @@ Current implementation is still partial, but names and required fields are now f
 
 ## Current Implementation Status
 
-- Implemented node types: `File`
-- Implemented edge types: `IMPORTS`
+- Implemented node types: `File`, `Function`, `Class`
+- Implemented edge types: `IMPORTS`, `IN_FILE`
 - Implemented validation:
   - Node and edge type names are checked against fixed dictionaries.
   - Required fields are validated for generated nodes/edges.
+
+Step 2 note:
+
+- `Function` and `Class` nodes are extracted from Python AST.
+- `IN_FILE` edges are generated as `Function/Class -> File`.
 
 ## Where Schema Is Defined in Code
 

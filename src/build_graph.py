@@ -78,6 +78,84 @@ def extract_imports(file_path: Path) -> Set[str]:
     return imports
 
 
+class SymbolCollector(ast.NodeVisitor):
+    """Collect function and class symbols with qualified names."""
+
+    def __init__(self, module_name: str, file_id: str) -> None:
+        self.module_name = module_name
+        self.file_id = file_id
+        self.scope_stack: List[str] = []
+        self.function_nodes: List[Dict[str, str]] = []
+        self.class_nodes: List[Dict[str, str]] = []
+
+    def _qualified_name(self, symbol_name: str) -> str:
+        scoped = ".".join(self.scope_stack + [symbol_name])
+        if self.module_name:
+            return f"{self.module_name}.{scoped}"
+        return scoped
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        qualified_name = self._qualified_name(node.name)
+        self.class_nodes.append(
+            {
+                "id": f"class::{self.file_id}::{qualified_name}",
+                "type": "Class",
+                "name": node.name,
+                "qualified_name": qualified_name,
+                "file_path": self.file_id,
+            }
+        )
+        self.scope_stack.append(node.name)
+        self.generic_visit(node)
+        self.scope_stack.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        qualified_name = self._qualified_name(node.name)
+        self.function_nodes.append(
+            {
+                "id": f"function::{self.file_id}::{qualified_name}",
+                "type": "Function",
+                "name": node.name,
+                "qualified_name": qualified_name,
+                "file_path": self.file_id,
+            }
+        )
+        self.scope_stack.append(node.name)
+        self.generic_visit(node)
+        self.scope_stack.pop()
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self.visit_FunctionDef(node)
+
+
+def extract_functions_and_classes(
+    file_path: Path,
+    repo_path: Path,
+    module_name: str,
+) -> tuple[List[Dict[str, str]], List[Dict[str, str]], List[Dict[str, str]]]:
+    """
+    Extract Function/Class nodes and IN_FILE edges for a Python file.
+    Returns (function_nodes, class_nodes, in_file_edges).
+    """
+    file_id = str(file_path.relative_to(repo_path))
+    try:
+        source = file_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except Exception:
+        return [], [], []
+
+    collector = SymbolCollector(module_name=module_name, file_id=file_id)
+    collector.visit(tree)
+
+    in_file_edges: List[Dict[str, str]] = []
+    for fn in collector.function_nodes:
+        in_file_edges.append({"source": fn["id"], "target": file_id, "type": "IN_FILE"})
+    for cls in collector.class_nodes:
+        in_file_edges.append({"source": cls["id"], "target": file_id, "type": "IN_FILE"})
+
+    return collector.function_nodes, collector.class_nodes, in_file_edges
+
+
 def validate_graph_contract(nodes: List[Dict[str, str]], edges: List[Dict[str, str]]) -> None:
     """Validate the currently generated graph against the schema contract."""
     for node in nodes:
@@ -117,15 +195,28 @@ def build_file_import_graph(repo_path: Path) -> Dict[str, object]:
     edge_keys: Set[tuple[str, str, str]] = set()
 
     for file_path, module_name in file_to_module.items():
+        file_id = str(file_path.relative_to(repo_path))
         nodes.append(
             {
-                "id": str(file_path.relative_to(repo_path)),
+                "id": file_id,
                 "type": "File",
-                "path": str(file_path.relative_to(repo_path)),
+                "path": file_id,
                 "module": module_name,
                 "language": "python",
             }
         )
+        function_nodes, class_nodes, in_file_edges = extract_functions_and_classes(
+            file_path=file_path,
+            repo_path=repo_path,
+            module_name=module_name,
+        )
+        nodes.extend(function_nodes)
+        nodes.extend(class_nodes)
+        for edge in in_file_edges:
+            edge_key = (edge["source"], edge["target"], edge["type"])
+            if edge_key not in edge_keys:
+                edge_keys.add(edge_key)
+                edges.append(edge)
 
     for file_path in py_files:
         source_id = str(file_path.relative_to(repo_path))
@@ -159,8 +250,8 @@ def build_file_import_graph(repo_path: Path) -> Dict[str, object]:
         "schema_version": SCHEMA_VERSION,
         "schema_node_types": sorted(NODE_TYPES),
         "schema_edge_types": sorted(EDGE_TYPES),
-        "implemented_node_types": ["File"],
-        "implemented_edge_types": ["IMPORTS"],
+        "implemented_node_types": ["File", "Function", "Class"],
+        "implemented_edge_types": ["IMPORTS", "IN_FILE"],
         "nodes": nodes,
         "edges": edges,
     }

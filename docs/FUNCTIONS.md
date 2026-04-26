@@ -12,8 +12,14 @@ This document explains the current functions in the project scripts.
   - Generates possible module aliases to support monorepo import matching.
 - `extract_imports(file_path)`
   - Parses Python AST and extracts imported module names.
+- `SymbolCollector(ast.NodeVisitor)`
+  - Walks AST scopes and collects `Function` / `Class` symbols with qualified names.
+- `extract_functions_and_classes(file_path, repo_path, module_name)`
+  - Extracts `Function` and `Class` nodes and generates `IN_FILE` edges.
+- `validate_graph_contract(nodes, edges)`
+  - Validates generated nodes/edges against the fixed schema contract.
 - `build_file_import_graph(repo_path)`
-  - Builds graph JSON with `File` nodes and `IMPORTS` edges.
+  - Builds graph JSON with `File`, `Function`, `Class` nodes and `IMPORTS`, `IN_FILE` edges.
 - `main()`
   - CLI entry point for building and saving the graph.
 

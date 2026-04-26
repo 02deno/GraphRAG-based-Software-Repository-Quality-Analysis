@@ -21,6 +21,14 @@ Step 1 deliverables (schema clarification):
 - Create file, function/class, test, and commit nodes
 - Add relationship edges (CALLS, IN_FILE, TESTS, MODIFIED_BY)
 
+Step 2 current progress:
+
+- Done: Function/Class extraction from Python AST
+- Done: `IN_FILE` edge generation (`Function/Class -> File`)
+- Pending:
+  - `Test` and `Commit` nodes
+  - `CALLS`, `TESTS`, `MODIFIED_BY` edges
+
 ## Step 3 - Initial Analysis
 
 - Degree centrality

@@ -34,6 +34,14 @@ def top_k(counter: Counter, k: int) -> List[Tuple[str, int]]:
     return counter.most_common(k)
 
 
+def graph_edge_type_label(edges: List[Dict[str, str]]) -> str:
+    """Build a human-readable label for the graph edge type(s)."""
+    edge_types = sorted({edge.get("type", "UNKNOWN") for edge in edges})
+    if len(edge_types) == 1:
+        return f"{edge_types[0]} graph"
+    return f"{'+'.join(edge_types)} graph"
+
+
 def format_analysis_report(
     graph_path: Path,
     nodes: List[Dict[str, str]],
@@ -44,16 +52,18 @@ def format_analysis_report(
     top_k_value: int,
 ) -> str:
     """Build a plain-text analysis report."""
+    graph_label = graph_edge_type_label(edges)
     lines: List[str] = []
     lines.append(f"Graph file: {graph_path}")
+    lines.append(f"Graph type: {graph_label}")
     lines.append(f"Total nodes: {len(nodes)}")
     lines.append(f"Total edges: {len(edges)}")
     lines.append("")
-    lines.append(f"Top {top_k_value} most imported files (high in-degree):")
+    lines.append(f"Top {top_k_value} nodes by incoming edges (high in-degree):")
     for node_id, score in top_imported:
         lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
     lines.append("")
-    lines.append(f"Top {top_k_value} most importing files (high out-degree):")
+    lines.append(f"Top {top_k_value} nodes by outgoing edges (high out-degree):")
     for node_id, score in top_importing:
         lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
     return "\n".join(lines)

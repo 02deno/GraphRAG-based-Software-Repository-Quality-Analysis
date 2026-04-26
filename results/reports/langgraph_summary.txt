@@ -1,0 +1,38 @@
+Graph file: C:\Users\ASUS Zenbook\Desktop\İTÜ - Yüksek Lisans\1 - 2026 Bahar Dönemi\Graph Theory\Project\GraphRAG_Project\results\graphs\langgraph_graph.json
+Graph type: IMPORTS+IN_FILE graph
+Total nodes: 6385
+Total edges: 7180
+
+Top 15 nodes by incoming edges (high in-degree):
+- libs\langgraph\tests\test_pregel.py: 714
+- libs\langgraph\tests\test_pregel_async.py: 614
+- libs\langgraph\tests\test_time_travel.py: 230
+- libs\langgraph\tests\test_time_travel_async.py: 194
+- libs\langgraph\langgraph\typing.py: 183
+- libs\prebuilt\tests\test_react_agent.py: 142
+- libs\prebuilt\tests\test_tool_node.py: 106
+- libs\langgraph\tests\test_large_cases.py: 99
+- libs\langgraph\langgraph\types.py: 97
+- libs\langgraph\tests\test_stream_v2.py: 94
+- libs\checkpoint\langgraph\checkpoint\base\__init__.py: 91
+- libs\sdk-py\langgraph_sdk\auth\types.py: 84
+- libs\cli\tests\unit_tests\test_config.py: 77
+- libs\langgraph\tests\test_runtime.py: 72
+- libs\checkpoint\langgraph\store\base\__init__.py: 72
+
+Top 15 nodes by outgoing edges (high out-degree):
+- libs\langgraph\langgraph\pregel\main.py: 36
+- libs\langgraph\langgraph\graph\state.py: 26
+- libs\langgraph\langgraph\pregel\_loop.py: 25
+- libs\langgraph\tests\test_pregel.py: 24
+- libs\langgraph\tests\test_pregel_async.py: 24
+- libs\langgraph\tests\test_large_cases.py: 19
+- libs\langgraph\tests\test_large_cases_async.py: 18
+- libs\langgraph\langgraph\pregel\_algo.py: 18
+- libs\langgraph\langgraph\func\__init__.py: 16
+- libs\sdk-py\langgraph_sdk\client.py: 15
+- libs\prebuilt\tests\test_react_agent.py: 15
+- libs\prebuilt\tests\test_tool_node.py: 14
+- libs\prebuilt\langgraph\prebuilt\chat_agent_executor.py: 13
+- libs\langgraph\langgraph\pregel\_draw.py: 13
+- libs\langgraph\tests\test_remote_graph.py: 12
