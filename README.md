@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # GraphRAG-based Software Repository Quality Analysis
 
 This project aims to model a software repository as a graph and analyze software quality risks.
@@ -67,3 +68,6 @@ Default stats outputs:
 
 - `results/repo_stats.txt`
 - `results/repo_stats.json`
+=======
+# GraphRAG-based-Software-Repository-Quality-Analysis-
+>>>>>>> c9134630969a473a373d27ca7e9df7ac951855fb
