@@ -15,9 +15,21 @@ from schema_contract import (
 )
 
 
-def collect_python_files(repo_path: Path) -> List[Path]:
-    """Collect all Python files under the repository path."""
-    return [p for p in repo_path.rglob("*.py") if p.is_file()]
+def collect_python_files(repo_path: Path, exclude_dirs: Set[str] | None = None) -> List[Path]:
+    """Collect all Python files under the repository path, excluding named directories."""
+    if exclude_dirs is None:
+        exclude_dirs = set()
+    exclude_dirs = {directory.lower() for directory in exclude_dirs}
+
+    python_files: List[Path] = []
+    for p in repo_path.rglob("*.py"):
+        if not p.is_file():
+            continue
+        rel_parts = p.relative_to(repo_path).parts
+        if any(part.lower() in exclude_dirs for part in rel_parts):
+            continue
+        python_files.append(p)
+    return python_files
 
 
 def module_name_from_path(file_path: Path, repo_path: Path) -> str:
@@ -177,13 +189,13 @@ def validate_graph_contract(nodes: List[Dict[str, str]], edges: List[Dict[str, s
             raise ValueError(f"Edge {edge} missing fields: {sorted(missing)}")
 
 
-def build_file_import_graph(repo_path: Path) -> Dict[str, object]:
+def build_file_import_graph(repo_path: Path, exclude_dirs: Set[str] | None = None) -> Dict[str, object]:
     """
     Build a minimal graph with:
     - File nodes
     - IMPORTS edges (File -> File when resolvable inside repository)
     """
-    py_files = collect_python_files(repo_path)
+    py_files = collect_python_files(repo_path, exclude_dirs=exclude_dirs)
     file_to_module: Dict[Path, str] = {p: module_name_from_path(p, repo_path) for p in py_files}
     module_to_file: Dict[str, Path] = {}
     for file_path in py_files:
@@ -262,15 +274,28 @@ def main() -> None:
     parser.add_argument("--repo", required=True, help="Path to target repository")
     parser.add_argument(
         "--output",
-        default="results/graph_file_imports.json",
-        help="Output graph JSON path",
+        default=None,
+        help="Output graph JSON path (default: results/graphs/<repo_name>_imports_graph.json)",
+    )
+    parser.add_argument(
+        "--exclude-dirs",
+        default="tests,examples,docs,data",
+        help="Comma-separated directory names to exclude from repository traversal",
     )
     args = parser.parse_args()
 
     repo_path = Path(args.repo).resolve()
-    output_path = Path(args.output).resolve()
+    if args.output is None:
+        output_path = Path("results") / "graphs" / f"{repo_path.name}_imports_graph.json"
+    else:
+        output_path = Path(args.output).resolve()
 
-    graph = build_file_import_graph(repo_path)
+    exclude_dirs = {
+        directory.strip().lower()
+        for directory in args.exclude_dirs.split(",")
+        if directory.strip()
+    }
+    graph = build_file_import_graph(repo_path, exclude_dirs=exclude_dirs)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(graph, indent=2), encoding="utf-8")
 
