@@ -1,0 +1,27 @@
+Graph file: C:\Users\ASUS Zenbook\Desktop\GraphRAG_Project\results\graph_file_imports.json
+Total nodes: 320
+Total edges: 1214
+
+Top 10 most imported files:
+- libs\langgraph\langgraph\typing.py: 183
+- libs\checkpoint\langgraph\checkpoint\base\__init__.py: 57
+- libs\langgraph\langgraph\types.py: 57
+- libs\langgraph\langgraph\graph\__init__.py: 38
+- libs\checkpoint\langgraph\store\base\__init__.py: 36
+- libs\langgraph\langgraph\_internal\_constants.py: 33
+- libs\langgraph\langgraph\warnings.py: 28
+- libs\langgraph\langgraph\errors.py: 27
+- libs\langgraph\langgraph\_internal\_typing.py: 25
+- libs\langgraph\langgraph\constants.py: 25
+
+Top 10 most importing files:
+- libs\langgraph\langgraph\pregel\main.py: 36
+- libs\langgraph\langgraph\graph\state.py: 26
+- libs\langgraph\langgraph\pregel\_loop.py: 25
+- libs\langgraph\tests\test_pregel.py: 24
+- libs\langgraph\tests\test_pregel_async.py: 24
+- libs\langgraph\tests\test_large_cases.py: 19
+- libs\langgraph\tests\test_large_cases_async.py: 18
+- libs\langgraph\langgraph\pregel\_algo.py: 18
+- libs\langgraph\langgraph\func\__init__.py: 16
+- libs\sdk-py\langgraph_sdk\client.py: 15

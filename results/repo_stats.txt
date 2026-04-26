@@ -1,0 +1,7 @@
+Repository: C:\Users\ASUS Zenbook\Desktop\GraphRAG_Project\data\langgraph
+
+Python files: 320
+Lines of code (non-empty): 117575
+Classes: 1116
+Functions: 4949
+Variables (assignments): 15353
