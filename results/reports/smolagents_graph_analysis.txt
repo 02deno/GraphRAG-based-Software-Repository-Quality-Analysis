@@ -1,0 +1,56 @@
+Graph file: C:\Users\ASUS Zenbook\Desktop\İTÜ - Yüksek Lisans\1 - 2026 Bahar Dönemi\Graph Theory\Project\GraphRAG_Project\results\graphs\smolagents_imports_graph.json
+Graph type: IMPORTS+IN_FILE graph
+Total nodes: 590
+Total edges: 630
+
+Edge counts by type:
+- IMPORTS: 59
+- IN_FILE: 571
+
+Top 10 nodes by incoming IMPORTS edges:
+- src\smolagents\utils.py: 11
+- src\smolagents\tools.py: 7
+- src\smolagents\agent_types.py: 5
+- src\smolagents\monitoring.py: 5
+- src\smolagents\default_tools.py: 4
+- src\smolagents\local_python_executor.py: 4
+- src\smolagents\models.py: 4
+- src\smolagents\memory.py: 4
+- src\smolagents\agents.py: 3
+- src\smolagents\remote_executors.py: 2
+
+Top 10 nodes by outgoing IMPORTS edges:
+- src\smolagents\__init__.py: 14
+- src\smolagents\agents.py: 9
+- src\smolagents\remote_executors.py: 6
+- src\smolagents\gradio_ui.py: 5
+- src\smolagents\tools.py: 4
+- src\smolagents\default_tools.py: 3
+- src\smolagents\memory.py: 3
+- src\smolagents\models.py: 3
+- src\smolagents\vision_web_browser.py: 3
+- src\smolagents\cli.py: 2
+
+Top 10 nodes by incoming IN_FILE edges:
+- src\smolagents\models.py: 82
+- src\smolagents\local_python_executor.py: 79
+- src\smolagents\tools.py: 61
+- src\smolagents\agents.py: 60
+- src\smolagents\remote_executors.py: 54
+- src\smolagents\default_tools.py: 46
+- src\smolagents\utils.py: 33
+- src\smolagents\memory.py: 27
+- src\smolagents\monitoring.py: 26
+- src\smolagents\tool_validation.py: 24
+
+Top 10 nodes by outgoing IN_FILE edges:
+- function::src\smolagents\agents.py::src.smolagents.agents.populate_template: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.RunResult.__init__: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.RunResult.messages: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.RunResult.dict: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.MultiStepAgent.__init__: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.MultiStepAgent.system_prompt: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.MultiStepAgent._validate_name: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.MultiStepAgent._setup_managed_agents: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.MultiStepAgent._setup_tools: 1
+- function::src\smolagents\agents.py::src.smolagents.agents.MultiStepAgent._validate_tools_and_managed_agents: 1
