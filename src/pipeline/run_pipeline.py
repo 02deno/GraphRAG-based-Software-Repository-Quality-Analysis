@@ -1,0 +1,120 @@
+"""Orchestrates graph build, validation, persistence, analysis, and visualization."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from src.analysis.graph_analysis import generate_analysis_text_report, save_analysis_report
+from src.graph import GraphBuilder, graph_to_dict, save_graph, validate_graph_contract
+from src.visualization.graph_visualization import generate_visual_summary, save_visual_summary
+
+from .output_paths import default_cli_graph_path, default_cli_visual_summary_path
+from .result import PipelineRunResult
+
+
+def run_repository_pipeline(
+    repo_path: Path,
+    *,
+    graph_output: Path,
+    analysis_output: Path | None = None,
+    visual_summary_output: Path | None = None,
+    skip_visualization: bool = False,
+    top_k: int = 10,
+) -> PipelineRunResult:
+    """Build a repository graph, analyze it, and optionally generate visual summaries.
+
+    Args:
+        repo_path: Absolute path to the repository root.
+        graph_output: Where to write the graph JSON document.
+        analysis_output: Where to write the text analysis report; if omitted, uses
+            the default path derived by :func:`generate_analysis_text_report`.
+        visual_summary_output: Optional path for the visual summary text file.
+        skip_visualization: When True, skip matplotlib/networkx visualization steps.
+        top_k: Rank depth for analysis and visualization summaries.
+
+    Returns:
+        Structured result including the graph document and human-readable analysis text.
+
+    Raises:
+        ValueError: If the graph fails schema validation.
+        OSError: If reading or writing artifacts fails.
+    """
+    log_lines: list[str] = []
+    repo_path = repo_path.resolve()
+
+    log_lines.append(f"Building graph for repository: {repo_path}")
+    builder = GraphBuilder(repo_path)
+    builder.build()
+
+    raw = builder.to_dict()
+    graph_document = graph_to_dict(raw["nodes"], raw["edges"])
+    validate_graph_contract(graph_document["nodes"], graph_document["edges"])
+    save_graph(graph_document, graph_output)
+    log_lines.append(f"Graph saved to: {graph_output}")
+    log_lines.append(f"Total nodes: {len(graph_document['nodes'])}")
+    log_lines.append(f"Total edges: {len(graph_document['edges'])}")
+
+    log_lines.append("")
+    log_lines.append("Running analysis...")
+    report, default_report_path = generate_analysis_text_report(graph_output, top_k_value=top_k)
+    final_analysis_path = analysis_output if analysis_output is not None else default_report_path
+    save_analysis_report(report, final_analysis_path)
+    log_lines.append(f"Analysis saved to: {final_analysis_path}")
+
+    visual_path: Path | None = None
+    if skip_visualization:
+        log_lines.append("Skipping visualization step.")
+        return PipelineRunResult(
+            graph_document=dict(graph_document),
+            analysis_text=report,
+            graph_path=graph_output,
+            analysis_path=final_analysis_path,
+            visual_summary_path=None,
+            log_lines=tuple(log_lines),
+        )
+
+    log_lines.append("")
+    log_lines.append("Generating visualization outputs...")
+    report_lines, summary_data = generate_visual_summary(
+        graph_output,
+        top_k=top_k,
+        summary_output=visual_summary_output,
+    )
+    save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])
+    visual_path = Path(str(summary_data["summary_output"]))
+    log_lines.extend(report_lines)
+    log_lines.append(f"Visual summary saved to: {summary_data['summary_output']}")
+
+    return PipelineRunResult(
+        graph_document=dict(graph_document),
+        analysis_text=report,
+        graph_path=graph_output,
+        analysis_path=final_analysis_path,
+        visual_summary_path=visual_path,
+        log_lines=tuple(log_lines),
+    )
+
+
+def resolve_default_cli_paths(
+    repo_path: Path,
+    graph_output_arg: str,
+    visual_summary_output_arg: str,
+) -> tuple[Path, Path]:
+    """Resolve default graph and visual-summary paths for CLI runs.
+
+    Args:
+        repo_path: Repository path from CLI.
+        graph_output_arg: Optional ``--graph-output`` string (empty uses default).
+        visual_summary_output_arg: Optional ``--visual-summary-output`` string.
+
+    Returns:
+        Tuple ``(graph_path, visual_summary_path)`` (all resolved).
+    """
+    rp = repo_path.resolve()
+    graph_path = Path(graph_output_arg).resolve() if graph_output_arg else default_cli_graph_path(rp)
+    visual_path = (
+        Path(visual_summary_output_arg).resolve()
+        if visual_summary_output_arg
+        else default_cli_visual_summary_path(rp)
+    )
+    return graph_path, visual_path

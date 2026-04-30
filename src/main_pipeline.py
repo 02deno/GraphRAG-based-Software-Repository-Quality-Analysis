@@ -1,37 +1,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
 from pathlib import Path
 
-from src.analysis.graph_analysis import generate_analysis_text_report, save_analysis_report
-from src.graph import GraphBuilder, graph_to_dict, save_graph, validate_graph_contract
-from src.visualization.graph_visualization import generate_visual_summary, save_visual_summary
-
-
-def results_base_dir(repo_path: Path) -> Path:
-    folder_name = f"{repo_path.name}_{date.today().strftime('%Y%m%d')}"
-    output_dir = Path("results") / folder_name
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir
-
-
-def default_graph_path(repo_path: Path) -> Path:
-    output_dir = results_base_dir(repo_path)
-    return output_dir / f"{repo_path.name}_graph.json"
-
-
-def default_analysis_path(repo_path: Path) -> Path:
-    output_dir = results_base_dir(repo_path)
-    return output_dir / f"{repo_path.name}_pipeline_analysis.txt"
-
-
-def default_visual_summary_path(repo_path: Path) -> Path:
-    output_dir = results_base_dir(repo_path)
-    return output_dir / f"{repo_path.name}_pipeline_visual_summary.txt"
+from src.pipeline.run_pipeline import resolve_default_cli_paths, run_repository_pipeline
 
 
 def main() -> None:
+    """CLI entry: parse arguments and run the full repository pipeline."""
     parser = argparse.ArgumentParser(
         description="Run the full repository pipeline: build graph, analyze graph, and generate visual summaries."
     )
@@ -44,7 +20,7 @@ def main() -> None:
     parser.add_argument(
         "--analysis-output",
         default="",
-        help="Optional analysis report output path",
+        help="Optional analysis report output path (default under results/reports/)",
     )
     parser.add_argument(
         "--visual-summary-output",
@@ -65,53 +41,23 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_path = Path(args.repo).resolve()
-    graph_output = (
-        Path(args.graph_output).resolve()
-        if args.graph_output
-        else default_graph_path(repo_path)
+    graph_output, visual_summary_output = resolve_default_cli_paths(
+        repo_path,
+        args.graph_output,
+        args.visual_summary_output,
     )
-    analysis_output = (
-        Path(args.analysis_output).resolve()
-        if args.analysis_output
-        else default_analysis_path(repo_path)
-    )
-    visual_summary_output = (
-        Path(args.visual_summary_output).resolve()
-        if args.visual_summary_output
-        else default_visual_summary_path(repo_path)
-    )
+    analysis_explicit = Path(args.analysis_output).resolve() if args.analysis_output else None
 
-    print(f"Building graph for repository: {repo_path}")
-    builder = GraphBuilder(repo_path)
-    builder.build()
-
-    graph_document = graph_to_dict(builder.to_dict()["nodes"], builder.to_dict()["edges"])
-    validate_graph_contract(graph_document["nodes"], graph_document["edges"])
-    save_graph(graph_document, graph_output)
-    print(f"Graph saved to: {graph_output}")
-    print(f"Total nodes: {len(graph_document['nodes'])}")
-    print(f"Total edges: {len(graph_document['edges'])}")
-
-    print("\nRunning analysis...")
-    report, default_report_path = generate_analysis_text_report(Path(graph_output), top_k_value=args.top_k)
-    final_analysis_path = analysis_output if args.analysis_output else default_report_path
-    save_analysis_report(report, final_analysis_path)
-    print(f"Analysis saved to: {final_analysis_path}")
-
-    if args.skip_visualization:
-        print("Skipping visualization step.")
-        return
-
-    print("\nGenerating visualization outputs...")
-    report_lines, summary_data = generate_visual_summary(
-        Path(graph_output),
+    result = run_repository_pipeline(
+        repo_path,
+        graph_output=graph_output,
+        analysis_output=analysis_explicit,
+        visual_summary_output=visual_summary_output,
+        skip_visualization=args.skip_visualization,
         top_k=args.top_k,
-        summary_output=visual_summary_output,
     )
-    save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])
-    for line in report_lines:
+    for line in result.log_lines:
         print(line)
-    print(f"Visual summary saved to: {summary_data['summary_output']}")
 
 
 if __name__ == "__main__":
