@@ -9,6 +9,7 @@ GraphRAG_Project/
 ├── src/                              # Backend Core
 │   ├── web/                          # Web Application Layer
 │   ├── compatibility/                 # Compatibility Checking Layer
+│   ├── pipeline/                      # End-to-end pipeline orchestration (CLI + web)
 │   ├── graph/                         # Graph Model & Construction Layer
 │   ├── extractors/                    # Data Extraction Layer
 │   ├── analysis/                      # Graph Analysis Layer
@@ -28,8 +29,14 @@ GraphRAG_Project/
 
 ### Web Application Layer (`src/web/`)
 **Purpose**: Flask-based web interface for repository analysis
-- **`app.py`**: Main Flask application with API endpoints
-- **`__init__.py`**: Package initialization
+- **`app.py`**: Exposes ``app = create_app()`` for ``run_web_app`` / WSGI servers
+- **`factory.py`**: ``create_app()`` wires config, extensions, and blueprints
+- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → use ``url_for('web.index')`` etc.)
+- **`service_protocols.py`**: ``typing.Protocol`` ports for services (dependency inversion)
+- **`config.py`**: Project root resolution and Flask configuration (e.g. ``FLASK_SECRET_KEY``)
+- **`handlers/`**: Upload and repository filesystem operations
+- **`services/`**: Compatibility and pipeline orchestration for the UI
+- **`utils/`**: Shared helpers (upload form parsing, GitHub URL rules, temp cleanup)
 
 **Key Features**:
 - Repository upload (ZIP files and local paths)
@@ -40,16 +47,23 @@ GraphRAG_Project/
 
 ### Compatibility Checking Layer (`src/compatibility/`)
 **Purpose**: Repository analysis and confidence scoring system
-- **`repo_checker.py`**: Smart compatibility checker with weighted scoring
-- **`__init__.py`**: Package initialization
+- **`check_item.py`**: Value object for one scored check
+- **`repo_checker.py`**: Weighted compatibility checker using ``CheckItem`` results
 
 **Scoring Categories**:
 - **Core Checks (70%)**: Python language, src/tests folders, static imports
 - **Additional Checks (30%)**: Package structure, repo size, requirements, README
 
+### Pipeline Layer (`src/pipeline/`)
+**Purpose**: Single place to run build → validate → save graph → analyze → (optional) visualize, shared by **`main_pipeline.py`** and the web **`AnalysisService`** (no subprocess indirection).
+- **`run_pipeline.py`**: ``run_repository_pipeline`` orchestration
+- **`output_paths.py`**: Default output directories for CLI and web sessions
+- **`result.py`**: ``PipelineRunResult`` structured return type
+
 ### Graph Model & Construction Layer (`src/graph/`)
 **Purpose**: Core graph data model and construction logic
 - **`graph_builder.py`**: Main graph construction orchestrator
+- **`json_document.py`**: Shared graph JSON I/O and degree/label helpers (used by analysis and visualization)
 - **`schema.py`**: Node/edge schema definitions and validation
 - **`nodes/`**: Individual node type implementations
   - `file_node.py`: File node model
@@ -89,7 +103,7 @@ GraphRAG_Project/
 - **`build_graph.py`**: CLI wrapper for graph construction
 - **`analyze_graph.py`**: CLI wrapper for graph analysis
 - **`visualize_graph.py`**: CLI wrapper for visualization
-- **`main_pipeline.py`**: Full pipeline orchestrator
+- **`main_pipeline.py`**: CLI entry that delegates to ``src.pipeline.run_repository_pipeline``
 - **`repo_stats.py`**: CLI wrapper for repository statistics
 - **`schema_contract.py`**: Legacy schema contract reference
 
