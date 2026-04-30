@@ -1,69 +1,191 @@
-# Graph Schema (Step 1 - Fixed Dictionary)
+# Graph Schema
 
-This document defines the target schema dictionary for the project.
-Current implementation is still partial, but names and required fields are now fixed.
+This document defines the complete graph schema for the GraphRAG Repository Analysis project, including current implementation status and future GraphRAG integration plans.
 
 ## Schema Version
 
 - `schema_version`: `0.1.0`
 
-## Node Types and Required Fields
+## 📊 Node Types and Required Fields
 
-- `File`
-  - Required fields: `id`, `type`, `path`, `module`, `language`
-- `Function`
-  - Required fields: `id`, `type`, `name`, `qualified_name`, `file_path`
-- `Class`
-  - Required fields: `id`, `type`, `name`, `qualified_name`, `file_path`
-- `Test`
-  - Required fields: `id`, `type`, `name`, `file_path`, `target_hint`
-- `Commit`
-  - Required fields: `id`, `type`, `hash`, `author`, `date`, `message`
+### Currently Implemented Node Types
 
-## Edge Types and Required Fields
+#### `File`
+- **Required fields**: `id`, `type`, `path`, `module`, `language`
+- **Description**: Repository files with path and module information
+- **Implementation**: ✅ Complete
 
-- `IMPORTS`
-  - Required fields: `source`, `target`, `type`
-  - Direction: `File -> File`
-- `IN_FILE`
-  - Required fields: `source`, `target`, `type`
-  - Direction: `Function -> File` or `Class -> File`
-- `CALLS`
-  - Required fields: `source`, `target`, `type`
-  - Direction: `Function -> Function`
-- `TESTS`
-  - Required fields: `source`, `target`, `type`
-  - Direction: `Test -> Function` or `Test -> Class`
-- `MODIFIED_BY`
-  - Required fields: `source`, `target`, `type`
-  - Direction: `File -> Commit`
+#### `Function`
+- **Required fields**: `id`, `type`, `name`, `qualified_name`, `file_path`
+- **Description**: Python functions with qualified names and file references
+- **Implementation**: ✅ Complete
 
-## Current Implementation Status
+#### `Class`
+- **Required fields**: `id`, `type`, `name`, `qualified_name`, `file_path`
+- **Description**: Python classes with qualified names and file references
+- **Implementation**: ✅ Complete
 
-- Implemented node types: `File`, `Function`, `Class`, `Test`
-- Implemented edge types: `IMPORTS`, `IN_FILE`, `TESTS`
-- Implemented validation:
-  - Node and edge type names are checked against fixed dictionaries.
-  - Required fields are validated for generated nodes/edges.
-- Pending builder features:
-  - `Commit` nodes
-  - `CALLS` edges
-  - `MODIFIED_BY` edges
+#### `Test`
+- **Required fields**: `id`, `type`, `name`, `file_path`, `target_hint`
+- **Description**: Test functions with target hints for test coverage analysis
+- **Implementation**: ✅ Complete
 
-Step 2 note:
+### Planned Node Types
 
-- `Function` and `Class` nodes are extracted from Python AST.
-- `IN_FILE` edges are generated as `Function/Class -> File`.
+#### `Commit`
+- **Required fields**: `id`, `type`, `hash`, `author`, `date`, `message`
+- **Description**: Version control commits with metadata for change tracking
+- **Implementation**: 🚧 In Development
+- **Purpose**: Support for `MODIFIED_BY` edges and change frequency analysis
 
-## Where Schema Is Defined in Code
+## 🔗 Edge Types and Required Fields
 
-- `src/graph/schema.py`
-- `src/graph/graph_builder.py`
-- `src/build_graph.py`
+### Currently Implemented Edge Types
 
-## Initial Quality Signals (Target Analysis Layer)
+#### `IMPORTS`
+- **Required fields**: `source`, `target`, `type`
+- **Direction**: `File -> File`
+- **Description**: Import relationships between files
+- **Implementation**: ✅ Complete
 
-- High centrality nodes (possible architectural bottlenecks)
-- Files with high change frequency (`MODIFIED_BY` density)
-- Critical nodes with weak test linkage (`TESTS` edges)
-- Dense clusters with high coupling (`IMPORTS` and `CALLS`)
+#### `IN_FILE`
+- **Required fields**: `source`, `target`, `type`
+- **Direction**: `Function -> File` or `Class -> File`
+- **Description**: Containment relationships for symbols within files
+- **Implementation**: ✅ Complete
+
+#### `TESTS`
+- **Required fields**: `source`, `target`, `type`
+- **Direction**: `Test -> Function` or `Test -> Class`
+- **Description**: Test coverage relationships
+- **Implementation**: ✅ Complete
+
+### Planned Edge Types
+
+#### `CALLS`
+- **Required fields**: `source`, `target`, `type`
+- **Direction**: `Function -> Function`
+- **Description**: Function call relationships for dependency analysis
+- **Implementation**: 🚧 In Development
+- **Purpose**: Advanced dependency analysis and call graph construction
+
+#### `MODIFIED_BY`
+- **Required fields**: `source`, `target`, `type`
+- **Direction**: `File -> Commit`
+- **Description**: File modification history from version control
+- **Implementation**: 🚧 In Development
+- **Purpose**: Change frequency analysis and hot-spot identification
+
+## 🎯 Current Implementation Status
+
+### ✅ Completed Features
+- **Node Extraction**: File, Function, Class, Test nodes with full metadata
+- **Edge Construction**: IMPORTS, IN_FILE, TESTS relationships
+- **Schema Validation**: Complete validation against fixed dictionaries
+- **Web Integration**: Full compatibility with web application
+- **Analysis Pipeline**: Integration with centrality metrics and quality analysis
+
+### 🚧 In Development
+- **Commit Nodes**: Git history integration for change tracking
+- **CALLS Edges**: Advanced function call analysis
+- **MODIFIED_BY Edges**: Version control integration
+- **Enhanced Validation**: Extended schema validation for new types
+
+### 📋 GraphRAG Integration Plans
+- **Vector Embeddings**: Code semantic representation for retrieval
+- **Subgraph Retrieval**: Graph traversal for context extraction
+- **LLM Integration**: Natural language quality analysis
+- **Semantic Search**: Enhanced repository querying capabilities
+
+## 🏗️ Schema Implementation Architecture
+
+### Core Components
+- **`src/graph/schema.py`**: Schema definitions and validation logic
+- **`src/graph/graph_builder.py`**: Main graph construction orchestrator
+- **`src/extractors/`**: Modular extraction components
+- **`src/analysis/`**: Graph analysis and metrics calculation
+
+### Validation System
+- **Type Checking**: Node and edge types validated against schema dictionaries
+- **Field Validation**: Required fields validation for all generated elements
+- **Schema Versioning**: Version tracking for schema evolution
+- **Error Handling**: Graceful failure management for invalid structures
+
+## 🔄 Data Flow Integration
+
+### Web Application Integration
+1. **Repository Upload** → Compatibility checking
+2. **Compatibility Pass** → Graph construction
+3. **Graph Built** → Schema validation
+4. **Validation Success** → Analysis execution
+5. **Analysis Complete** → Results display
+
+### CLI Integration
+1. **Repository Path** → Direct graph construction
+2. **Graph Construction** → Schema validation
+3. **Validation Success** → Analysis pipeline
+4. **Analysis Complete** → Output generation
+
+## 📈 Quality Analysis Framework
+
+### Current Metrics
+- **Degree Centrality**: Node importance based on connections
+- **Edge Distribution**: Analysis of relationship types
+- **Graph Statistics**: Overall repository structure metrics
+- **Compatibility Scoring**: Repository readiness assessment
+
+### Future GraphRAG Metrics
+- **Semantic Similarity**: Code relationship analysis beyond structure
+- **Risk Assessment**: Automated quality risk identification
+- **Architectural Insights**: AI-powered repository analysis
+- **Change Impact Analysis**: Commit-based evolution tracking
+
+## 🔧 Schema Evolution Roadmap
+
+### Phase 1: Current Implementation ✅
+- Basic node and edge types
+- Schema validation system
+- Web application integration
+- Compatibility checking
+
+### Phase 2: Enhanced Analysis 🚧
+- Commit history integration
+- Function call graphs
+- Advanced centrality metrics
+- Change frequency analysis
+
+### Phase 3: GraphRAG Integration 📋
+- Vector embeddings for code
+- Subgraph retrieval algorithms
+- LLM-powered quality insights
+- Semantic search capabilities
+
+### Phase 4: Advanced Features 📋
+- Multi-language support
+- Real-time collaboration analysis
+- Enterprise-scale processing
+- Custom quality metrics
+
+## 📚 Schema Documentation
+
+### Where Schema Is Defined
+- **`src/graph/schema.py`**: Core schema definitions
+- **`src/graph/graph_builder.py`**: Schema implementation
+- **`src/compatibility/repo_checker.py`**: Schema-aware validation
+- **`src/web/app.py`**: Web integration
+
+### API Usage Examples
+```python
+# Schema validation
+from src.graph.schema import validate_graph_contract
+validate_graph_contract(nodes, edges)
+
+# Graph construction with schema
+from src.graph import GraphBuilder
+builder = GraphBuilder(repo_path)
+builder.build()  # Automatically validates schema
+```
+
+---
+
+This schema provides the foundation for both current repository analysis and future GraphRAG capabilities, ensuring extensibility and maintainability as the project evolves toward AI-powered repository quality analysis.
