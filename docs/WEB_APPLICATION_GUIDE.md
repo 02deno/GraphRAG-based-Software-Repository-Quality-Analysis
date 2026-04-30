@@ -7,7 +7,7 @@ This document provides comprehensive guidance for the GraphRAG Repository Analys
 The GraphRAG web application provides a user-friendly interface for repository analysis with intelligent compatibility checking and automated quality insights.
 
 ### Key Features
-- **📁 Smart Repository Upload**: ZIP files and local path support
+- **📁 Repository input**: GitHub HTTPS URL (``git clone``) and local path; ZIP upload UI hidden until a later release
 - **🔍 Compatibility Analysis**: Automated repository assessment with confidence scoring
 - **⚠️ Risk Management**: User confirmation for low-compatibility repositories
 - **📊 Real-time Analysis**: Immediate graph construction and quality metrics
@@ -50,21 +50,18 @@ export FLASK_DEBUG=False
 
 ### 1. Repository Submission
 
-#### ZIP File Upload
-- **Maximum Size**: 100MB
-- **Supported Formats**: ZIP archives containing Python repositories
-- **Validation**: Automatic ZIP structure validation
-- **Progress**: Real-time upload progress indication
+#### GitHub URL
+- **Format**: ``https://github.com/<owner>/<repo>`` (HTTPS only in the current checker)
+- **Behavior**: Server runs ``git clone`` into a temporary directory (requires ``git`` on the server PATH)
+- **Timeout**: Clone attempts time out after 60 seconds (see ``RepositoryHandler.clone_github_repository``)
 
 #### Local Path Input
-- **Supported Paths**: Local repository directories
-- **Validation**: Path existence and accessibility checks
+- **Supported Paths**: Local repository directories on the machine running the web app
+- **Validation**: Path existence checks
 - **Recommendation**: Use absolute paths for reliability
 
-#### Remote URL Input (Future)
-- **Planned Support**: Git repository URLs
-- **Framework**: Ready for git clone integration
-- **Security**: URL validation and sanitization
+#### ZIP File Upload (UI deferred)
+- The upload handler still accepts ZIP multipart posts; the home template keeps a ``hidden`` ZIP block so it can be re-enabled without rewriting the form.
 
 ### 2. Compatibility Analysis
 

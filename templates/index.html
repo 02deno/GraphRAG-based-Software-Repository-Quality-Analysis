@@ -105,20 +105,19 @@
 
         <form action="{{ url_for('web.upload_repository') }}" method="post" enctype="multipart/form-data">
             <div class="upload-section">
-                <!-- File Upload Method -->
-                <div class="upload-method">
+                {# ZIP upload: keep markup for a future UI release; set hidden=false to show. #}
+                <div class="upload-method" id="repository-zip-upload" hidden>
                     <h3>📁 Upload Repository ZIP</h3>
                     <div class="file-input">
-                        <input type="file" name="repository_file" accept=".zip" onchange="document.getElementById('file-method').checked = true; document.getElementById('url-method').checked = false;">
-                        <p class="info-text">Upload your repository as a ZIP file (max 100MB) - OR use GitHub link below</p>
+                        <input type="file" name="repository_file" accept=".zip">
+                        <p class="info-text">Upload your repository as a ZIP file (max 100MB)</p>
                     </div>
                 </div>
 
-                <!-- OR URL Method -->
                 <div class="upload-method">
-                    <h3>🔗 Repository Path/URL</h3>
-                    <input type="url" name="repository_url" placeholder="https://github.com/user/repo" onchange="document.getElementById('url-method').checked = true; document.getElementById('file-method').checked = false;">
-                    <p class="info-text">Enter a GitHub repository URL (will be cloned automatically)</p>
+                    <h3>🔗 GitHub URL or local path</h3>
+                    <input type="url" name="repository_url" placeholder="https://github.com/user/repo">
+                    <p class="info-text">Paste an <code>https://github.com/…</code> URL (cloned automatically) or a local repository path on this machine</p>
                 </div>
             </div>
 
@@ -142,25 +141,16 @@
     <script>
         // Form validation
         document.querySelector('form').addEventListener('submit', function(e) {
-            const fileInput = document.querySelector('input[name="repository_file"]');
             const urlInput = document.querySelector('input[name="repository_url"]');
-            
-            // Check if at least one field is filled
-            const hasFile = fileInput.files.length > 0;
+            const zipSection = document.getElementById('repository-zip-upload');
+            const fileInput = document.querySelector('input[name="repository_file"]');
+            const hasFile = zipSection && !zipSection.hidden && fileInput && fileInput.files.length > 0;
             const hasUrl = urlInput.value.trim() !== '';
-            
-            if (!hasFile && !hasUrl) {
+
+            if (!hasUrl && !hasFile) {
                 e.preventDefault();
-                alert('Lütfen bir ZIP dosyası yükleyin VEYA bir GitHub URL\'si girin');
+                alert('Please enter a GitHub repository URL or a local repository path.');
                 return false;
-            }
-            
-            // If both are filled, warn user but allow submission
-            if (hasFile && hasUrl) {
-                if (!confirm('Hem dosya hem de URL girdiniz. Dosya yükleme kullanılacak. Devam etmek istiyor musunuz?')) {
-                    e.preventDefault();
-                    return false;
-                }
             }
         });
     </script>

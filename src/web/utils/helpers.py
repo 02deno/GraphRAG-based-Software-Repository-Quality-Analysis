@@ -33,14 +33,15 @@ def handle_repository_upload(repo_handler: RepositoryHandler) -> Tuple[str, bool
     Raises:
         ValueError: If no valid repository provided
     """
-    # Handle ZIP file upload
+    # Handle ZIP file upload (Flask always includes the file key on multipart
+    # posts even when no file was chosen, so URL handling must not be `elif`.)
     if 'repository_file' in request.files:
         file = request.files['repository_file']
         if file.filename:
             return repo_handler.handle_zip_upload(file)
-    
+
     # Handle repository URL
-    elif 'repository_url' in request.form:
+    if 'repository_url' in request.form:
         repo_url = request.form['repository_url'].strip()
         if repo_url:
             if is_github_clone_url(repo_url):

@@ -27,7 +27,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 ## 🌟 Features
 
 ### Web Application Features
-- **📁 Repository Upload**: Upload ZIP files or provide local paths
+- **📁 Repository input**: GitHub HTTPS URL (clone) or local path; ZIP upload in the web UI is reserved for a later release (handler still supports ZIP)
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
 - **📊 Real-time Analysis**: Automatic graph analysis for compatible repositories
@@ -105,9 +105,9 @@ GraphRAG_Project/
 
 ### Web Application Workflow
 
-1. **Upload Repository**
-   - Choose ZIP file upload or local path
-   - Maximum file size: 100MB
+1. **Submit a repository**
+   - Paste a GitHub URL (for example `https://github.com/org/repo`) or a local filesystem path
+   - ZIP upload is not shown in the UI yet; the server-side upload handler remains for future use
 
 2. **Compatibility Check**
    - Automated analysis runs immediately

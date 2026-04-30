@@ -39,7 +39,7 @@ GraphRAG_Project/
 - **`utils/`**: Shared helpers (upload form parsing, GitHub URL rules, temp cleanup)
 
 **Key Features**:
-- Repository upload (ZIP files and local paths)
+- Repository input (GitHub URL clone, local path; ZIP block in ``index.html`` is hidden until a later UI iteration)
 - Compatibility checking integration
 - Analysis execution and results display
 - Session management for analysis state
@@ -111,7 +111,7 @@ GraphRAG_Project/
 
 **Purpose**: HTML templates for web interface
 - **`index.html`**: Repository upload interface
-  - File upload and URL input forms
+  - GitHub URL / local path form (ZIP upload markup kept but ``hidden`` for a future release)
   - Modern responsive design
   - Client-side validation
 - **`compatibility.html`**: Compatibility check results

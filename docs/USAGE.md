@@ -17,10 +17,10 @@ python run_web_app.py
 
 ### Web Application Workflow
 
-#### 1. Repository Upload
-- **ZIP File Upload**: Upload a repository as a ZIP file (max 100MB)
-- **Local Path**: Provide a local repository path
-- **Remote URL**: Enter a repository URL (framework ready for git clone)
+#### 1. Repository input
+- **GitHub URL**: Paste an ``https://github.com/…`` URL; the app clones it server-side (``git`` required)
+- **Local Path**: Provide a path to a repository on the machine running Flask
+- **ZIP**: Supported by the upload handler; the default UI hides the ZIP field until a later release (see ``templates/index.html``)
 
 #### 2. Compatibility Check
 The system automatically analyzes repository compatibility:
