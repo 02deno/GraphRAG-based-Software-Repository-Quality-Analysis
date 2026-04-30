@@ -13,7 +13,10 @@ from ..compatibility.repo_checker import RepoCompatibilityChecker
 from ..main_pipeline import main as run_main_pipeline
 
 
-app = Flask(__name__)
+# Get the project root directory (parent of src/web)
+project_root = Path(__file__).parent.parent.parent
+
+app = Flask(__name__, template_folder=str(project_root / 'templates'))
 app.config['SECRET_KEY'] = 'graphrag-secret-key'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
