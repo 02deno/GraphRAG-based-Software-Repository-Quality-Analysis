@@ -6,6 +6,9 @@ from typing import Tuple
 
 from flask import request
 
+from src.web.handlers.repository_handler import RepositoryHandler
+from src.web.utils.github_urls import is_github_clone_url
+
 
 def cleanup_temp_directory(repo_path: str, cleanup_needed: bool) -> None:
     """Clean up temporary directory if needed.
@@ -18,7 +21,7 @@ def cleanup_temp_directory(repo_path: str, cleanup_needed: bool) -> None:
         shutil.rmtree(repo_path, ignore_errors=True)
 
 
-def handle_repository_upload(repo_handler) -> Tuple[str, bool]:
+def handle_repository_upload(repo_handler: RepositoryHandler) -> Tuple[str, bool]:
     """Handle repository upload from form data.
     
     Args:
@@ -40,7 +43,7 @@ def handle_repository_upload(repo_handler) -> Tuple[str, bool]:
     elif 'repository_url' in request.form:
         repo_url = request.form['repository_url'].strip()
         if repo_url:
-            if repo_url.startswith('https://github.com/') or repo_url.startswith('git@github.com:'):
+            if is_github_clone_url(repo_url):
                 return repo_handler.clone_github_repository(repo_url)
             else:
                 return repo_handler.handle_local_repository(repo_url)

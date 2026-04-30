@@ -194,7 +194,7 @@
 
         <!-- Action Buttons -->
         {% if score >= 50 %}
-            <form action="{{ url_for('analyze_repository') }}" method="post">
+            <form action="{{ url_for('web.analyze_repository') }}" method="post">
                 <button type="submit" class="btn btn-success">
                     🚀 Start Graph Analysis
                 </button>
@@ -205,13 +205,13 @@
                 <p>This repository scored below 50% and may not produce reliable results.</p>
                 <p><strong>Are you sure you want to proceed with analysis?</strong></p>
                 
-                <form action="{{ url_for('analyze_repository') }}" method="post" style="margin-top: 20px;">
+                <form action="{{ url_for('web.analyze_repository') }}" method="post" style="margin-top: 20px;">
                     <button type="submit" class="btn btn-danger">
                         ⚠️ Yes, Analyze Anyway
                     </button>
                 </form>
                 
-                <a href="{{ url_for('index') }}" class="btn btn-warning" style="margin-top: 10px;">
+                <a href="{{ url_for('web.index') }}" class="btn btn-warning" style="margin-top: 10px;">
                     📁 Choose Different Repository
                 </a>
             </div>

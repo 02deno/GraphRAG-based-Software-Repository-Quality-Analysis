@@ -9,11 +9,18 @@ from typing import Tuple
 
 from werkzeug.utils import secure_filename
 
+from src.web.utils.github_urls import is_github_clone_url
+
 
 class RepositoryHandler:
     """Handles repository operations including ZIP extraction and Git cloning."""
     
-    def __init__(self, upload_folder: str):
+    def __init__(self, upload_folder: str) -> None:
+        """Store the directory used for uploads and extracted or cloned repositories.
+
+        Args:
+            upload_folder: Writable folder path for temporary content.
+        """
         self.upload_folder = upload_folder
     
     def handle_zip_upload(self, file) -> Tuple[str, bool]:
@@ -62,7 +69,7 @@ class RepositoryHandler:
         Raises:
             ValueError: If cloning fails
         """
-        if not (repo_url.startswith('https://github.com/') or repo_url.startswith('git@github.com:')):
+        if not is_github_clone_url(repo_url):
             raise ValueError('Invalid GitHub URL format')
         
         temp_dir = None
