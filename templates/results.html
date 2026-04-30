@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Analysis Results</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .results-section {
+            margin-bottom: 30px;
+        }
+        .results-section h3 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .analysis-text {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .download-section {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        .download-section h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-header">
+            <h1>✅ Graph Analysis Complete!</h1>
+            <p>Your repository has been successfully analyzed</p>
+        </div>
+
+        {% if results %}
+        <!-- Statistics Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ results.graph_data.nodes|length }}</div>
+                <div class="stat-label">Total Nodes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ results.graph_data.edges|length }}</div>
+                <div class="stat-label">Total Edges</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ results.graph_data.schema_node_types|length }}</div>
+                <div class="stat-label">Node Types</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ results.graph_data.schema_edge_types|length }}</div>
+                <div class="stat-label">Edge Types</div>
+            </div>
+        </div>
+
+        <!-- Graph Structure Information -->
+        <div class="results-section">
+            <h3>📊 Graph Structure</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                <p><strong>Schema Version:</strong> {{ results.graph_data.schema_version }}</p>
+                <p><strong>Node Types:</strong> {{ results.graph_data.schema_node_types|join(', ') }}</p>
+                <p><strong>Edge Types:</strong> {{ results.graph_data.schema_edge_types|join(', ') }}</p>
+                {% if results.graph_data.implemented_node_types %}
+                <p><strong>Implemented Node Types:</strong> {{ results.graph_data.implemented_node_types|join(', ') }}</p>
+                {% endif %}
+                {% if results.graph_data.implemented_edge_types %}
+                <p><strong>Implemented Edge Types:</strong> {{ results.graph_data.implemented_edge_types|join(', ') }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div class="results-section">
+            <h3>🔍 Quality Analysis Results</h3>
+            <div class="analysis-text">{{ results.analysis_text }}</div>
+        </div>
+
+        <!-- Pipeline Output -->
+        {% if results.pipeline_output %}
+        <div class="results-section">
+            <h3>📋 Pipeline Output</h3>
+            <div class="analysis-text">{{ results.pipeline_output }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Download Section -->
+        <div class="download-section">
+            <h4>📥 Download Results</h4>
+            <p>Download the complete analysis results for further investigation:</p>
+            
+            <a href="javascript:void(0)" onclick="downloadJSON()" class="btn btn-success">
+                📄 Download Graph JSON
+            </a>
+            
+            <a href="javascript:void(0)" onclick="downloadAnalysis()" class="btn btn-success">
+                📝 Download Analysis Report
+            </a>
+            
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                🔄 Analyze Another Repository
+            </a>
+        </div>
+
+        <script>
+            // Download functions
+            function downloadJSON() {
+                const data = {{ results.graph_data|tojson }};
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'graph_analysis_results.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
+            function downloadAnalysis() {
+                const analysisText = {{ results.analysis_text|tojson }};
+                const blob = new Blob([analysisText], {type: 'text/plain'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'graph_analysis_report.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+        </script>
+
+        {% else %}
+        <div class="error-message">
+            <h4>❌ Analysis Failed</h4>
+            <p>No results were generated. This could be due to:</p>
+            <ul>
+                <li>Incompatible repository structure</li>
+                <li>Processing errors during analysis</li>
+                <li>Repository access issues</li>
+            </ul>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                🔄 Try Again
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

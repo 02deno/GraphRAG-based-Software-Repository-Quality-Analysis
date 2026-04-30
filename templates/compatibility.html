@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compatibility Check Results</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .score-display {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+        }
+        .score-high { background: #28a745; }
+        .score-medium { background: #ffc107; color: #333; }
+        .score-low { background: #dc3545; }
+        
+        .check-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #ddd;
+        }
+        .check-passed { border-left-color: #28a745; }
+        .check-failed { border-left-color: #dc3545; }
+        
+        .check-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .icon-pass { background: #28a745; }
+        .icon-fail { background: #dc3545; }
+        
+        .check-details {
+            flex: 1;
+        }
+        .check-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .check-desc {
+            font-size: 14px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .check-weight {
+            font-size: 12px;
+            color: #999;
+            margin-left: 10px;
+        }
+        
+        .warnings {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warnings h4 {
+            color: #856404;
+            margin-top: 0;
+        }
+        .warnings ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            color: #856404;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .confirmation-prompt {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .confirmation-prompt h3 {
+            color: #721c24;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Repository Compatibility Check</h1>
+        
+        <div class="score-display">
+            <div class="score-circle {{ 'score-high' if score >= 70 else 'score-medium' if score >= 50 else 'score-low' }}">
+                {{ score }}%
+            </div>
+            <h2>{{ 'Excellent Compatibility' if score >= 70 else 'Good Compatibility' if score >= 50 else 'Low Compatibility' }}</h2>
+            <p style="color: #666;">
+                {{ 'This repository is well-suited for graph analysis' if score >= 70 else 
+                   'This repository should work with graph analysis' if score >= 50 else 
+                   'This repository may have compatibility issues' }}
+            </p>
+        </div>
+
+        <h3>📋 Detailed Check Results</h3>
+        
+        {% for check in details %}
+        <div class="check-item {{ 'check-passed' if check.passed else 'check-failed' }}">
+            <div class="check-icon {{ 'icon-pass' if check.passed else 'icon-fail' }}">
+                {{ '✓' if check.passed else '✗' }}
+            </div>
+            <div class="check-details">
+                <div class="check-name">{{ check.description }}</div>
+                <div class="check-weight">Weight: {{ check.weight * 100 }}% | Score: {{ (check.score / check.weight * 100) if check.weight > 0 else 0 }}%</div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if warnings %}
+        <div class="warnings">
+            <h4>⚠️ Warnings & Notes</h4>
+            <ul>
+                {% for warning in warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        {% if score >= 50 %}
+            <form action="{{ url_for('analyze_repository') }}" method="post">
+                <button type="submit" class="btn btn-success">
+                    🚀 Start Graph Analysis
+                </button>
+            </form>
+        {% else %}
+            <div class="confirmation-prompt">
+                <h3>⚠️ Low Compatibility Score</h3>
+                <p>This repository scored below 50% and may not produce reliable results.</p>
+                <p><strong>Are you sure you want to proceed with analysis?</strong></p>
+                
+                <form action="{{ url_for('analyze_repository') }}" method="post" style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-danger">
+                        ⚠️ Yes, Analyze Anyway
+                    </button>
+                </form>
+                
+                <a href="{{ url_for('index') }}" class="btn btn-warning" style="margin-top: 10px;">
+                    📁 Choose Different Repository
+                </a>
+            </div>
+        {% endif %}
+
+        <div style="margin-top: 30px; padding: 20px; background: #e9ecef; border-radius: 6px;">
+            <h4>ℹ️ What happens next?</h4>
+            <p style="margin: 10px 0; color: #666;">
+                The graph analysis will:
+            </p>
+            <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
+                <li>Extract File, Function, Class, and Test nodes</li>
+                <li>Build IMPORTS, IN_FILE, and TESTS relationships</li>
+                <li>Generate degree centrality metrics</li>
+                <li>Identify potential quality risks and architectural insights</li>
+                <li>Provide visual summaries and detailed reports</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

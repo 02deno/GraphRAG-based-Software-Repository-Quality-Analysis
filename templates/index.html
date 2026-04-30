@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphRAG Repository Analysis</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            margin-bottom: 30px;
+        }
+        .upload-method {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .upload-method h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .file-input {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .file-input:hover {
+            border-color: #007bff;
+        }
+        input[type="file"], input[type="url"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 GraphRAG Repository Analysis</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Analyze your software repository structure and quality using graph-based analysis
+        </p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('upload_repository') }}" method="post" enctype="multipart/form-data">
+            <div class="upload-section">
+                <!-- File Upload Method -->
+                <div class="upload-method">
+                    <h3>📁 Upload Repository ZIP</h3>
+                    <div class="file-input">
+                        <input type="file" name="repository_file" accept=".zip" required onchange="document.getElementById('file-method').checked = true; document.getElementById('url-method').checked = false;">
+                        <p class="info-text">Upload your repository as a ZIP file (max 100MB)</p>
+                    </div>
+                </div>
+
+                <!-- OR URL Method -->
+                <div class="upload-method">
+                    <h3>🔗 Repository Path/URL</h3>
+                    <input type="url" name="repository_url" placeholder="https://github.com/user/repo or /path/to/local/repo" onchange="document.getElementById('url-method').checked = true; document.getElementById('file-method').checked = false;">
+                    <p class="info-text">Enter a local repository path or remote URL (for now, local paths only)</p>
+                </div>
+            </div>
+
+            <button type="submit" class="btn">
+                🚀 Analyze Repository
+            </button>
+        </form>
+
+        <div style="margin-top: 30px; padding: 20px; background: #e9ecef; border-radius: 6px;">
+            <h4>📋 What this tool analyzes:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+                <li>Repository structure and dependencies</li>
+                <li>File imports and relationships</li>
+                <li>Functions, classes, and test coverage</li>
+                <li>Quality metrics and potential risks</li>
+                <li>Graph-based insights and recommendations</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const fileInput = document.querySelector('input[name="repository_file"]');
+            const urlInput = document.querySelector('input[name="repository_url"]');
+            
+            if (!fileInput.files.length && !urlInput.value.trim()) {
+                e.preventDefault();
+                alert('Please provide either a ZIP file or repository URL');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
