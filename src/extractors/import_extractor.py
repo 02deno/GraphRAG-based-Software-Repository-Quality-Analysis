@@ -6,12 +6,22 @@ from typing import Set
 
 
 def extract_imports(file_path: Path) -> Set[str]:
-    """Extract imported module names from a Python file using AST."""
+    """Collect top-level ``import`` / ``from`` module names from a Python file.
+
+    Walks the AST and records ``Import`` names and ``ImportFrom`` package roots.
+    Dynamic or failed parses yield an empty set.
+
+    Args:
+        file_path: Path to a ``.py`` file under the repository.
+
+    Returns:
+        Set of dotted or simple module strings referenced by static imports.
+    """
     imports: Set[str] = set()
     try:
         source = file_path.read_text(encoding="utf-8")
         tree = ast.parse(source)
-    except Exception:
+    except (OSError, SyntaxError, UnicodeDecodeError):
         return imports
 
     for node in ast.walk(tree):
