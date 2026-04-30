@@ -20,12 +20,16 @@ Step 1 deliverables (schema clarification):
 
 - Create file, function/class, test, and commit nodes
 - Add relationship edges (CALLS, IN_FILE, TESTS, MODIFIED_BY)
+- Add thin CLI wrappers for package entrypoints
 
 Step 2 current progress:
 
-- Done: Function/Class extraction from Python AST
-- Done: `IN_FILE` edge generation (`Function/Class -> File`)
+- Done: Modular `src/graph` package created
+- Done: Modular `src/extractors` package created
+- Done: `GraphBuilder` pipeline implemented
+- Done: thin CLI wrappers created in `src/build_graph.py`, `src/analyze_graph.py`, `src/visualize_graph.py`, `src/repo_stats.py`
 - Done: `Test` node extraction and `TESTS` edge generation
+- Done: `IMPORTS` and `IN_FILE` edge generation
 - Pending:
   - `Commit` nodes
   - `CALLS`, `MODIFIED_BY` edges

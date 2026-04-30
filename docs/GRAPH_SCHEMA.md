@@ -45,6 +45,10 @@ Current implementation is still partial, but names and required fields are now f
 - Implemented validation:
   - Node and edge type names are checked against fixed dictionaries.
   - Required fields are validated for generated nodes/edges.
+- Pending builder features:
+  - `Commit` nodes
+  - `CALLS` edges
+  - `MODIFIED_BY` edges
 
 Step 2 note:
 
@@ -53,7 +57,8 @@ Step 2 note:
 
 ## Where Schema Is Defined in Code
 
-- `src/schema_contract.py`
+- `src/graph/schema.py`
+- `src/graph/graph_builder.py`
 - `src/build_graph.py`
 
 ## Initial Quality Signals (Target Analysis Layer)
