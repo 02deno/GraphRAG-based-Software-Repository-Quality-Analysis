@@ -1,0 +1,30 @@
+---
+description: Flask web layer — factory, blueprints, handlers, services
+globs: src/web/**/*.py
+alwaysApply: false
+---
+
+# Web layer refactors (`src/web`)
+
+## Layout
+
+- **`factory.py`**: `create_app()` — builds `Flask`, `app.config`, `app.extensions`, registers **`web`** blueprint.
+- **`blueprints/web.py`**: Only route handlers; obtain handlers via `current_app.extensions[...]`.
+- **`app.py`**: `app = create_app()` only (plus `if __name__ == "__main__"` runner when executed as script).
+
+## Separation
+
+- **Routes**: no business logic beyond request/session wiring; delegate to **`services/`** and **`handlers/`**.
+- **`utils/helpers.py`**: form parsing and temp cleanup; keep **`request`** usage here or in handlers, not in `AnalysisService`.
+
+## URLs and templates
+
+- Endpoint names are **`web.<function_name>`**. Any change to blueprint name or view function names must update **every** `url_for(...)` in `templates/` in the same commit.
+
+## Sessions
+
+- **`session['analysis_data']`** keys (`repo_path`, `cleanup_temp`, `compatibility`) are a contract with templates and both POST handlers. Keep them stable or migrate all readers and writers together.
+
+## Config
+
+- Secrets: `load_flask_config()` reads `FLASK_SECRET_KEY`; do not add new hardcoded secrets.

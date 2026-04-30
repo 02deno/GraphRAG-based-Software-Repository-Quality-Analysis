@@ -1,0 +1,25 @@
+---
+description: After code changes, verify and update project documentation so it stays accurate
+alwaysApply: true
+---
+
+# Documentation must stay current
+
+Whenever you add, remove, or refactor behavior in this repository, treat docs as part of the same change—not an optional follow-up.
+
+## What to check
+
+- **`docs/PROJECT_STRUCTURE.md`** — paths, layers, new packages (`src/pipeline/`, `src/web/blueprints/`, `src/graph/json_document.py`, etc.), CLI vs web entry points, and how services connect.
+- **`README.md`** — install/run commands, env vars (`FLASK_SECRET_KEY`), how to start the web app or CLI, and any user-visible workflow that changed.
+- **Other `docs/*.md`** — if your edit touches compatibility scoring, graph schema, web flow, or pipeline flags, grep those docs for stale names, paths, or flags and align them with the code.
+
+## Rules for the agent
+
+1. **Before finishing a task**, search `docs/` and `README.md` for keywords you changed (module names, blueprint `web.*`, `run_repository_pipeline`, removed subprocess flow, new files).
+2. **Update** paragraphs, file trees, and examples so a new contributor could run the project from docs alone.
+3. **Do not** leave contradictory docs (e.g. old `url_for('index')` vs `web.index`, or “subprocess pipeline” when the web app calls Python APIs directly).
+4. If only a tiny doc tweak is needed (one line), still include it in the same change set when possible so history stays coherent.
+
+## If documentation is intentionally unchanged
+
+State briefly why (e.g. “internal rename only, no user-facing behavior”)—rare; default is to update docs.

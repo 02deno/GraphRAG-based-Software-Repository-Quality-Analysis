@@ -1,0 +1,42 @@
+---
+description: Project-specific refactor patterns (pipeline, graph JSON, web architecture)
+alwaysApply: true
+---
+
+# Refactor patterns
+
+## Pipeline and web
+
+- **Do not** shell out to `main_pipeline.py` from in-process code. Call `run_repository_pipeline` in `src/pipeline/run_pipeline.py` (same path CLI and web use).
+- **App factory**: new Flask instances go through `create_app()` in `src/web/factory.py`. Shared services live on `app.extensions["repo_handler"]` and `app.extensions["analysis_service"]`.
+- **Blueprints**: UI routes live on blueprint `web` (`src/web/blueprints/web.py`). Templates must use `url_for('web.<view>')` (e.g. `web.index`, `web.upload_repository`, `web.analyze_repository`).
+
+## Graph JSON and analysis
+
+- **Reuse** `src/graph/json_document.py` for loading graph files, degree counters, and edge-type labels. Do not copy that logic into `analysis/` or `visualization/`.
+- **Schema**: node/edge shape changes require updates to `src/graph/schema.py` and all producers (e.g. `GraphBuilder`, extractors) in one change set.
+
+## Documentation and types
+
+- **Public functions and methods** should have a docstring with purpose; include `Args` / `Returns` where parameters are non-obvious.
+- **Structural typing**: when adding a new web-facing service, define or extend a `Protocol` in `src/web/service_protocols.py` and document which class implements it.
+
+## Anti-patterns
+
+```python
+# BAD: bare except when reading files
+except:
+    continue
+
+# GOOD
+except (OSError, UnicodeDecodeError):
+    continue
+```
+
+```python
+# BAD: subprocess to run pipeline from Flask
+subprocess.run(["python", "src/main_pipeline.py", ...])
+
+# GOOD
+from src.pipeline import run_repository_pipeline
+```

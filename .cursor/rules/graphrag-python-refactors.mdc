@@ -1,0 +1,42 @@
+---
+description: Python refactor conventions for src code
+globs: src/**/*.py
+alwaysApply: false
+---
+
+# Python refactors (`src/`)
+
+## Style to preserve
+
+- Use **`from __future__ import annotations`** at the top of new or heavily touched modules if the rest of the file uses modern typing.
+- Prefer **`pathlib.Path`** over string paths for new code; match existing parameters when refactoring call sites.
+- Keep **explicit type hints** on public functions and methods; use narrow types (`list[str]`, `dict[str, object]`) consistent with neighboring code.
+
+## Imports
+
+- The codebase mixes **package-relative** imports (e.g. `from .schema import …` inside `src/graph`) with **`src.`**-absolute imports (e.g. `from src.extractors import …`). When refactoring, **do not churn import style** across a package unless you are standardizing that entire package in one pass.
+- Avoid new **circular imports** between `graph`, `extractors`, and `analysis`; extract shared types/helpers to the lowest layer that both sides may depend on.
+
+## Docstrings
+
+- Add a docstring to every **new** public function or method; prefer **Google-style** short `Args:` / `Returns:` blocks for non-trivial APIs (match surrounding modules).
+
+## Safe refactors
+
+- **Extract function** instead of duplicating AST or graph logic; pass `repo_path: Path` and explicit options (exclude dirs, etc.) rather than globals.
+- **Rename** symbols with IDE-style renames across all references, including templates or JSON keys only if they are truly internal (user-visible keys need a deliberate migration).
+- **Dead code**: remove only when sure nothing imports it (grep under `src/` and entry scripts).
+
+## Anti-patterns
+
+```python
+# BAD: swallowing errors during refactor
+except Exception:
+    pass
+
+# BETTER: log or re-raise with context; match existing error handling in the module
+except ValueError as e:
+    raise ValueError("…") from e
+```
+
+Do not add broad `try/except` around large blocks to “make refactors safer”; narrow exceptions to the specific call that can fail.

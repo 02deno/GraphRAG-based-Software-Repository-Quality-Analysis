@@ -1,0 +1,32 @@
+---
+description: Refactoring scope, layers, and files to leave unchanged
+alwaysApply: true
+---
+
+# Refactor guardrails
+
+## Scope
+
+- Treat **`src/`** as the product code to refactor. Prefer small, reviewable diffs; do not “clean up” unrelated modules in the same change.
+- **`data/`** holds sample or cloned repositories. Do not refactor, reformat, or “improve” files there unless the user explicitly asks.
+- **`results/`** is generated output. Do not commit large binary/JSON churn from refactors unless the user requests regenerating artifacts.
+
+## Layer boundaries (keep imports coherent)
+
+When moving or splitting code, preserve this direction of dependencies:
+
+1. **`src/web/`** — HTTP, sessions, wiring. Call **`handlers/`**, **`services/`**, **`utils/`**; avoid embedding graph construction or AST logic in route functions.
+2. **`src/compatibility/`** — repo scoring and checks; keep it independent of Flask request objects where possible.
+3. **`src/extractors/`** — parsing and file discovery only; no Flask, no HTTP.
+4. **`src/graph/`** — nodes, edges, builder, schema; may use extractors; must not import web or compatibility.
+5. **`src/analysis/`**, **`src/visualization/`**, **`src/stats/`** — operate on built graphs or paths; avoid circular imports back into `graph_builder` unless there is a clear, existing pattern.
+
+CLI entry scripts at **`src/*.py`** (e.g. `build_graph.py`, `main_pipeline.py`) should stay thin wrappers around library code in the layers above.
+
+## Graph schema and JSON
+
+- Changes to node/edge shapes or IDs must stay aligned with **`src/graph/schema.py`** and any serialization used by the web app and **`graph_to_dict`**-style exports. Refactor schema and all producers/consumers in one coherent step.
+
+## Verification
+
+After non-trivial refactors, run the smallest relevant check the project provides (e.g. import smoke test, web app start, or a targeted script) rather than only relying on static edits.
