@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -9,48 +8,14 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import networkx as nx
 
-
-def load_graph(graph_path: Path) -> Dict[str, List[Dict[str, str]]]:
-    """Load graph JSON from build_graph.py output."""
-    return json.loads(graph_path.read_text(encoding="utf-8"))
-
-
-def compute_degrees(edges: List[Dict[str, str]]) -> Tuple[Counter, Counter]:
-    """Compute in-degree and out-degree counters for directed edges."""
-    in_degree: Counter = Counter()
-    out_degree: Counter = Counter()
-    for edge in edges:
-        out_degree[edge["source"]] += 1
-        in_degree[edge["target"]] += 1
-    return in_degree, out_degree
-
-
-def compute_degrees_by_type(edges: List[Dict[str, str]]) -> Dict[str, Tuple[Counter, Counter]]:
-    """Compute in-degree and out-degree counters for each edge type."""
-    degrees_by_type: Dict[str, Tuple[Counter, Counter]] = {}
-    for edge in edges:
-        edge_type = edge.get("type", "UNKNOWN")
-        if edge_type not in degrees_by_type:
-            degrees_by_type[edge_type] = (Counter(), Counter())
-        in_cnt, out_cnt = degrees_by_type[edge_type]
-        out_cnt[edge["source"]] += 1
-        in_cnt[edge["target"]] += 1
-    return degrees_by_type
-
-
-def node_path_map(nodes: List[Dict[str, str]]) -> Dict[str, str]:
-    """Map node id to human-readable file path."""
-    return {node["id"]: node.get("path", node["id"]) for node in nodes}
-
-
-def graph_name_from_path(graph_path: Path) -> str:
-    """Extract a compact repository/graph name from the path."""
-    stem = graph_path.stem
-    if stem.endswith("_imports_graph"):
-        return stem[: -len("_imports_graph")]
-    if stem.endswith("_graph"):
-        return stem[: -len("_graph")]
-    return stem
+from src.graph.json_document import (
+    compute_in_out_degrees,
+    compute_in_out_degrees_by_edge_type,
+    human_readable_graph_edge_label,
+    load_graph_document,
+    map_node_id_to_path,
+    graph_stem_display_name,
+)
 
 
 def build_nx_graph(nodes: List[Dict[str, str]], edges: List[Dict[str, str]]) -> nx.DiGraph:
@@ -63,8 +28,17 @@ def build_nx_graph(nodes: List[Dict[str, str]], edges: List[Dict[str, str]]) -> 
     return graph
 
 
-def safe_spring_layout(graph: nx.Graph, seed: int = 42, k: float = 0.7):
-    """Compute a layout for plotting, with a fallback when SciPy is unavailable."""
+def safe_spring_layout(graph: nx.Graph, seed: int = 42, k: float = 0.7) -> dict:
+    """Compute a 2D layout for *graph*, falling back if spring layout is unavailable.
+
+    Args:
+        graph: NetworkX graph to lay out.
+        seed: Random seed for reproducible layouts.
+        k: Optimal distance between nodes (spring layout).
+
+    Returns:
+        Mapping of node id to ``(x, y)`` positions.
+    """
     try:
         return nx.spring_layout(graph, seed=seed, k=k)
     except (ModuleNotFoundError, TypeError):
@@ -187,14 +161,6 @@ def compute_graph_for_edge_type(
     return graph
 
 
-def graph_edge_type_label(edges: List[Dict[str, str]]) -> str:
-    """Build a human-readable label for the graph edge type(s)."""
-    edge_types = sorted({edge.get("type", "UNKNOWN") for edge in edges})
-    if len(edge_types) == 1:
-        return f"{edge_types[0]} graph"
-    return f"{'+'.join(edge_types)} graph"
-
-
 def build_visual_summary(
     graph_path: Path,
     nodes: List[Dict[str, str]],
@@ -203,14 +169,26 @@ def build_visual_summary(
     path_by_id: Dict[str, str],
     top_k: int,
 ) -> str:
-    """Build a short text summary for generated visuals."""
-    repo_name = graph_name_from_path(graph_path)
-    graph_label = f"{repo_name} — {graph_edge_type_label(edges)}"
+    """Build a short plain-text summary describing graph size and per-type degree leaders.
+
+    Args:
+        graph_path: Source graph path (for headers).
+        nodes: Graph node list.
+        edges: Graph edge list (used for type labels).
+        degrees_by_type: In/out counters keyed by edge type string.
+        path_by_id: Node id to display path.
+        top_k: How many ranked nodes to print per section.
+
+    Returns:
+        Newline-terminated summary string.
+    """
+    repo_name = graph_stem_display_name(graph_path)
+    graph_label = f"{repo_name} — {human_readable_graph_edge_label(edges)}"
     lines: List[str] = []
     lines.append(f"Repository: {repo_name}")
     lines.append(f"Graph label: {graph_label}")
     lines.append(f"Graph file: {graph_path}")
-    lines.append(f"Graph type: {graph_edge_type_label(edges)}")
+    lines.append(f"Graph type: {human_readable_graph_edge_label(edges)}")
     lines.append(f"Total nodes: {len(nodes)}")
     lines.append(f"Total edges: {len(edges)}")
     lines.append("")
@@ -243,18 +221,36 @@ def generate_visual_summary(
     analysis_output_in_file: Path | None = None,
     summary_output: Path | None = None,
 ) -> tuple[List[str], Dict[str, object]]:
+    """Render structure and degree plots plus a text summary for one graph JSON file.
+
+    Args:
+        graph_path: Path to the serialized graph document.
+        top_k: How many top nodes to show per metric in charts and summary text.
+        structure_nodes: Size cap for the high-degree subgraph used in structure plots.
+        skip_structure: When True, skip PNG structure subgraph exports.
+        structure_output: Optional path for the full-graph structure image.
+        structure_output_imports: Optional path for IMPORTS-only structure image.
+        structure_output_in_file: Optional path for IN_FILE-only structure image.
+        analysis_output: Optional path for combined degree bar chart image.
+        analysis_output_imports: Optional path for IMPORTS degree bar chart.
+        analysis_output_in_file: Optional path for IN_FILE degree bar chart.
+        summary_output: Optional path for the textual summary file.
+
+    Returns:
+        ``(report_lines, {"summary_text": str, "summary_output": Path})`` for callers to log or save.
+    """
     graph_path = graph_path.resolve()
-    graph_data = load_graph(graph_path)
+    graph_data = load_graph_document(graph_path)
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
-    path_by_id = node_path_map(nodes)
+    path_by_id = map_node_id_to_path(nodes)
 
-    in_degree, out_degree = compute_degrees(edges)
-    degrees_by_type = compute_degrees_by_type(edges)
+    in_degree, out_degree = compute_in_out_degrees(edges)
+    degrees_by_type = compute_in_out_degrees_by_edge_type(edges)
     nx_graph = build_nx_graph(nodes, edges)
 
-    repo_name = graph_name_from_path(graph_path)
-    graph_label = f"{repo_name} — {graph_edge_type_label(edges)}"
+    repo_name = graph_stem_display_name(graph_path)
+    graph_label = f"{repo_name} — {human_readable_graph_edge_label(edges)}"
     imports_graph_label = f"{repo_name} — IMPORTS graph"
     in_file_graph_label = f"{repo_name} — IN_FILE graph"
 
@@ -303,8 +299,8 @@ def generate_visual_summary(
         in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
         imports_graph = compute_graph_for_edge_type(nodes, edges, "IMPORTS")
         in_file_graph = compute_graph_for_edge_type(nodes, edges, "IN_FILE")
-        imports_in_degree, imports_out_degree = compute_degrees(imports_edges)
-        in_file_in_degree, in_file_out_degree = compute_degrees(in_file_edges)
+        imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
+        in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
 
         imports_selected = select_structure_nodes(
             graph=imports_graph,
@@ -347,8 +343,8 @@ def generate_visual_summary(
 
     imports_edges = [edge for edge in edges if edge.get("type") == "IMPORTS"]
     in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
-    imports_in_degree, imports_out_degree = compute_degrees(imports_edges)
-    in_file_in_degree, in_file_out_degree = compute_degrees(in_file_edges)
+    imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
+    in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
 
     plot_degree_bars(
         imports_in_degree,
@@ -385,11 +381,18 @@ def generate_visual_summary(
 
 
 def save_visual_summary(summary_text: str, summary_output: Path) -> None:
+    """Write *summary_text* to *summary_output*, creating parent directories if needed.
+
+    Args:
+        summary_text: Full summary body.
+        summary_output: Destination file path.
+    """
     summary_output.parent.mkdir(parents=True, exist_ok=True)
     summary_output.write_text(summary_text, encoding="utf-8")
 
 
 def main() -> None:
+    """CLI entry: parse arguments and run :func:`generate_visual_summary`."""
     parser = argparse.ArgumentParser(description="Visualize graph structure and degree analysis.")
     parser.add_argument(
         "--graph",

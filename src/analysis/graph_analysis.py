@@ -1,68 +1,30 @@
 from __future__ import annotations
 
 import argparse
-import json
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-
-def load_graph(graph_path: Path) -> Dict[str, List[Dict[str, str]]]:
-    """Load graph JSON produced by build_graph.py."""
-    return json.loads(graph_path.read_text(encoding="utf-8"))
-
-
-def compute_degrees(edges: List[Dict[str, str]]) -> Tuple[Counter, Counter]:
-    """Compute in-degree and out-degree counters from directed edges."""
-    in_degree: Counter = Counter()
-    out_degree: Counter = Counter()
-    for edge in edges:
-        source = edge["source"]
-        target = edge["target"]
-        out_degree[source] += 1
-        in_degree[target] += 1
-    return in_degree, out_degree
-
-
-def compute_degrees_by_type(edges: List[Dict[str, str]]) -> Dict[str, Tuple[Counter, Counter]]:
-    """Compute in/out-degree counters grouped by edge type."""
-    degrees_by_type: Dict[str, Tuple[Counter, Counter]] = {}
-    for edge in edges:
-        edge_type = edge.get("type", "UNKNOWN")
-        if edge_type not in degrees_by_type:
-            degrees_by_type[edge_type] = (Counter(), Counter())
-        in_deg, out_deg = degrees_by_type[edge_type]
-        out_deg[edge["source"]] += 1
-        in_deg[edge["target"]] += 1
-    return degrees_by_type
-
-
-def node_path_map(nodes: List[Dict[str, str]]) -> Dict[str, str]:
-    """Map node id to display path."""
-    return {node["id"]: node.get("path", node["id"]) for node in nodes}
-
-
-def graph_name_from_path(graph_path: Path) -> str:
-    """Extract a compact repository/graph name from the path."""
-    stem = graph_path.stem
-    if stem.endswith("_imports_graph"):
-        return stem[: -len("_imports_graph")]
-    if stem.endswith("_graph"):
-        return stem[: -len("_graph")]
-    return stem
+from src.graph.json_document import (
+    compute_in_out_degrees_by_edge_type,
+    human_readable_graph_edge_label,
+    load_graph_document,
+    map_node_id_to_path,
+    graph_stem_display_name,
+)
 
 
 def top_k(counter: Counter, k: int) -> List[Tuple[str, int]]:
-    """Return top-k items from a counter."""
+    """Return the top-*k* items from a counter by count descending.
+
+    Args:
+        counter: Counter mapping ids to scores.
+        k: Maximum number of entries to return.
+
+    Returns:
+        List of ``(id, count)`` pairs from ``most_common(k)``.
+    """
     return counter.most_common(k)
-
-
-def graph_edge_type_label(edges: List[Dict[str, str]]) -> str:
-    """Build a human-readable label for the graph edge type(s)."""
-    edge_types = sorted({edge.get("type", "UNKNOWN") for edge in edges})
-    if len(edge_types) == 1:
-        return f"{edge_types[0]} graph"
-    return f"{'+'.join(edge_types)} graph"
 
 
 def format_top_nodes_section(
@@ -70,6 +32,16 @@ def format_top_nodes_section(
     items: List[Tuple[str, int]],
     path_by_id: Dict[str, str],
 ) -> List[str]:
+    """Format one titled section listing top nodes with paths.
+
+    Args:
+        title: Section heading line.
+        items: Ranked node ids and scores.
+        path_by_id: Mapping from node id to display path.
+
+    Returns:
+        Lines of plain text for the report section.
+    """
     lines: List[str] = []
     lines.append(title)
     if items:
@@ -94,8 +66,26 @@ def format_analysis_report(
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
-    """Build a plain-text analysis report."""
-    graph_label = graph_edge_type_label(edges)
+    """Build a plain-text analysis report for one graph document.
+
+    Args:
+        graph_path: Source graph file path (for header).
+        nodes: Graph nodes list.
+        edges: Graph edges list.
+        edge_type_counts: Precomputed counts per edge type.
+        imports_in: Top nodes by incoming IMPORTS edges.
+        imports_out: Top nodes by outgoing IMPORTS edges.
+        in_file_in: Top nodes by incoming IN_FILE edges.
+        in_file_out: Top nodes by outgoing IN_FILE edges.
+        tests_in: Top nodes by incoming TESTS edges.
+        tests_out: Top nodes by outgoing TESTS edges.
+        path_by_id: Node id to path map for display.
+        top_k_value: How many top entries to show per section.
+
+    Returns:
+        Full report as a single string with embedded newlines.
+    """
+    graph_label = human_readable_graph_edge_label(edges)
     lines: List[str] = []
     lines.append(f"Graph file: {graph_path}")
     lines.append(f"Graph type: {graph_label}")
@@ -157,13 +147,23 @@ def format_analysis_report(
 
 
 def generate_analysis_text_report(graph_path: Path, top_k_value: int = 10) -> tuple[str, Path]:
+    """Load a graph JSON file and produce a degree-based text report.
+
+    Args:
+        graph_path: Path to the serialized graph document.
+        top_k_value: Number of top-ranked nodes to include per category.
+
+    Returns:
+        Tuple of ``(report_text, default_report_path)`` where the default path is
+        under ``results/reports/`` derived from the graph filename.
+    """
     graph_path = graph_path.resolve()
-    graph = load_graph(graph_path)
+    graph = load_graph_document(graph_path)
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
-    path_by_id = node_path_map(nodes)
+    path_by_id = map_node_id_to_path(nodes)
 
-    degrees_by_type = compute_degrees_by_type(edges)
+    degrees_by_type = compute_in_out_degrees_by_edge_type(edges)
     edge_type_counts = Counter(edge.get("type", "UNKNOWN") for edge in edges)
     imports_in, imports_out = degrees_by_type.get("IMPORTS", (Counter(), Counter()))
     in_file_in, in_file_out = degrees_by_type.get("IN_FILE", (Counter(), Counter()))
@@ -184,16 +184,23 @@ def generate_analysis_text_report(graph_path: Path, top_k_value: int = 10) -> tu
         top_k_value=top_k_value,
     )
 
-    report_path = Path(f"results/reports/{graph_name_from_path(graph_path)}_graph_analysis.txt").resolve()
+    report_path = Path(f"results/reports/{graph_stem_display_name(graph_path)}_graph_analysis.txt").resolve()
     return report, report_path
 
 
 def save_analysis_report(report: str, report_path: Path) -> None:
+    """Persist a text report to disk, creating parent directories as needed.
+
+    Args:
+        report: Full report body.
+        report_path: Destination file path.
+    """
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report + "\n", encoding="utf-8")
 
 
 def main() -> None:
+    """CLI entry: load a graph file, print analysis, optionally save report."""
     parser = argparse.ArgumentParser(description="Analyze a repository graph document.")
     parser.add_argument(
         "--graph",
@@ -215,3 +222,7 @@ def main() -> None:
     print(report)
     print("")
     print(f"Report saved to: {actual_report_path}")
+
+
+if __name__ == "__main__":
+    main()

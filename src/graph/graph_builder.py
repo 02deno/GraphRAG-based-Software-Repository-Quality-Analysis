@@ -23,9 +23,14 @@ from .schema import graph_to_dict
 
 
 class GraphBuilder:
-    """Build a structured graph from a Python repository."""
+    """Orchestrate scanning a Python repo and assembling typed nodes and edges."""
 
     def __init__(self, repo_path: Path) -> None:
+        """Prepare empty stores keyed by the resolved repository root.
+
+        Args:
+            repo_path: Absolute path to the repository root directory.
+        """
         self.repo_path = repo_path
         self.nodes: Dict[str, object] = {}
         self.edges: List[object] = []
@@ -37,6 +42,7 @@ class GraphBuilder:
         self.file_module_aliases: Dict[str, Set[str]] = {}
 
     def build(self) -> None:
+        """Populate ``nodes`` and ``edges`` by walking Python files under ``repo_path``."""
         python_files = collect_python_files(self.repo_path, exclude_dirs={"venv", "node_modules", "__pycache__"})
         file_nodes: List[FileNode] = []
 
@@ -81,6 +87,7 @@ class GraphBuilder:
         self.edges.extend(build_tests_edges(test_nodes, self.nodes_by_type))
 
     def _build_import_edges(self, file_id: str, imports: Set[str]) -> List[ImportsEdge]:
+        """Resolve ``imports`` against collected module aliases and emit IMPORTS edges."""
         module_lookup = {
             alias: target_file_id
             for target_file_id, aliases in self.file_module_aliases.items()
@@ -93,6 +100,7 @@ class GraphBuilder:
         return edges
 
     def to_dict(self) -> dict:
+        """Return serializable ``nodes`` and ``edges`` lists (dict rows per element)."""
         return {
             "nodes": [self._node_to_dict(node) for node in self.nodes.values()],
             "edges": [self._edge_to_dict(edge) for edge in self.edges],
@@ -100,25 +108,37 @@ class GraphBuilder:
 
     @staticmethod
     def _node_to_dict(node: object) -> dict:
+        """Serialize a node instance using ``to_dict`` when available."""
         if hasattr(node, "to_dict"):
             return node.to_dict()
         return node.__dict__
 
     @staticmethod
     def _edge_to_dict(edge: object) -> dict:
+        """Serialize an edge instance using ``to_dict`` when available."""
         if hasattr(edge, "to_dict"):
             return edge.to_dict()
         return edge.__dict__
 
 
 def build_graph(repo_path: Path) -> dict:
-    """Build a graph document from a repository path."""
+    """Build and return a schema-wrapped graph document dict for *repo_path*.
+
+    Returns:
+        Mapping including ``nodes``, ``edges``, and schema metadata from :func:`graph_to_dict`.
+    """
     builder = GraphBuilder(repo_path)
     builder.build()
-    return graph_to_dict(builder.to_dict()["nodes"], builder.to_dict()["edges"])
+    raw = builder.to_dict()
+    return graph_to_dict(raw["nodes"], raw["edges"])
 
 
 def save_graph(graph: dict, output_path: Path) -> None:
-    """Write the graph document to a JSON file."""
+    """Write *graph* as indented JSON to *output_path* (parents created as needed).
+
+    Args:
+        graph: Full document from :func:`graph_to_dict` or equivalent.
+        output_path: Destination ``.json`` file.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(graph, indent=2), encoding="utf-8")
