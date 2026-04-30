@@ -50,12 +50,18 @@ This will compute repository-level statistics and save them into `results/repo_s
 python src/main_pipeline.py --repo "PATH_TO_TARGET_REPO"
 ```
 
-Optional outputs:
+This saves pipeline outputs under `results/<repo_name>_<YYYYMMDD>/` with prefixed filenames like:
+
+- `results/<repo_name>_<YYYYMMDD>/<repo_name>_graph.json`
+- `results/<repo_name>_<YYYYMMDD>/<repo_name>_pipeline_analysis.txt`
+- `results/<repo_name>_<YYYYMMDD>/<repo_name>_pipeline_visual_summary.txt`
+
+Optional explicit outputs:
 
 ```bash
-python src/main_pipeline.py --repo "PATH_TO_TARGET_REPO" --graph-output "results/graphs/myrepo_graph.json" \
-  --analysis-output "results/reports/myrepo_analysis.txt" \
-  --visual-summary-output "results/reports/myrepo_visual_summary.txt"
+python src/main_pipeline.py --repo "PATH_TO_TARGET_REPO" --graph-output "results/myrepo_20260501/myrepo_graph.json" \
+  --analysis-output "results/myrepo_20260501/myrepo_analysis.txt" \
+  --visual-summary-output "results/myrepo_20260501/myrepo_visual_summary.txt"
 ```
 
 ## Developer API example

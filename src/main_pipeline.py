@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import date
 from pathlib import Path
 
 from src.analysis.graph_analysis import generate_analysis_text_report, save_analysis_report
@@ -8,21 +9,25 @@ from src.graph import GraphBuilder, graph_to_dict, save_graph, validate_graph_co
 from src.visualization.graph_visualization import generate_visual_summary, save_visual_summary
 
 
-def default_graph_path(repo_path: Path) -> Path:
-    output_dir = Path("results/graphs")
+def results_base_dir(repo_path: Path) -> Path:
+    folder_name = f"{repo_path.name}_{date.today().strftime('%Y%m%d')}"
+    output_dir = Path("results") / folder_name
     output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def default_graph_path(repo_path: Path) -> Path:
+    output_dir = results_base_dir(repo_path)
     return output_dir / f"{repo_path.name}_graph.json"
 
 
 def default_analysis_path(repo_path: Path) -> Path:
-    output_dir = Path("results/reports")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = results_base_dir(repo_path)
     return output_dir / f"{repo_path.name}_pipeline_analysis.txt"
 
 
 def default_visual_summary_path(repo_path: Path) -> Path:
-    output_dir = Path("results/reports")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = results_base_dir(repo_path)
     return output_dir / f"{repo_path.name}_pipeline_visual_summary.txt"
 
 

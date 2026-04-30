@@ -22,6 +22,7 @@ Please check:
 - `src/build_graph.py`: CLI wrapper to build graph JSON
 - `src/analyze_graph.py`: CLI wrapper to report edge-degree metrics
 - `src/main_pipeline.py`: full pipeline entrypoint for build + analyze + visualize
+- Pipeline outputs are saved under `results/<repo_name>_<YYYYMMDD>/` by default.
 - Full usage examples are available in `docs/USAGE.md`
 
 ## Run the first extractor
