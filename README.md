@@ -27,31 +27,33 @@ python src/build_graph.py --repo "PATH_TO_TARGET_REPO"
 
 Default output:
 
-- `results/graph_file_imports.json`
+- `results/graphs/<repo_name>_graph.json`
 
 Current extractor output includes:
 
 - `File` nodes
 - `Function` and `Class` nodes (AST-based)
+- `Test` nodes for pytest/unittest patterns
 - `IMPORTS` edges (`File -> File`)
 - `IN_FILE` edges (`Function/Class -> File`)
+- `TESTS` edges (test function -> target function/class)
 
 ## Run basic graph analysis
 
 ```bash
-python src/analyze_graph.py --graph "results/graph_file_imports.json" --top-k 10
+python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --top-k 10
 ```
 
 Save analysis to a text file:
 
 ```bash
-python src/analyze_graph.py --graph "results/graph_file_imports.json" --top-k 10 --save-report "results/basic_analysis.txt"
+python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --top-k 10 --save-report "results/basic_analysis.txt"
 ```
 
 ## Create visual outputs
 
 ```bash
-python src/visualize_graph.py --graph "results/graph_file_imports.json"
+python src/visualize_graph.py --graph "results/graphs/<repo_name>_graph.json"
 ```
 
 Default visualization outputs:

@@ -25,9 +25,10 @@ Step 2 current progress:
 
 - Done: Function/Class extraction from Python AST
 - Done: `IN_FILE` edge generation (`Function/Class -> File`)
+- Done: `Test` node extraction and `TESTS` edge generation
 - Pending:
-  - `Test` and `Commit` nodes
-  - `CALLS`, `TESTS`, `MODIFIED_BY` edges
+  - `Commit` nodes
+  - `CALLS`, `MODIFIED_BY` edges
 
 ## Step 3 - Initial Analysis
 

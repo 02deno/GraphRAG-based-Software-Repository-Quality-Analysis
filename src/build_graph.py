@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Set
 
@@ -168,6 +169,126 @@ def extract_functions_and_classes(
     return collector.function_nodes, collector.class_nodes, in_file_edges
 
 
+def is_test_file(file_path: Path) -> bool:
+    """Determine if a Python file is a test file by naming or path conventions."""
+    filename = file_path.name
+    if filename.startswith("test_") or filename.endswith("_test.py"):
+        return True
+    return any(part.lower() == "tests" or part.lower() == "test" for part in file_path.parts)
+
+
+class TestCollector(ast.NodeVisitor):
+    """Collect test functions and test methods from AST."""
+
+    def __init__(self, file_id: str) -> None:
+        self.file_id = file_id
+        self.scope_stack: List[str] = []
+        self.test_nodes: List[Dict[str, str]] = []
+
+    def _qualified_name(self, symbol_name: str) -> str:
+        return ".".join(self.scope_stack + [symbol_name]) if self.scope_stack else symbol_name
+
+    def _target_hint(self, symbol_name: str) -> str:
+        if symbol_name.startswith("test_"):
+            return symbol_name[len("test_"):]
+        return symbol_name
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.scope_stack.append(node.name)
+        self.generic_visit(node)
+        self.scope_stack.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        if node.name.startswith("test_"):
+            qualified_name = self._qualified_name(node.name)
+            self.test_nodes.append(
+                {
+                    "id": f"test::{self.file_id}::{qualified_name}",
+                    "type": "Test",
+                    "name": node.name,
+                    "file_path": self.file_id,
+                    "target_hint": self._target_hint(node.name),
+                }
+            )
+        self.scope_stack.append(node.name)
+        self.generic_visit(node)
+        self.scope_stack.pop()
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self.visit_FunctionDef(node)
+
+
+def extract_tests(file_path: Path, repo_path: Path) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
+    """Extract Test nodes from Python test files, plus placeholder test metadata."""
+    if not is_test_file(file_path):
+        return [], []
+
+    file_id = str(file_path.relative_to(repo_path))
+    try:
+        source = file_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except Exception:
+        return [], []
+
+    collector = TestCollector(file_id=file_id)
+    collector.visit(tree)
+    return collector.test_nodes, []
+
+
+def find_test_targets(
+    target_hint: str,
+    function_nodes: List[Dict[str, str]],
+    class_nodes: List[Dict[str, str]],
+) -> List[str]:
+    """Find candidate function/class node ids that match a test target hint."""
+    hint = target_hint.lower().replace("test_", "")
+    tokens = [token for token in re.split(r"[^a-z0-9]+", hint) if token]
+    candidates: List[str] = []
+
+    def matches(node: Dict[str, str]) -> bool:
+        if is_test_file(Path(node["file_path"])):
+            return False
+        name = node["name"].lower()
+        qualified = node.get("qualified_name", "").lower()
+        if hint and hint in qualified:
+            return True
+        if hint and hint == name:
+            return True
+        if any(token in name or token in qualified for token in tokens):
+            return True
+        return False
+
+    for node in function_nodes + class_nodes:
+        if matches(node):
+            candidates.append(node["id"])
+
+    return sorted(set(candidates))
+
+
+def build_tests_edges(
+    test_nodes: List[Dict[str, str]],
+    function_nodes: List[Dict[str, str]],
+    class_nodes: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    """Build TESTS edges from test nodes to function/class targets."""
+    edges: List[Dict[str, str]] = []
+    edge_keys: Set[tuple[str, str, str]] = set()
+    for test_node in test_nodes:
+        targets = find_test_targets(test_node["target_hint"], function_nodes, class_nodes)
+        for target_id in targets:
+            edge_key = (test_node["id"], target_id, "TESTS")
+            if edge_key not in edge_keys:
+                edge_keys.add(edge_key)
+                edges.append(
+                    {
+                        "source": test_node["id"],
+                        "target": target_id,
+                        "type": "TESTS",
+                    }
+                )
+    return edges
+
+
 def validate_graph_contract(nodes: List[Dict[str, str]], edges: List[Dict[str, str]]) -> None:
     """Validate the currently generated graph against the schema contract."""
     for node in nodes:
@@ -191,9 +312,13 @@ def validate_graph_contract(nodes: List[Dict[str, str]], edges: List[Dict[str, s
 
 def build_file_import_graph(repo_path: Path, exclude_dirs: Set[str] | None = None) -> Dict[str, object]:
     """
-    Build a minimal graph with:
+    Build a graph with:
     - File nodes
-    - IMPORTS edges (File -> File when resolvable inside repository)
+    - Function and Class nodes
+    - Test nodes for pytest/unittest patterns
+    - IMPORTS edges
+    - IN_FILE edges
+    - TESTS edges
     """
     py_files = collect_python_files(repo_path, exclude_dirs=exclude_dirs)
     file_to_module: Dict[Path, str] = {p: module_name_from_path(p, repo_path) for p in py_files}
@@ -205,6 +330,9 @@ def build_file_import_graph(repo_path: Path, exclude_dirs: Set[str] | None = Non
     nodes: List[Dict[str, str]] = []
     edges: List[Dict[str, str]] = []
     edge_keys: Set[tuple[str, str, str]] = set()
+    all_function_nodes: List[Dict[str, str]] = []
+    all_class_nodes: List[Dict[str, str]] = []
+    all_test_nodes: List[Dict[str, str]] = []
 
     for file_path, module_name in file_to_module.items():
         file_id = str(file_path.relative_to(repo_path))
@@ -222,13 +350,27 @@ def build_file_import_graph(repo_path: Path, exclude_dirs: Set[str] | None = Non
             repo_path=repo_path,
             module_name=module_name,
         )
+        test_nodes, _ = extract_tests(file_path=file_path, repo_path=repo_path)
+
+        all_function_nodes.extend(function_nodes)
+        all_class_nodes.extend(class_nodes)
+        all_test_nodes.extend(test_nodes)
+
         nodes.extend(function_nodes)
         nodes.extend(class_nodes)
+        nodes.extend(test_nodes)
         for edge in in_file_edges:
             edge_key = (edge["source"], edge["target"], edge["type"])
             if edge_key not in edge_keys:
                 edge_keys.add(edge_key)
                 edges.append(edge)
+
+    tests_edges = build_tests_edges(all_test_nodes, all_function_nodes, all_class_nodes)
+    for edge in tests_edges:
+        edge_key = (edge["source"], edge["target"], edge["type"])
+        if edge_key not in edge_keys:
+            edge_keys.add(edge_key)
+            edges.append(edge)
 
     for file_path in py_files:
         source_id = str(file_path.relative_to(repo_path))
@@ -262,31 +404,31 @@ def build_file_import_graph(repo_path: Path, exclude_dirs: Set[str] | None = Non
         "schema_version": SCHEMA_VERSION,
         "schema_node_types": sorted(NODE_TYPES),
         "schema_edge_types": sorted(EDGE_TYPES),
-        "implemented_node_types": ["File", "Function", "Class"],
-        "implemented_edge_types": ["IMPORTS", "IN_FILE"],
+        "implemented_node_types": ["File", "Function", "Class", "Test"],
+        "implemented_edge_types": ["IMPORTS", "IN_FILE", "TESTS"],
         "nodes": nodes,
         "edges": edges,
     }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build minimal File+IMPORTS graph.")
+    parser = argparse.ArgumentParser(description="Build graph with File, Function, Class, Test nodes and IMPORTS/IN_FILE/TESTS edges.")
     parser.add_argument("--repo", required=True, help="Path to target repository")
     parser.add_argument(
         "--output",
         default=None,
-        help="Output graph JSON path (default: results/graphs/<repo_name>_imports_graph.json)",
+        help="Output graph JSON path (default: results/graphs/<repo_name>_graph.json)",
     )
     parser.add_argument(
         "--exclude-dirs",
-        default="tests,examples,docs,data",
+        default="examples,docs,data",
         help="Comma-separated directory names to exclude from repository traversal",
     )
     args = parser.parse_args()
 
     repo_path = Path(args.repo).resolve()
     if args.output is None:
-        output_path = Path("results") / "graphs" / f"{repo_path.name}_imports_graph.json"
+        output_path = Path("results") / "graphs" / f"{repo_path.name}_graph.json"
     else:
         output_path = Path(args.output).resolve()
 

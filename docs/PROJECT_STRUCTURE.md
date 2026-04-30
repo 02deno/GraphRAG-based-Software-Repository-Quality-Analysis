@@ -25,4 +25,4 @@ This document describes the current high-level structure of the project.
 - `data/`
   - Target repositories and input data.
 - `results/`
-  - Generated outputs (e.g. `graph_file_imports.json`, `graph_structure.png`, `repo_stats.txt`).
+  - Generated outputs (e.g. `results/graphs/<repo_name>_graph.json`, `graph_structure.png`, `repo_stats.txt`).

@@ -89,6 +89,8 @@ def format_analysis_report(
     imports_out: List[Tuple[str, int]],
     in_file_in: List[Tuple[str, int]],
     in_file_out: List[Tuple[str, int]],
+    tests_in: List[Tuple[str, int]],
+    tests_out: List[Tuple[str, int]],
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
@@ -135,6 +137,22 @@ def format_analysis_report(
             path_by_id,
         )
     )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by incoming TESTS edges:",
+            tests_in,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by outgoing TESTS edges:",
+            tests_out,
+            path_by_id,
+        )
+    )
     return "\n".join(lines)
 
 
@@ -171,6 +189,7 @@ def main() -> None:
 
     imports_in, imports_out = degrees_by_type.get("IMPORTS", (Counter(), Counter()))
     in_file_in, in_file_out = degrees_by_type.get("IN_FILE", (Counter(), Counter()))
+    tests_in, tests_out = degrees_by_type.get("TESTS", (Counter(), Counter()))
 
     report = format_analysis_report(
         graph_path=graph_path,
@@ -181,6 +200,8 @@ def main() -> None:
         imports_out=top_k(imports_out, args.top_k),
         in_file_in=top_k(in_file_in, args.top_k),
         in_file_out=top_k(in_file_out, args.top_k),
+        tests_in=top_k(tests_in, args.top_k),
+        tests_out=top_k(tests_out, args.top_k),
         path_by_id=path_by_id,
         top_k_value=args.top_k,
     )

@@ -16,10 +16,12 @@ This document explains the current functions in the project scripts.
   - Walks AST scopes and collects `Function` / `Class` symbols with qualified names.
 - `extract_functions_and_classes(file_path, repo_path, module_name)`
   - Extracts `Function` and `Class` nodes and generates `IN_FILE` edges.
+- `extract_tests(file_path, repo_path)`
+  - Extracts `Test` nodes from pytest/unittest-style files.
 - `validate_graph_contract(nodes, edges)`
   - Validates generated nodes/edges against the fixed schema contract.
 - `build_file_import_graph(repo_path)`
-  - Builds graph JSON with `File`, `Function`, `Class` nodes and `IMPORTS`, `IN_FILE` edges.
+  - Builds graph JSON with `File`, `Function`, `Class`, `Test` nodes and `IMPORTS`, `IN_FILE`, `TESTS` edges.
 - `main()`
   - CLI entry point for building and saving the graph.
 

@@ -39,9 +39,9 @@ Use this checklist before running the current `File + IMPORTS` pipeline on a new
 
 ## E) What Is Not Implemented Yet
 
-- [ ] Function/class-level graph extraction (`Function`, `Class` nodes) is not in the active pipeline.
+- [x] Function/class-level graph extraction (`Function`, `Class` nodes) is in the active pipeline.
 - [ ] Call graph edges (`CALLS`) are not extracted.
-- [ ] Test linkage (`TESTS`) is not extracted.
+- [x] Test linkage (`TESTS`) is partially extracted for pytest/unittest-style tests.
 - [ ] Commit-history edges (`MODIFIED_BY`) are not extracted.
 - [ ] Issue-tracker integration is not extracted.
 - [ ] GraphRAG retrieval + LLM reasoning pipeline is not implemented yet.

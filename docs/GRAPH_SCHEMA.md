@@ -40,8 +40,8 @@ Current implementation is still partial, but names and required fields are now f
 
 ## Current Implementation Status
 
-- Implemented node types: `File`, `Function`, `Class`
-- Implemented edge types: `IMPORTS`, `IN_FILE`
+- Implemented node types: `File`, `Function`, `Class`, `Test`
+- Implemented edge types: `IMPORTS`, `IN_FILE`, `TESTS`
 - Implemented validation:
   - Node and edge type names are checked against fixed dictionaries.
   - Required fields are validated for generated nodes/edges.
