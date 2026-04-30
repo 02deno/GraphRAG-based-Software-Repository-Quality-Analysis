@@ -1,81 +1,64 @@
 from __future__ import annotations
 
-import json
-import subprocess
-from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
-from ...compatibility.repo_checker import RepoCompatibilityChecker
+from src.compatibility.repo_checker import RepoCompatibilityChecker
+from src.pipeline import run_repository_pipeline
+from src.pipeline.output_paths import new_web_session_results_dir
 
 
 class AnalysisService:
-    """Handles repository analysis operations."""
-    
-    def __init__(self):
+    """Coordinates compatibility checks and the graph analysis pipeline for the web UI.
+
+    Satisfies the structural contracts ``CompatibilityService`` and
+    ``AnalysisPipelineService`` in ``src.web.service_protocols`` (duck typing).
+    """
+
+    def __init__(self) -> None:
+        """Create a service with a dedicated compatibility checker instance."""
         self.compatibility_checker = RepoCompatibilityChecker()
-    
-    def run_compatibility_check(self, repo_path: str) -> Dict:
-        """Run compatibility analysis on repository.
-        
+
+    def run_compatibility_check(self, repo_path: str) -> Dict[str, Any]:
+        """Run compatibility scoring on a repository path.
+
         Args:
-            repo_path: Path to repository
-            
+            repo_path: Filesystem path to the repository root.
+
         Returns:
-            Dict: Compatibility analysis results
+            Dict with score, details, warnings, and related metadata.
         """
         return self.compatibility_checker.analyze_repository(repo_path)
-    
-    def run_analysis_pipeline(self, repo_path: str) -> Dict:
-        """Run the main graph analysis pipeline.
-        
+
+    def run_analysis_pipeline(self, repo_path: str) -> Dict[str, Any]:
+        """Execute the full build/analyze (and optional visualize) pipeline.
+
         Args:
-            repo_path: Path to repository
-            
+            repo_path: Filesystem path to the repository root.
+
         Returns:
-            Dict: Analysis results
-            
+            Keys: ``graph_data``, ``analysis_text``, ``pipeline_output``, ``results_dir``.
+
         Raises:
-            Exception: If pipeline execution fails
+            OSError: If reading or writing pipeline artifacts fails.
+            ValueError: If graph validation fails.
         """
-        results_dir = Path("results") / f"web_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        results_dir.mkdir(parents=True, exist_ok=True)
-        
+        results_dir = new_web_session_results_dir()
         graph_output = results_dir / "graph.json"
         analysis_output = results_dir / "analysis.txt"
-        
-        cmd = [
-            "python", "src/main_pipeline.py",
-            "--repo", repo_path,
-            "--graph-output", str(graph_output),
-            "--analysis-output", str(analysis_output),
-            "--skip-visualization"
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
-        
-        if result.returncode != 0:
-            raise Exception(f"Pipeline failed: {result.stderr}")
-        
-        graph_data = {}
-        analysis_text = "No analysis available"
-        
-        if graph_output.exists():
-            try:
-                graph_data = graph_output.read_text()
-                graph_data = json.loads(graph_data)
-            except (json.JSONDecodeError, IOError):
-                graph_data = {}
-        
-        if analysis_output.exists():
-            try:
-                analysis_text = analysis_output.read_text()
-            except IOError:
-                analysis_text = "No analysis available"
-        
+
+        result = run_repository_pipeline(
+            Path(repo_path).resolve(),
+            graph_output=graph_output,
+            analysis_output=analysis_output,
+            visual_summary_output=None,
+            skip_visualization=True,
+            top_k=10,
+        )
+
         return {
-            'graph_data': graph_data,
-            'analysis_text': analysis_text,
-            'pipeline_output': result.stdout,
-            'results_dir': str(results_dir)
+            "graph_data": dict(result.graph_document),
+            "analysis_text": result.analysis_text,
+            "pipeline_output": "\n".join(result.log_lines),
+            "results_dir": str(results_dir),
         }

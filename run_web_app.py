@@ -15,9 +15,9 @@ import os
 import sys
 from pathlib import Path
 
-# Add src directory to Python path
-src_path = Path(__file__).parent / "src"
-sys.path.insert(0, str(src_path))
+# Project root must be on path so ``import src.…`` resolves (``src`` is the package).
+project_root = Path(__file__).resolve().parent
+sys.path.insert(0, str(project_root))
 
 if __name__ == "__main__":
     from src.web.app import app
