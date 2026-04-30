@@ -12,6 +12,7 @@ This document describes the current high-level structure of the project.
   - `build_graph.py`: Thin CLI wrapper that delegates graph construction to `src.graph.GraphBuilder`.
   - `analyze_graph.py`: Thin CLI wrapper calling `src.analysis.graph_analysis`.
   - `visualize_graph.py`: Thin CLI wrapper calling `src.visualization.graph_visualization`.
+  - `main_pipeline.py`: Full pipeline script that builds the graph, runs analysis, and generates visualization summaries.
   - `repo_stats.py`: Thin CLI wrapper calling `src.stats.repository_stats`.
   - `graph/`: modular graph model and builder.
     - `graph_builder.py`: Builds graph nodes/edges from repository AST data.

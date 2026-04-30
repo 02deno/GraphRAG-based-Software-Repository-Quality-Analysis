@@ -21,6 +21,7 @@ Please check:
 - `src/extractors/`: AST extraction for files, imports, symbols, and tests
 - `src/build_graph.py`: CLI wrapper to build graph JSON
 - `src/analyze_graph.py`: CLI wrapper to report edge-degree metrics
+- `src/main_pipeline.py`: full pipeline entrypoint for build + analyze + visualize
 - Full usage examples are available in `docs/USAGE.md`
 
 ## Run the first extractor

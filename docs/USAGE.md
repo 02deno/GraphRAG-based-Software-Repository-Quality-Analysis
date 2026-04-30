@@ -44,6 +44,20 @@ python src/repo_stats.py --repo "data/langgraph"
 
 This will compute repository-level statistics and save them into `results/repo_stats.txt` and `results/repo_stats.json` by default.
 
+## Full pipeline: build, analyze, visualize
+
+```bash
+python src/main_pipeline.py --repo "PATH_TO_TARGET_REPO"
+```
+
+Optional outputs:
+
+```bash
+python src/main_pipeline.py --repo "PATH_TO_TARGET_REPO" --graph-output "results/graphs/myrepo_graph.json" \
+  --analysis-output "results/reports/myrepo_analysis.txt" \
+  --visual-summary-output "results/reports/myrepo_visual_summary.txt"
+```
+
 ## Developer API example
 
 The core builder is available as a Python class from `src.graph`:

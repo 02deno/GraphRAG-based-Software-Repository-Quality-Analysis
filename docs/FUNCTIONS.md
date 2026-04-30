@@ -30,6 +30,12 @@ This document explains the current package-level API and CLI entrypoints in the 
   - CLI entrypoint for repository statistics.
   - Delegates stats computation to `src.stats.repository_stats`.
 
+## `src/main_pipeline.py`
+
+- `main()`
+  - CLI entrypoint for the full repository pipeline.
+  - Runs graph build, analysis report generation, and visualization summary creation.
+
 ## `src/graph/graph_builder.py`
 
 - `GraphBuilder`
