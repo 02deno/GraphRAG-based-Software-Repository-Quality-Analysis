@@ -7,6 +7,8 @@ from ..base_node import BaseNode
 
 @dataclass
 class CommitNode(BaseNode):
+    """Graph vertex for a version-control commit (reserved for future pipeline use)."""
+
     hash: str
     author: str
     date: str
@@ -21,6 +23,7 @@ class CommitNode(BaseNode):
         date: str,
         message: str,
     ) -> None:
+        """Populate commit metadata fields."""
         super().__init__(id=id, type="Commit")
         self.hash = hash
         self.author = author

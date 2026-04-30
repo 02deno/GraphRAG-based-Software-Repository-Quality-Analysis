@@ -25,7 +25,15 @@ EDGE_REQUIRED_FIELDS: Dict[str, Set[str]] = {
 
 
 def validate_graph_contract(nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]) -> None:
-    """Validate graph nodes and edges against the target schema."""
+    """Ensure every node and edge satisfies known types and required field sets.
+
+    Args:
+        nodes: Serialized node dicts with a ``type`` field.
+        edges: Serialized edge dicts with ``source``, ``target``, and ``type``.
+
+    Raises:
+        ValueError: On unknown type or missing required keys.
+    """
     for node in nodes:
         node_type = node.get("type", "")
         if node_type not in NODE_TYPES:
@@ -46,7 +54,15 @@ def validate_graph_contract(nodes: list[Dict[str, Any]], edges: list[Dict[str, A
 
 
 def graph_to_dict(nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]) -> Dict[str, Any]:
-    """Return a serializable graph document including schema metadata."""
+    """Wrap node and edge lists with schema version and allowed type metadata.
+
+    Args:
+        nodes: List of node dicts ready for JSON.
+        edges: List of edge dicts ready for JSON.
+
+    Returns:
+        Document suitable for persistence and web templates.
+    """
     return {
         "schema_version": SCHEMA_VERSION,
         "schema_node_types": sorted(NODE_TYPES),

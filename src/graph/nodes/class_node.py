@@ -7,12 +7,15 @@ from ..base_node import BaseNode
 
 @dataclass
 class ClassNode(BaseNode):
+    """Graph vertex for a Python class discovered via AST."""
+
     name: str
     qualified_name: str
     file_path: str
     type: str = field(init=False, default="Class")
 
     def __init__(self, id: str, name: str, qualified_name: str, file_path: str) -> None:
+        """Create a class node; *id* is stable and unique within the graph."""
         super().__init__(id=id, type="Class")
         self.name = name
         self.qualified_name = qualified_name
