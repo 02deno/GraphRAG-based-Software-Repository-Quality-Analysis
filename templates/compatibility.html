@@ -174,9 +174,13 @@
             cursor: pointer;
             font-size: 16px;
             width: 100%;
+            max-width: 100%;
             margin-top: 10px;
+            margin-left: 0;
+            margin-right: 0;
             text-decoration: none;
-            display: inline-block;
+            display: block;
+            box-sizing: border-box;
             text-align: center;
         }
         .btn:hover { background: #0056b3; }
@@ -195,6 +199,19 @@
             padding: 20px;
             margin: 20px 0;
             text-align: center;
+        }
+        .confirmation-prompt form {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .confirmation-prompt-secondary {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            margin-top: 10px;
         }
         .confirmation-prompt h3 {
             color: #721c24;
@@ -390,9 +407,11 @@
                     </button>
                 </form>
 
-                <a href="{{ url_for('web.index') }}" class="btn btn-warning" style="margin-top: 10px;">
-                    📁 Choose Different Repository
-                </a>
+                <div class="confirmation-prompt-secondary">
+                    <a href="{{ url_for('web.index') }}" class="btn btn-warning">
+                        📁 Choose Different Repository
+                    </a>
+                </div>
             </div>
         {% endif %}
 
