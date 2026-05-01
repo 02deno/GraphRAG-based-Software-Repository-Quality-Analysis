@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 import queue
 import threading
+from io import BytesIO
 from typing import Any, Dict, Iterator
 
 from flask import (
@@ -17,6 +19,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     send_from_directory,
     session,
     stream_with_context,
@@ -25,11 +28,13 @@ from flask import (
 
 from src.compatibility.check_item import CheckItem
 from src.web.handlers.repository_handler import RepositoryHandler
+from src.web.report_docx import build_analysis_docx_bytes
 from src.web.results_paths import is_safe_visual_png_filename, safe_resolve_results_run_dir
 from src.web.services.analysis_service import AnalysisService, load_results_from_run_directory
 from src.web.utils.helpers import cleanup_temp_directory, handle_repository_upload
 
 web_bp = Blueprint("web", __name__)
+logger = logging.getLogger(__name__)
 
 _PROGRESS_UI_HEADER = "X-GraphRAG-Progressive-UI"
 _ANALYZE_STREAM_HEADER = "X-GraphRAG-Analyze-Stream"
@@ -125,6 +130,7 @@ def upload_repository():
         flash(str(exc))
         return redirect(url_for("web.index"))
     except Exception as exc:
+        logger.exception("upload_repository failed")
         cleanup_temp_directory(repo_path, cleanup_temp)
         if _wants_progressive_ui():
             return jsonify({"ok": False, "error": f"Error processing repository: {exc!s}"}), 500
@@ -183,6 +189,7 @@ def analyze_repository():
                     pct, msg = payload
                     yield _sse_bytes({"type": "progress", "percent": pct, "message": msg})
                 elif kind == "err":
+                    logger.error("analyze_repository SSE pipeline error: %s", payload)
                     cleanup_temp_directory(repo_path, cleanup_temp)
                     yield _sse_bytes({"type": "error", "error": payload})
                     return
@@ -212,6 +219,7 @@ def analyze_repository():
         session.pop("analysis_data", None)
         return render_template("results_final.html", results=results)
     except Exception as exc:
+        logger.exception("analyze_repository failed")
         cleanup_temp_directory(repo_path, cleanup_temp)
         if _wants_progressive_ui():
             return jsonify({"ok": False, "error": f"Error during analysis: {exc!s}"}), 500
@@ -249,3 +257,22 @@ def analysis_visual_asset(run_dir: str, filename: str):
     if not target.is_file():
         return ("Not found", 404)
     return send_from_directory(str(visuals_dir.resolve()), filename, mimetype="image/png")
+
+
+@web_bp.route("/analysis-results/<run_dir>/report.docx")
+def export_analysis_docx(run_dir: str):
+    """Download a single Word document bundling text reports, pipeline log, and chart PNGs."""
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        return ("Not found", 404)
+    try:
+        data, fname = build_analysis_docx_bytes(base)
+    except Exception:
+        logger.exception("DOCX export failed for run_dir=%s", run_dir)
+        return ("Report could not be built", 500)
+    return send_file(
+        BytesIO(data),
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        as_attachment=True,
+        download_name=fname,
+    )

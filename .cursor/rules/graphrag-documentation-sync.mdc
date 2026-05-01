@@ -10,7 +10,8 @@ Whenever you add, remove, or refactor behavior in this repository, treat docs as
 ## What to check
 
 - **`docs/PROJECT_STRUCTURE.md`** — paths, layers, new packages (`src/pipeline/`, `src/web/blueprints/`, `src/graph/json_document.py`, etc.), CLI vs web entry points, and how services connect.
-- **`README.md`** — install/run commands, env vars (`FLASK_SECRET_KEY`), how to start the web app or CLI, and any user-visible workflow that changed.
+- **`README.md`** — install/run commands, env vars (`FLASK_SECRET_KEY`, `GRAPHRAG_LOG_LEVEL`, `GRAPHRAG_LOG_FILE`, `GRAPHRAG_LOG_TO_FILE`), how to start the web app or CLI, and any user-visible workflow that changed.
+- **Logging** — follow `.cursor/rules/graphrag-logging.mdc` when adding diagnostics; keep docs in sync if you introduce new env vars or export routes (e.g. ``report.docx``).
 - **Other `docs/*.md`** — if your edit touches compatibility scoring, graph schema, web flow, or pipeline flags, grep those docs for stale names, paths, or flags and align them with the code.
 
 ## Rules for the agent

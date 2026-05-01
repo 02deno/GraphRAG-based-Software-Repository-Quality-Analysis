@@ -8,6 +8,7 @@ This document describes the current full-stack architecture with optimal backend
 GraphRAG_Project/
 ├── src/                              # Backend Core
 │   ├── web/                          # Web Application Layer
+│   ├── logging_config.py              # UTC stderr + rotating file (GRAPHRAG_LOG_LEVEL, GRAPHRAG_LOG_FILE)
 │   ├── utils/                         # Cross-layer filesystem helpers (e.g. repo slugs)
 │   ├── compatibility/                 # Compatibility Checking Layer
 │   ├── pipeline/                      # End-to-end pipeline orchestration (CLI + web)
@@ -34,6 +35,8 @@ GraphRAG_Project/
 - **`factory.py`**: ``create_app()`` wires config, extensions, and blueprints
 - **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis can stream **SSE** progress (``X-GraphRAG-Analyze-Stream``) then redirect to a disk-backed results URL.
 - **`results_paths.py`**: Validates ``web_analysis_*`` run directory names and safe PNG filenames for chart URLs
+- **`report_docx.py`**: Builds a combined ``.docx`` export (text artifacts + embedded PNGs) for ``GET …/report.docx``
+- **`factory.py`**: Calls ``configure_standard_logging()`` and registers lightweight ``after_request`` access logging (``src.web.request``)
 - **`service_protocols.py`**: ``typing.Protocol`` ports for services (dependency inversion)
 - **`config.py`**: Project root resolution and Flask configuration (e.g. ``FLASK_SECRET_KEY``)
 - **`handlers/`**: Upload and repository filesystem operations

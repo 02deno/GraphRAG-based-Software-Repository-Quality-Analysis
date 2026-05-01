@@ -3,11 +3,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from src.logging_config import configure_standard_logging
 from src.pipeline.run_pipeline import resolve_default_cli_paths, run_repository_pipeline
 
 
 def main() -> None:
     """CLI entry: parse arguments and run the full repository pipeline."""
+    configure_standard_logging()
     parser = argparse.ArgumentParser(
         description="Run the full repository pipeline: build graph, analyze graph, and generate visual summaries."
     )

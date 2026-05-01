@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Dict
@@ -9,6 +10,8 @@ from src.compatibility.repo_checker import RepoCompatibilityChecker
 from src.pipeline import run_repository_pipeline
 from src.pipeline.output_paths import new_web_session_results_dir
 from src.pipeline.result import PipelineRunResult
+
+logger = logging.getLogger(__name__)
 
 
 def _png_display_title(filename: str) -> str:
@@ -40,13 +43,20 @@ def collect_visual_gallery_entries(results_dir: Path) -> list[dict[str, str]]:
 
 def package_web_results(results_dir: Path, result: PipelineRunResult) -> Dict[str, Any]:
     """Shape the dict passed to ``results_final.html`` after a pipeline run."""
+    pipeline_text = "\n".join(result.log_lines)
+    pipeline_path = results_dir / "pipeline.txt"
+    try:
+        pipeline_path.write_text(pipeline_text + "\n", encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Could not persist pipeline.txt under %s: %s", results_dir, exc)
+
     visual_summary_text = ""
     if result.visual_summary_path is not None:
         visual_summary_text = Path(result.visual_summary_path).read_text(encoding="utf-8")
     return {
         "graph_data": dict(result.graph_document),
         "analysis_text": result.analysis_text,
-        "pipeline_output": "\n".join(result.log_lines),
+        "pipeline_output": pipeline_text,
         "results_dir": str(results_dir.resolve()),
         "results_run_dir": results_dir.name,
         "visual_summary_text": visual_summary_text,
@@ -65,10 +75,12 @@ def load_results_from_run_directory(run_path: Path) -> Dict[str, Any]:
     analysis_text = analysis_path.read_text(encoding="utf-8") if analysis_path.exists() else ""
     vis_path = run_path / "visual_summary.txt"
     visual_summary_text = vis_path.read_text(encoding="utf-8") if vis_path.exists() else ""
+    pl_path = run_path / "pipeline.txt"
+    pipeline_output = pl_path.read_text(encoding="utf-8") if pl_path.exists() else ""
     return {
         "graph_data": graph,
         "analysis_text": analysis_text,
-        "pipeline_output": "",
+        "pipeline_output": pipeline_output,
         "results_dir": str(run_path.resolve()),
         "results_run_dir": run_path.name,
         "visual_summary_text": visual_summary_text,
@@ -124,6 +136,11 @@ class AnalysisService:
             ValueError: If graph validation fails.
         """
         results_dir = new_web_session_results_dir(results_folder_slug)
+        logger.info(
+            "Starting analysis pipeline repo_path=%s results_dir=%s",
+            repo_path,
+            results_dir.name,
+        )
         graph_output = results_dir / "graph.json"
         analysis_output = results_dir / "analysis.txt"
         visual_summary_output = results_dir / "visual_summary.txt"
@@ -139,4 +156,11 @@ class AnalysisService:
             progress_callback=progress_callback,
         )
 
-        return package_web_results(results_dir, result)
+        payload = package_web_results(results_dir, result)
+        logger.info(
+            "Finished analysis pipeline results_dir=%s nodes=%s edges=%s",
+            results_dir.name,
+            len(payload.get("graph_data", {}).get("nodes", [])),
+            len(payload.get("graph_data", {}).get("edges", [])),
+        )
+        return payload

@@ -15,6 +15,8 @@ python run_web_app.py
 # Open your browser and go to: http://localhost:5000
 ```
 
+Optional diagnostics: set ``GRAPHRAG_LOG_LEVEL=DEBUG`` (or ``INFO`` / ``WARNING`` / ``ERROR``). Logs go to **stderr** and, by default, to a rotating **``logs/graphrag.log``** under the project root (override with ``GRAPHRAG_LOG_FILE``; disable the file with ``GRAPHRAG_LOG_TO_FILE=0``).
+
 ### Web Application Workflow
 
 #### 1. Repository input
@@ -43,7 +45,7 @@ The system analyzes compatibility in the same step as upload, then sends you to 
 #### 4. Results Display
 - Graph statistics (nodes, edges, types)
 - Quality analysis with centrality metrics
-- Downloadable JSON and text reports
+- Downloadable JSON, text reports, individual PNGs, pipeline log, and a **single .docx** (combined narrative + embedded charts) from ``GET /analysis-results/<run_dir>/report.docx``
 
 ### Web Application Features
 - **Smart Upload**: Validation plus a client-side **progress overlay** while clone/check runs; errors from ``POST /upload`` can return JSON when the progressive-UI header is sent

@@ -266,6 +266,9 @@
                 <div class="visual-card">
                     <h4>{{ item.title }}</h4>
                     <img src="{{ url_for('web.analysis_visual_asset', run_dir=results.results_run_dir, filename=item.name) }}" alt="{{ item.title }}" loading="lazy">
+                    <p style="margin:10px 0 0 0;">
+                        <a class="btn btn-success" style="padding:8px 14px;font-size:14px;" download="{{ item.name }}" href="{{ url_for('web.analysis_visual_asset', run_dir=results.results_run_dir, filename=item.name) }}">⬇ Download PNG</a>
+                    </p>
                 </div>
                 {% endfor %}
             </div>
@@ -283,19 +286,31 @@
         <!-- Download Section -->
         <div class="download-section">
             <h4>📥 Download Results</h4>
-            <p>Download the complete analysis results for further investigation:</p>
+            <p>Download individual files or one combined Word report (text + pipeline log + embedded charts).</p>
+
+            {% if results.results_run_dir %}
+            <a href="{{ url_for('web.export_analysis_docx', run_dir=results.results_run_dir) }}" class="btn btn-success" download>
+                📑 Download full report (.docx)
+            </a>
+            {% endif %}
 
             <button type="button" onclick="downloadJSON()" class="btn btn-success">
                 📄 Download Graph JSON
             </button>
 
             <button type="button" onclick="downloadAnalysis()" class="btn btn-success">
-                📝 Download Analysis Report
+                📝 Download Analysis Report (.txt)
             </button>
 
             {% if results.visual_summary_text %}
             <button type="button" onclick="downloadVisualSummary()" class="btn btn-success">
                 📊 Download Visual Summary (text)
+            </button>
+            {% endif %}
+
+            {% if results.pipeline_output %}
+            <button type="button" onclick="downloadPipeline()" class="btn btn-success">
+                📋 Download Pipeline Log (.txt)
             </button>
             {% endif %}
 
@@ -305,7 +320,7 @@
         </div>
 
         <script id="results-bootstrap" type="application/json">
-{{ {"graph": results.graph_data, "analysis": results.analysis_text, "visual": results.visual_summary_text or ""}|tojson }}
+{{ {"graph": results.graph_data, "analysis": results.analysis_text, "visual": results.visual_summary_text or "", "pipeline": results.pipeline_output or ""}|tojson }}
         </script>
         <script>
 (function () {
@@ -319,6 +334,7 @@
             var graphData = payload.graph;
             var analysisText = payload.analysis;
             var visualSummaryText = payload.visual;
+            var pipelineText = payload.pipeline;
 
             function downloadJSON() {
                 if (graphData === undefined || graphData === null) {
@@ -368,9 +384,26 @@
                 window.URL.revokeObjectURL(url);
             }
 
+            function downloadPipeline() {
+                if (pipelineText === undefined || pipelineText === null || pipelineText === '') {
+                    alert('Pipeline log is not available to download.');
+                    return;
+                }
+                var blob = new Blob([String(pipelineText)], {type: 'text/plain;charset=utf-8'});
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'pipeline_log.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
             window.downloadJSON = downloadJSON;
             window.downloadAnalysis = downloadAnalysis;
             window.downloadVisualSummary = downloadVisualSummary;
+            window.downloadPipeline = downloadPipeline;
 })();
         </script>
 

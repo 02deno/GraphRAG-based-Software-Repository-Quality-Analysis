@@ -9,6 +9,11 @@ This project provides a **full-stack web application** for analyzing Python repo
 # Install dependencies
 pip install -r requirements.txt
 
+# Optional: verbose UTC logs — stderr + rotating file logs/graphrag.log (5 MB × 5)
+# set GRAPHRAG_LOG_LEVEL=DEBUG
+# set GRAPHRAG_LOG_FILE=C:\path\to\my.log   # optional override
+# set GRAPHRAG_LOG_TO_FILE=0               # stderr only, no file
+
 # Start web application
 python run_web_app.py
 
@@ -31,7 +36,8 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
 - **📊 Real-time Analysis**: Automatic graph analysis for compatible repositories, with **percent + phase** progress over SSE while the pipeline runs
-- **📥 Downloadable Results**: Export JSON graphs, analysis text, and (when generated) visual summary text from the results page; PNG charts are stored under each run’s ``results/…/visuals/`` folder and **shown inline** on the results view
+- **📥 Downloadable Results**: Export JSON, text reports, individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
+- **📜 Structured logging**: UTC ISO timestamps and levels via ``GRAPHRAG_LOG_LEVEL``; duplicate stream to a **rotating** ``logs/graphrag.log`` (override with ``GRAPHRAG_LOG_FILE``, or set ``GRAPHRAG_LOG_TO_FILE=0`` for console-only); HTTP lines under ``src.web.request``
 - **📱 Responsive Design**: Mobile-friendly interface
 
 ### Core Analysis Features
@@ -45,6 +51,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 ```
 GraphRAG_Project/
 ├── 📁 src/                          # Backend Core
+│   ├── 📄 logging_config.py         # UTC stderr logging (GRAPHRAG_LOG_LEVEL)
 │   ├── 📁 utils/                    # Cross-layer helpers (repo → safe path slug)
 │   ├── 📁 web/                      # Web Application
 │   │   ├── app.py                    # Flask application

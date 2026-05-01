@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from src.visualization.graph_visualization import generate_visual_summary, save_
 
 from .output_paths import default_cli_graph_path, default_cli_visual_summary_path
 from .result import PipelineRunResult
+
+logger = logging.getLogger(__name__)
 
 
 def _notify_progress(
@@ -60,6 +63,12 @@ def run_repository_pipeline(
     log_lines: list[str] = []
     repo_path = repo_path.resolve()
 
+    logger.info(
+        "pipeline_start repo=%s graph_output=%s skip_visualization=%s",
+        repo_path,
+        graph_output,
+        skip_visualization,
+    )
     _notify_progress(progress_callback, 5, "Preparing repository graph build…")
     log_lines.append(f"Building graph for repository: {repo_path}")
     builder = GraphBuilder(repo_path)
@@ -74,6 +83,12 @@ def run_repository_pipeline(
     log_lines.append(f"Graph saved to: {graph_output}")
     log_lines.append(f"Total nodes: {len(graph_document['nodes'])}")
     log_lines.append(f"Total edges: {len(graph_document['edges'])}")
+    logger.info(
+        "graph_saved path=%s nodes=%d edges=%d",
+        graph_output,
+        len(graph_document["nodes"]),
+        len(graph_document["edges"]),
+    )
 
     log_lines.append("")
     log_lines.append("Running analysis...")
@@ -83,11 +98,13 @@ def run_repository_pipeline(
     save_analysis_report(report, final_analysis_path)
     log_lines.append(f"Analysis saved to: {final_analysis_path}")
     _notify_progress(progress_callback, 72, "Analysis report saved.")
+    logger.info("analysis_text_report_saved path=%s", final_analysis_path)
 
     visual_path: Path | None = None
     if skip_visualization:
         log_lines.append("Skipping visualization step.")
         _notify_progress(progress_callback, 100, "Pipeline finished.")
+        logger.info("pipeline_complete visualization=skipped")
         return PipelineRunResult(
             graph_document=dict(graph_document),
             analysis_text=report,
@@ -129,6 +146,10 @@ def run_repository_pipeline(
     log_lines.append(f"Visual summary saved to: {summary_data['summary_output']}")
     _notify_progress(progress_callback, 94, "Saving visual summary text…")
     _notify_progress(progress_callback, 100, "Pipeline finished.")
+    logger.info(
+        "pipeline_complete visualization=yes summary=%s",
+        summary_data.get("summary_output"),
+    )
 
     return PipelineRunResult(
         graph_document=dict(graph_document),

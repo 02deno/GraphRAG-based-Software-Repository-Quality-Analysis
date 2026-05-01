@@ -138,7 +138,8 @@ export FLASK_DEBUG=False
 ### Backend Components
 
 #### Flask Application (`src/web/app.py`)
-- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; progressive UI uses ``text/event-stream`` with ``X-GraphRAG-Analyze-Stream`` for phase **percent** updates, then redirects to ``GET /analysis-results/<run_dir>``), ``GET /analysis-results/<run_dir>/visuals/<filename>`` (PNG charts)
+- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; progressive UI uses ``text/event-stream`` with ``X-GraphRAG-Analyze-Stream`` for phase **percent** updates, then redirects to ``GET /analysis-results/<run_dir>``), ``GET /analysis-results/<run_dir>/visuals/<filename>`` (PNG charts), ``GET /analysis-results/<run_dir>/report.docx`` (single bundled Word export)
+- **Logging**: ``GRAPHRAG_LOG_LEVEL`` (default ``INFO``); UTC lines on stderr **and** by default a rotating ``logs/graphrag.log``; ``GRAPHRAG_LOG_FILE`` / ``GRAPHRAG_LOG_TO_FILE``; each response as ``METHOD path -> status`` under ``src.web.request``
 - **Session Management**: Analysis state preservation
 - **Error Handling**: Comprehensive exception management
 - **File Management**: Temporary upload handling
@@ -176,7 +177,7 @@ export FLASK_DEBUG=False
 - **Chart gallery**: Embeds each PNG via ``web.analysis_visual_asset`` when ``visual_gallery`` is present
 - **Interactive Downloads**: Client-side downloads read from an embedded JSON payload (avoids fragile string interpolation that could yield empty or ``undefined`` files for large graphs)
 - **Error Handling**: Failed analysis presentation
-- **Export Options**: Graph JSON, analysis report text, and visual summary text when available
+- **Export Options**: Graph JSON, analysis report text, visual summary text, per-chart PNG downloads, pipeline log text, and a combined **.docx** (embedded PNGs + sections for each text file)
 
 ## 🛠️ Configuration
 

@@ -3,3 +3,4 @@ networkx
 scipy
 flask
 werkzeug
+python-docx
