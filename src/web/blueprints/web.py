@@ -3,28 +3,36 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict
+import json
+import queue
+import threading
+from typing import Any, Dict, Iterator
 
 from flask import (
     Blueprint,
+    Response,
     current_app,
     flash,
     jsonify,
     redirect,
     render_template,
     request,
+    send_from_directory,
     session,
+    stream_with_context,
     url_for,
 )
 
 from src.compatibility.check_item import CheckItem
 from src.web.handlers.repository_handler import RepositoryHandler
-from src.web.services.analysis_service import AnalysisService
+from src.web.results_paths import is_safe_visual_png_filename, safe_resolve_results_run_dir
+from src.web.services.analysis_service import AnalysisService, load_results_from_run_directory
 from src.web.utils.helpers import cleanup_temp_directory, handle_repository_upload
 
 web_bp = Blueprint("web", __name__)
 
 _PROGRESS_UI_HEADER = "X-GraphRAG-Progressive-UI"
+_ANALYZE_STREAM_HEADER = "X-GraphRAG-Analyze-Stream"
 
 
 def _repo_handler() -> RepositoryHandler:
@@ -40,6 +48,11 @@ def _analysis_service() -> AnalysisService:
 def _wants_progressive_ui() -> bool:
     """Return True when the client opted into fetch + JSON errors (see templates)."""
     return request.headers.get(_PROGRESS_UI_HEADER, "").strip().lower() in ("1", "true", "yes")
+
+
+def _wants_analyze_event_stream() -> bool:
+    """Return True when the client expects SSE progress events for ``POST /analyze``."""
+    return request.headers.get(_ANALYZE_STREAM_HEADER, "").strip().lower() in ("1", "true", "yes")
 
 
 def _serialize_compatibility_for_session(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -124,7 +137,8 @@ def analyze_repository():
     """Run the graph pipeline on the repository from session state.
 
     Returns:
-        Rendered results HTML on success, or redirect home on missing session or failure.
+        Rendered results HTML on success, ``text/event-stream`` when the client requests
+        SSE progress (see ``X-GraphRAG-Analyze-Stream``), or JSON errors for progressive UI.
     """
     analysis_data = session.get("analysis_data")
     if not analysis_data:
@@ -134,6 +148,61 @@ def analyze_repository():
     repo_path = analysis_data["repo_path"]
     cleanup_temp = analysis_data["cleanup_temp"]
     results_folder_slug = analysis_data.get("results_folder_slug")
+
+    if _wants_progressive_ui() and _wants_analyze_event_stream():
+        # Resolve service in the request/app context; the worker thread must not call
+        # ``current_app`` (Flask raises "Working outside of application context").
+        analysis_svc: AnalysisService = current_app.extensions["analysis_service"]
+
+        def _sse_bytes(obj: Dict[str, Any]) -> bytes:
+            return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n".encode("utf-8")
+
+        @stream_with_context
+        def event_stream() -> Iterator[bytes]:
+            events: "queue.Queue[tuple[str, Any]]" = queue.Queue()
+            yield _sse_bytes({"type": "progress", "percent": 1, "message": "Starting graph pipeline…"})
+
+            def progress_cb(percent: int, message: str) -> None:
+                events.put(("progress", (percent, message)))
+
+            def worker() -> None:
+                try:
+                    done = analysis_svc.run_analysis_pipeline(
+                        repo_path,
+                        results_folder_slug=results_folder_slug,
+                        progress_callback=progress_cb,
+                    )
+                    events.put(("ok", done))
+                except Exception as exc:  # noqa: BLE001 — surfaced to client as SSE
+                    events.put(("err", str(exc)))
+
+            threading.Thread(target=worker, daemon=True).start()
+            while True:
+                kind, payload = events.get()
+                if kind == "progress":
+                    pct, msg = payload
+                    yield _sse_bytes({"type": "progress", "percent": pct, "message": msg})
+                elif kind == "err":
+                    cleanup_temp_directory(repo_path, cleanup_temp)
+                    yield _sse_bytes({"type": "error", "error": payload})
+                    return
+                elif kind == "ok":
+                    cleanup_temp_directory(repo_path, cleanup_temp)
+                    session.pop("analysis_data", None)
+                    run_dir = payload.get("results_run_dir", "")
+                    loc = url_for("web.analysis_results_page", run_dir=run_dir)
+                    yield _sse_bytes({"type": "complete", "percent": 100, "redirect": loc})
+                    return
+
+        return Response(
+            event_stream(),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
 
     try:
         results = _analysis_service().run_analysis_pipeline(
@@ -148,3 +217,35 @@ def analyze_repository():
             return jsonify({"ok": False, "error": f"Error during analysis: {exc!s}"}), 500
         flash(f"Error during analysis: {exc!s}")
         return redirect(url_for("web.index"))
+
+
+@web_bp.route("/analysis-results/<run_dir>")
+def analysis_results_page(run_dir: str):
+    """Load a completed web run from ``results/<run_dir>/`` and render the results view."""
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        flash("Analysis results folder was not found or is not valid.")
+        return redirect(url_for("web.index"))
+    results = load_results_from_run_directory(base)
+    return render_template("results_final.html", results=results)
+
+
+@web_bp.route("/analysis-results/<run_dir>/visuals/<filename>")
+def analysis_visual_asset(run_dir: str, filename: str):
+    """Serve one PNG from ``results/<run_dir>/visuals/``."""
+    if not is_safe_visual_png_filename(filename):
+        return ("Not found", 404)
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        return ("Not found", 404)
+    visuals_dir = base / "visuals"
+    if not visuals_dir.is_dir():
+        return ("Not found", 404)
+    target = (visuals_dir / filename).resolve()
+    try:
+        target.relative_to(visuals_dir.resolve())
+    except ValueError:
+        return ("Not found", 404)
+    if not target.is_file():
+        return ("Not found", 404)
+    return send_from_directory(str(visuals_dir.resolve()), filename, mimetype="image/png")

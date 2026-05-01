@@ -220,9 +220,11 @@ def generate_visual_summary(
     structure_output: Path | None = None,
     structure_output_imports: Path | None = None,
     structure_output_in_file: Path | None = None,
+    structure_output_tests: Path | None = None,
     analysis_output: Path | None = None,
     analysis_output_imports: Path | None = None,
     analysis_output_in_file: Path | None = None,
+    analysis_output_tests: Path | None = None,
     summary_output: Path | None = None,
 ) -> tuple[List[str], Dict[str, object]]:
     """Render structure and degree plots plus a text summary for one graph JSON file.
@@ -235,9 +237,11 @@ def generate_visual_summary(
         structure_output: Optional path for the full-graph structure image.
         structure_output_imports: Optional path for IMPORTS-only structure image.
         structure_output_in_file: Optional path for IN_FILE-only structure image.
+        structure_output_tests: Optional path for TESTS-only structure image.
         analysis_output: Optional path for combined degree bar chart image.
         analysis_output_imports: Optional path for IMPORTS degree bar chart.
         analysis_output_in_file: Optional path for IN_FILE degree bar chart.
+        analysis_output_tests: Optional path for TESTS degree bar chart.
         summary_output: Optional path for the textual summary file.
 
     Returns:
@@ -253,10 +257,15 @@ def generate_visual_summary(
     degrees_by_type = compute_in_out_degrees_by_edge_type(edges)
     nx_graph = build_nx_graph(nodes, edges)
 
+    imports_edges = [edge for edge in edges if edge.get("type") == "IMPORTS"]
+    in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
+    tests_edges = [edge for edge in edges if edge.get("type") == "TESTS"]
+
     repo_name = graph_stem_display_name(graph_path)
     graph_label = f"{repo_name} — {human_readable_graph_edge_label(edges)}"
     imports_graph_label = f"{repo_name} — IMPORTS graph"
     in_file_graph_label = f"{repo_name} — IN_FILE graph"
+    tests_graph_label = f"{repo_name} — TESTS graph"
 
     structure_output = (
         structure_output
@@ -270,6 +279,10 @@ def generate_visual_summary(
         structure_output_in_file
         or Path(f"results/visuals/{repo_name}_graph_structure_in_file.png").resolve()
     )
+    structure_output_tests = (
+        structure_output_tests
+        or Path(f"results/visuals/{repo_name}_graph_structure_tests.png").resolve()
+    )
     analysis_output = (
         analysis_output
         or Path(f"results/visuals/{repo_name}_graph_degree_analysis.png").resolve()
@@ -281,6 +294,10 @@ def generate_visual_summary(
     analysis_output_in_file = (
         analysis_output_in_file
         or Path(f"results/visuals/{repo_name}_graph_degree_analysis_in_file.png").resolve()
+    )
+    analysis_output_tests = (
+        analysis_output_tests
+        or Path(f"results/visuals/{repo_name}_graph_degree_analysis_tests.png").resolve()
     )
     summary_output = (
         summary_output
@@ -299,12 +316,12 @@ def generate_visual_summary(
             plot_structure_subgraph(nx_graph, selected_nodes, path_by_id, structure_output, graph_label)
             report_lines.append(f"Overall structure visualization saved to: {structure_output}")
 
-        imports_edges = [edge for edge in edges if edge.get("type") == "IMPORTS"]
-        in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
         imports_graph = compute_graph_for_edge_type(nodes, edges, "IMPORTS")
         in_file_graph = compute_graph_for_edge_type(nodes, edges, "IN_FILE")
+        tests_graph = compute_graph_for_edge_type(nodes, edges, "TESTS")
         imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
         in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
+        tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
 
         imports_selected = select_structure_nodes(
             graph=imports_graph,
@@ -316,6 +333,12 @@ def generate_visual_summary(
             graph=in_file_graph,
             in_degree=in_file_in_degree,
             out_degree=in_file_out_degree,
+            top_n=max(5, structure_nodes),
+        )
+        tests_selected = select_structure_nodes(
+            graph=tests_graph,
+            in_degree=tests_in_degree,
+            out_degree=tests_out_degree,
             top_n=max(5, structure_nodes),
         )
 
@@ -339,16 +362,25 @@ def generate_visual_summary(
             )
             report_lines.append(f"IN_FILE structure visualization saved to: {structure_output_in_file}")
 
+        if tests_selected:
+            plot_structure_subgraph(
+                tests_graph,
+                tests_selected,
+                path_by_id,
+                structure_output_tests,
+                tests_graph_label,
+            )
+            report_lines.append(f"TESTS structure visualization saved to: {structure_output_tests}")
+
     else:
         report_lines.append("Skipping structure visualization because skip_structure=True.")
 
     plot_degree_bars(in_degree, out_degree, path_by_id, top_k, analysis_output, graph_label)
     report_lines.append(f"Overall degree analysis saved to: {analysis_output}")
 
-    imports_edges = [edge for edge in edges if edge.get("type") == "IMPORTS"]
-    in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
     imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
     in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
+    tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
 
     plot_degree_bars(
         imports_in_degree,
@@ -369,6 +401,16 @@ def generate_visual_summary(
         in_file_graph_label,
     )
     report_lines.append(f"IN_FILE degree analysis saved to: {analysis_output_in_file}")
+
+    plot_degree_bars(
+        tests_in_degree,
+        tests_out_degree,
+        path_by_id,
+        top_k,
+        analysis_output_tests,
+        tests_graph_label,
+    )
+    report_lines.append(f"TESTS degree analysis saved to: {analysis_output_tests}")
 
     summary_text = build_visual_summary(
         graph_path=graph_path,
@@ -419,6 +461,11 @@ def main() -> None:
         help="Output image for IN_FILE structure graph",
     )
     parser.add_argument(
+        "--structure-output-tests",
+        default="results/visuals/graph_structure_tests.png",
+        help="Output image for TESTS structure graph",
+    )
+    parser.add_argument(
         "--analysis-output",
         default="results/visuals/graph_degree_analysis.png",
         help="Output image for overall degree analysis",
@@ -432,6 +479,11 @@ def main() -> None:
         "--analysis-output-in-file",
         default="results/visuals/graph_degree_analysis_in_file.png",
         help="Output image for IN_FILE degree analysis",
+    )
+    parser.add_argument(
+        "--analysis-output-tests",
+        default="results/visuals/graph_degree_analysis_tests.png",
+        help="Output image for TESTS degree analysis",
     )
     parser.add_argument(
         "--summary-output",
@@ -461,9 +513,11 @@ def main() -> None:
         structure_output=Path(args.structure_output).resolve(),
         structure_output_imports=Path(args.structure_output_imports).resolve(),
         structure_output_in_file=Path(args.structure_output_in_file).resolve(),
+        structure_output_tests=Path(args.structure_output_tests).resolve(),
         analysis_output=Path(args.analysis_output).resolve(),
         analysis_output_imports=Path(args.analysis_output_imports).resolve(),
         analysis_output_in_file=Path(args.analysis_output_in_file).resolve(),
+        analysis_output_tests=Path(args.analysis_output_tests).resolve(),
         summary_output=Path(args.summary_output).resolve(),
     )
     save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])

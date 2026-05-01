@@ -154,6 +154,29 @@
             color: #666;
             margin-top: 12px;
         }
+        .visual-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+        }
+        .visual-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .visual-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 15px;
+            color: #333;
+        }
+        .visual-card img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            background: #fff;
+        }
     </style>
 </head>
 <body>
@@ -231,6 +254,21 @@
         <div class="results-section">
             <h3>📈 Visual summary</h3>
             <div class="analysis-text">{{ results.visual_summary_text }}</div>
+        </div>
+        {% endif %}
+
+        {% if results.visual_gallery and results.results_run_dir %}
+        <div class="results-section">
+            <h3>🖼️ Visualization charts</h3>
+            <p class="schema-note" style="margin-top:0;">PNG exports from this run (also stored under <code>results/{{ results.results_run_dir }}/visuals/</code>).</p>
+            <div class="visual-gallery">
+                {% for item in results.visual_gallery %}
+                <div class="visual-card">
+                    <h4>{{ item.title }}</h4>
+                    <img src="{{ url_for('web.analysis_visual_asset', run_dir=results.results_run_dir, filename=item.name) }}" alt="{{ item.title }}" loading="lazy">
+                </div>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
 

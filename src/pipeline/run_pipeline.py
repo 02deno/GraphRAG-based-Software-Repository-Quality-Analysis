@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from src.analysis.graph_analysis import generate_analysis_text_report, save_analysis_report
@@ -10,6 +11,17 @@ from src.visualization.graph_visualization import generate_visual_summary, save_
 
 from .output_paths import default_cli_graph_path, default_cli_visual_summary_path
 from .result import PipelineRunResult
+
+
+def _notify_progress(
+    callback: Callable[[int, str], None] | None, percent: int, message: str
+) -> None:
+    if callback is None:
+        return
+    try:
+        callback(max(0, min(100, int(percent))), message)
+    except Exception:
+        pass
 
 
 def run_repository_pipeline(
@@ -21,6 +33,7 @@ def run_repository_pipeline(
     visual_artifacts_dir: Path | None = None,
     skip_visualization: bool = False,
     top_k: int = 10,
+    progress_callback: Callable[[int, str], None] | None = None,
 ) -> PipelineRunResult:
     """Build a repository graph, analyze it, and optionally generate visual summaries.
 
@@ -35,6 +48,7 @@ def run_repository_pipeline(
             inside :func:`generate_visual_summary` apply (CLI).
         skip_visualization: When True, skip matplotlib/networkx visualization steps.
         top_k: Rank depth for analysis and visualization summaries.
+        progress_callback: Optional ``(percent, message)`` updates for long-running UIs.
 
     Returns:
         Structured result including the graph document and human-readable analysis text.
@@ -46,13 +60,16 @@ def run_repository_pipeline(
     log_lines: list[str] = []
     repo_path = repo_path.resolve()
 
+    _notify_progress(progress_callback, 5, "Preparing repository graph build…")
     log_lines.append(f"Building graph for repository: {repo_path}")
     builder = GraphBuilder(repo_path)
     builder.build()
+    _notify_progress(progress_callback, 28, "Extracted symbols and edges; validating schema…")
 
     raw = builder.to_dict()
     graph_document = graph_to_dict(raw["nodes"], raw["edges"])
     validate_graph_contract(graph_document["nodes"], graph_document["edges"])
+    _notify_progress(progress_callback, 42, "Saving graph JSON…")
     save_graph(graph_document, graph_output)
     log_lines.append(f"Graph saved to: {graph_output}")
     log_lines.append(f"Total nodes: {len(graph_document['nodes'])}")
@@ -60,14 +77,17 @@ def run_repository_pipeline(
 
     log_lines.append("")
     log_lines.append("Running analysis...")
+    _notify_progress(progress_callback, 55, "Computing degree metrics and text report…")
     report, default_report_path = generate_analysis_text_report(graph_output, top_k_value=top_k)
     final_analysis_path = analysis_output if analysis_output is not None else default_report_path
     save_analysis_report(report, final_analysis_path)
     log_lines.append(f"Analysis saved to: {final_analysis_path}")
+    _notify_progress(progress_callback, 72, "Analysis report saved.")
 
     visual_path: Path | None = None
     if skip_visualization:
         log_lines.append("Skipping visualization step.")
+        _notify_progress(progress_callback, 100, "Pipeline finished.")
         return PipelineRunResult(
             graph_document=dict(graph_document),
             analysis_text=report,
@@ -79,6 +99,7 @@ def run_repository_pipeline(
 
     log_lines.append("")
     log_lines.append("Generating visualization outputs...")
+    _notify_progress(progress_callback, 78, "Rendering chart images (this can take a while)…")
     if visual_artifacts_dir is not None:
         vdir = visual_artifacts_dir.resolve()
         vdir.mkdir(parents=True, exist_ok=True)
@@ -89,9 +110,11 @@ def run_repository_pipeline(
             structure_output=vdir / f"{prefix}_structure.png",
             structure_output_imports=vdir / f"{prefix}_structure_imports.png",
             structure_output_in_file=vdir / f"{prefix}_structure_in_file.png",
+            structure_output_tests=vdir / f"{prefix}_structure_tests.png",
             analysis_output=vdir / f"{prefix}_degree_analysis.png",
             analysis_output_imports=vdir / f"{prefix}_degree_analysis_imports.png",
             analysis_output_in_file=vdir / f"{prefix}_degree_analysis_in_file.png",
+            analysis_output_tests=vdir / f"{prefix}_degree_analysis_tests.png",
             summary_output=visual_summary_output,
         )
     else:
@@ -104,6 +127,8 @@ def run_repository_pipeline(
     visual_path = Path(str(summary_data["summary_output"]))
     log_lines.extend(report_lines)
     log_lines.append(f"Visual summary saved to: {summary_data['summary_output']}")
+    _notify_progress(progress_callback, 94, "Saving visual summary text…")
+    _notify_progress(progress_callback, 100, "Pipeline finished.")
 
     return PipelineRunResult(
         graph_document=dict(graph_document),

@@ -32,7 +32,8 @@ GraphRAG_Project/
 **Purpose**: Flask-based web interface for repository analysis
 - **`app.py`**: Exposes ``app = create_app()`` for ``run_web_app`` / WSGI servers
 - **`factory.py`**: ``create_app()`` wires config, extensions, and blueprints
-- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting.
+- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis can stream **SSE** progress (``X-GraphRAG-Analyze-Stream``) then redirect to a disk-backed results URL.
+- **`results_paths.py`**: Validates ``web_analysis_*`` run directory names and safe PNG filenames for chart URLs
 - **`service_protocols.py`**: ``typing.Protocol`` ports for services (dependency inversion)
 - **`config.py`**: Project root resolution and Flask configuration (e.g. ``FLASK_SECRET_KEY``)
 - **`handlers/`**: Upload and repository filesystem operations
@@ -95,7 +96,7 @@ GraphRAG_Project/
 
 ### Visualization Layer (`src/visualization/`)
 **Purpose**: Graph visualization and reporting
-- **`graph_visualization.py`**: Graph structure visualization
+- **`graph_visualization.py`**: Structure subgraphs and degree bar charts per edge kind (IMPORTS, IN_FILE, TESTS, plus combined)
 - **`__init__.py`**: Visualization utilities and exports
 
 ### Statistics Layer (`src/stats/`)

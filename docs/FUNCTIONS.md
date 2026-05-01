@@ -22,7 +22,7 @@ This document explains the current package-level API and CLI entrypoints in the 
 
 - `main()`
   - CLI entrypoint for graph visualization.
-  - Delegates visualization to `src.visualization.graph_visualization`.
+  - Delegates visualization to `src.visualization.graph_visualization`, which emits combined plus per-type PNGs for **IMPORTS**, **IN_FILE**, and **TESTS** (structure + degree), plus a text summary.
 
 ## `src/repo_stats.py`
 

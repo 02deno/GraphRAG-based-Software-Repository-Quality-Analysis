@@ -30,8 +30,8 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **📁 Repository input**: GitHub HTTPS URL (clone) or local path; ZIP upload in the web UI is reserved for a later release (handler still supports ZIP)
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
-- **📊 Real-time Analysis**: Automatic graph analysis for compatible repositories
-- **📥 Downloadable Results**: Export JSON graphs, analysis text, and (when generated) visual summary text from the results page; each run also stores PNG charts under that run’s folder in ``results/``
+- **📊 Real-time Analysis**: Automatic graph analysis for compatible repositories, with **percent + phase** progress over SSE while the pipeline runs
+- **📥 Downloadable Results**: Export JSON graphs, analysis text, and (when generated) visual summary text from the results page; PNG charts are stored under each run’s ``results/…/visuals/`` folder and **shown inline** on the results view
 - **📱 Responsive Design**: Mobile-friendly interface
 
 ### Core Analysis Features

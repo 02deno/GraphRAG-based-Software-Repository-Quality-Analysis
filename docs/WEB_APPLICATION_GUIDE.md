@@ -138,7 +138,7 @@ export FLASK_DEBUG=False
 ### Backend Components
 
 #### Flask Application (`src/web/app.py`)
-- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; same-origin fetch shows progress then replaces the page with results HTML)
+- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; progressive UI uses ``text/event-stream`` with ``X-GraphRAG-Analyze-Stream`` for phase **percent** updates, then redirects to ``GET /analysis-results/<run_dir>``), ``GET /analysis-results/<run_dir>/visuals/<filename>`` (PNG charts)
 - **Session Management**: Analysis state preservation
 - **Error Handling**: Comprehensive exception management
 - **File Management**: Temporary upload handling
@@ -167,11 +167,13 @@ export FLASK_DEBUG=False
 - **Visual Scoring**: Color-coded score display
 - **Detailed Metrics**: Individual check results
 - **Interactive Elements**: Confirmation dialogs and actions
+- **Graph analysis progress**: ``POST /analyze`` with ``X-GraphRAG-Progressive-UI`` and ``X-GraphRAG-Analyze-Stream`` receives **Server-Sent Events** carrying ``percent`` (0–100) and a short **message** per pipeline phase
 - **Accessibility**: Semantic HTML and keyboard navigation
 
 #### Analysis Results (`templates/results_final.html`)
 - **Graph stats**: Shows **implemented** node/edge types (what appears in the built graph), not the full schema contract reserved for future edge kinds
 - **Pipeline timeline**: Includes the visualization step (PNG artifacts under the run’s ``results/…/visuals/`` folder on disk)
+- **Chart gallery**: Embeds each PNG via ``web.analysis_visual_asset`` when ``visual_gallery`` is present
 - **Interactive Downloads**: Client-side downloads read from an embedded JSON payload (avoids fragile string interpolation that could yield empty or ``undefined`` files for large graphs)
 - **Error Handling**: Failed analysis presentation
 - **Export Options**: Graph JSON, analysis report text, and visual summary text when available
