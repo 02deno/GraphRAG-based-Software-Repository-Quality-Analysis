@@ -15,6 +15,15 @@ _TRACKED_SOURCE_GLOBS = ("*.py", "*.js", "*.ts", "*.java", "*.cpp", "*.c", "*.go
 _MIN_PYTHON_RATIO_FOR_PIPELINE = 0.3
 
 
+def _directory_has_python_files(path: Path) -> bool:
+    """Return True if *path* is a directory containing at least one ``*.py`` file."""
+    if not path.is_dir():
+        return False
+    for _ in path.rglob("*.py"):
+        return True
+    return False
+
+
 def _language_source_counts(repo_path: Path) -> Tuple[int, int]:
     """Count ``*.py`` files and all tracked source extensions (for language ratio).
 
@@ -56,24 +65,25 @@ class RepoCompatibilityChecker:
             },
             {
                 "name": "src_folder_exists",
-                "description": "src/ folder exists",
+                "description": "Python package root (src/, app/, backend/…)",
                 "weight": 0.15,
                 "check_fn": self._check_src_folder,
                 "explanation": (
-                    "Looks for a conventional top-level ``src/`` directory (or close "
-                    "substitutes such as ``lib/``). That layout usually makes package "
-                    "roots easier to infer for static extraction."
+                    "Looks for a recognizable Python tree root: top-level ``src/``, "
+                    "``backend/app`` or ``backend/src`` (full-stack / monorepos), "
+                    "top-level ``app/`` with ``.py`` files (common FastAPI layout), or "
+                    "substitutes such as ``lib/``. Helps the extractor anchor packages."
                 ),
             },
             {
                 "name": "tests_folder_exists",
-                "description": "tests/ folder exists",
+                "description": "tests/ folder (root or service)",
                 "weight": 0.10,
                 "check_fn": self._check_tests_folder,
                 "explanation": (
-                    "Detects ``tests/``, ``test/``, or ``specs/`` at the repository root. "
-                    "Tests improve confidence that TESTS edges and coverage-related signals "
-                    "can be mined."
+                    "Detects ``tests/``, ``test/``, or ``specs/`` at the repo root or under "
+                    "common service folders (e.g. ``backend/tests``, ``app/tests``) so "
+                    "full-stack templates are not penalized for keeping tests next to the API."
                 ),
             },
             {
@@ -257,7 +267,7 @@ class RepoCompatibilityChecker:
         return False, py_ratio * 0.3, "Python is not the primary language"
 
     def _check_src_folder(self, repo_path: Path) -> Tuple[bool, float, str]:
-        """Detect a conventional ``src/`` (or fallback) layout at repo top level.
+        """Detect a conventional or monorepo Python package root.
 
         Args:
             repo_path: Root of the repository.
@@ -265,20 +275,31 @@ class RepoCompatibilityChecker:
         Returns:
             ``(passed, contribution, warning_or_empty)``.
         """
-        src_folders = [d for d in repo_path.iterdir() if d.is_dir() and d.name.lower() == "src"]
+        if (repo_path / "src").is_dir():
+            return True, 1.0, "Found top-level src/"
 
-        if src_folders:
-            return True, 1.0, ""
+        backend = repo_path / "backend"
+        if backend.is_dir():
+            for name in ("app", "src"):
+                child = backend / name
+                if child.is_dir() and _directory_has_python_files(child):
+                    return True, 0.95, f"Found backend/{name}/ with Python sources (monorepo)"
+            if _directory_has_python_files(backend):
+                return True, 0.85, "Found backend/ with Python sources (no dedicated app/ or src/ subfolder)"
+
+        app_root = repo_path / "app"
+        if app_root.is_dir() and _directory_has_python_files(app_root):
+            return True, 0.9, "Found top-level app/ with Python sources (e.g. FastAPI service)"
 
         common_folders = ["lib", "source", "code"]
         for folder in common_folders:
-            if (repo_path / folder).exists():
+            if (repo_path / folder).is_dir():
                 return True, 0.8, f"Found {folder}/ folder instead of src/"
 
-        return False, 0.0, "No src/ folder found"
+        return False, 0.0, "No src/, backend/app, backend/src, or app/ with Python sources found"
 
     def _check_tests_folder(self, repo_path: Path) -> Tuple[bool, float, str]:
-        """Detect common test directory names at repo top level.
+        """Detect test directories at repo root or under common Python service paths.
 
         Args:
             repo_path: Root of the repository.
@@ -286,15 +307,29 @@ class RepoCompatibilityChecker:
         Returns:
             ``(passed, contribution, warning_or_empty)``.
         """
-        test_folders: List[str] = []
-        for folder in ["tests", "test", "specs"]:
-            candidate = repo_path / folder
-            if candidate.exists() and candidate.is_dir():
-                test_folders.append(folder)
+        relative_candidates = (
+            "tests",
+            "test",
+            "specs",
+            "backend/tests",
+            "backend/test",
+            "backend/app/tests",
+            "backend/src/tests",
+            "src/tests",
+            "app/tests",
+            "server/tests",
+            "api/tests",
+        )
+        for rel in relative_candidates:
+            candidate = repo_path / rel
+            if candidate.is_dir():
+                return True, 1.0, f"Found {rel}/"
 
-        if test_folders:
-            return True, 1.0, ""
-        return False, 0.0, "No tests/ folder found"
+        return (
+            False,
+            0.0,
+            "No tests/, backend/tests/, app/tests/, or similar test directory found",
+        )
 
     def _check_static_imports(self, repo_path: Path) -> Tuple[bool, float, str]:
         """Heuristically measure static ``import`` / ``from`` lines in a small sample.

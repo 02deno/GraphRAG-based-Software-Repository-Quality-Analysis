@@ -26,7 +26,7 @@ python run_web_app.py
 The system analyzes compatibility in the same step as upload, then sends you to ``GET /compatibility``. There you get a short **step timeline**, a collapsible **how scoring works** note, and **per-check** ``<details>`` blocks: static text for what the check measures, plus a **For this repository** line when the checker returned a concrete outcome (why the score is high or low for that row). Pipeline-level caps still appear in the top **Warnings** list.
 
 **Scoring Categories:**
-- **Core Checks (70%)**: Python language, src/tests folders, static imports
+- **Core Checks (70%)**: Python language, package-root / tests layout (including ``backend/`` monorepos), static imports
 - **Additional Checks (30%)**: Package structure, repo size, Python root dependency manifest, README
 
 **Python-only pipeline:** If there are no ``.py`` files, no tracked source files, or Python is under 30% of tracked sources, the **overall score is capped below 50%** regardless of other layout signals (see ``src/compatibility/repo_checker.py``).
@@ -255,7 +255,7 @@ ANALYSIS_CONFIG = {
 **Repository Upload Fails:**
 - Check file size (max 100MB)
 - Ensure ZIP contains valid Python repository
-- Verify src/ and tests/ folders exist
+- Verify Python layout (``src/``, ``backend/app``, ``backend/tests``, etc.) matches what you expect
 
 **Low Compatibility Score:**
 - Add requirements.txt or setup.py
@@ -288,7 +288,7 @@ python src/main_pipeline.py --repo "PATH_TO_REPO" --verbose
 ## Best Practices
 
 ### For Web Users
-1. **Prepare Repository**: Ensure src/ and tests/ folders exist
+1. **Prepare Repository**: Ensure Python sources and tests are discoverable (root or e.g. ``backend/``)
 2. **Check Compatibility**: Review score before analysis
 3. **Download Results**: Save analysis reports for reference
 4. **Monitor Progress**: Watch for completion notifications

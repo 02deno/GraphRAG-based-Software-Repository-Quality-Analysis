@@ -86,8 +86,8 @@ GraphRAG_Project/
 
 **Core Checks (70% weight):**
 - **Python Primary Language** (25%): Repository is primarily Python-based
-- **src/ Folder** (15%): Standard source directory structure
-- **tests/ Folder** (10%): Test directory presence
+- **Python package root** (15%): ``src/``, ``backend/app`` or ``backend/src``, top-level ``app/`` with Python, or ``lib/``-style fallbacks (monorepo-friendly)
+- **Tests directory** (10%): ``tests/`` at repo root or under paths like ``backend/tests``, ``app/tests``
 - **Static Imports** (20%): Parseable import statements
 
 **Additional Checks (30% weight):**

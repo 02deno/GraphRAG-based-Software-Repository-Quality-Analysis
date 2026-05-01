@@ -74,8 +74,8 @@ export FLASK_DEBUG=False
 #### Scoring System
 **Core Checks (70% weight):**
 - **Python Primary Language** (25%): Python file ratio analysis
-- **src/ Folder** (15%): Standard source structure
-- **tests/ Folder** (10%): Test directory presence
+- **Package root** (15%): ``src/``, ``backend/app``, ``backend/src``, top-level ``app/`` with Python, or fallbacks
+- **Tests** (10%): ``tests/`` at root or under e.g. ``backend/tests``, ``app/tests``
 - **Static Imports** (20%): AST-parsable import analysis
 
 **Additional Checks (30% weight):**
@@ -212,7 +212,7 @@ EXCLUDE_DIRS = [            # Directories to ignore
 **Solutions**:
 - Check file size (max 100MB)
 - Verify ZIP contains valid Python repository
-- Ensure repository has src/ and tests/ folders
+- Ensure Python package and test folders exist (root or monorepo paths such as ``backend/``)
 - Check for corrupted ZIP file
 
 #### Compatibility Issues
@@ -222,7 +222,7 @@ EXCLUDE_DIRS = [            # Directories to ignore
 - Include __init__.py files in packages
 - Reduce dynamic imports (importlib, __import__)
 - Add README.md documentation
-- Ensure src/ and tests/ directory structure
+- Ensure Python layout is coherent (``src/`` or ``backend/app`` + ``backend/tests``, etc.)
 
 #### Analysis Errors
 **Problem**: Graph construction fails
