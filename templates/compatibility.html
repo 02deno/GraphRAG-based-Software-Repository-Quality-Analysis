@@ -375,7 +375,7 @@
             <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="analyze-progress-bar">
                 <div class="progress-bar-fill" id="analyze-progress-fill"></div>
             </div>
-            <p class="progress-steps-hint">Activity log: with live streaming you see each pipeline step from the server; otherwise timed hints (with elapsed seconds) until the HTML response arrives.</p>
+            <p class="progress-steps-hint">Activity log: HTTP 200 means the progress stream is connected; analysis keeps running until a final complete event/redirect arrives.</p>
             <div class="progress-steps-wrap">
                 <ol id="analyze-progress-steps" class="progress-steps" aria-live="polite" aria-relevant="additions"></ol>
             </div>
@@ -554,6 +554,7 @@
     var barEl = document.getElementById('analyze-progress-bar');
     var stepsEl = document.getElementById('analyze-progress-steps');
     var lastProgressSig = '';
+    var highestPercentSeen = 0;
 
     function setProgressUi(percent, message) {
         var p = Math.min(100, Math.max(0, Number(percent) || 0));
@@ -565,7 +566,9 @@
 
     function appendProgressStep(percent, message) {
         var msg = message || '…';
-        var p = Math.min(100, Math.max(0, Number(percent) || 0));
+        var incoming = Math.min(100, Math.max(0, Number(percent) || 0));
+        var p = incoming < highestPercentSeen ? highestPercentSeen : incoming;
+        highestPercentSeen = p;
         var sig = String(p) + '\u0000' + msg;
         if (sig === lastProgressSig) return;
         lastProgressSig = sig;
@@ -591,11 +594,15 @@
     function showOverlay() {
         if (!overlay) return;
         overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+        overlay.style.visibility = 'visible';
+        overlay.style.opacity = '1';
         overlay.setAttribute('aria-hidden', 'false');
         lastProgressSig = '';
+        highestPercentSeen = 0;
         if (stepsEl) stepsEl.innerHTML = '';
         waitStartMs = Date.now();
-        appendProgressStep(2, 'Request sent — waiting for server (first byte may be delayed on small dev servers)…');
+        appendProgressStep(0, 'Request sent — waiting for server (first byte may be delayed on small dev servers)…');
         if (fakeProgressTimer) clearInterval(fakeProgressTimer);
         var phase = 0;
         var milestones = [
@@ -646,6 +653,9 @@
         stopFakeProgress();
         if (!overlay) return;
         overlay.classList.add('hidden');
+        overlay.style.display = '';
+        overlay.style.visibility = '';
+        overlay.style.opacity = '';
         overlay.setAttribute('aria-hidden', 'true');
     }
 
@@ -707,18 +717,20 @@
                         buf += dec.decode();
                     } catch (e1) { /* ignore */ }
                 }
-                var parts = buf.split(/\n\n');
+                var parts = buf.split(/\r?\n\r?\n/);
                 buf = parts.pop() || '';
                 for (var i = 0; i < parts.length; i++) {
                     if (processSseTextBlock(parts[i], btn)) return;
                 }
                 if (result.done) {
                     if (buf.trim() && processSseTextBlock(buf, btn)) return;
-                    hideOverlay();
-                    if (btn) btn.disabled = false;
                     if (buf.trim()) {
                         console.warn('analyze stream ended without complete; tail:', buf.slice(0, 500));
                     }
+                    appendProgressStep(100, 'Finalizing and opening results…');
+                    setTimeout(function () {
+                        window.location.href = "{{ url_for('web.analysis_results_latest') }}";
+                    }, 350);
                     return;
                 }
                 return pump();
@@ -732,75 +744,104 @@
         return pump();
     }
 
-    document.querySelectorAll('.graph-analysis-form').forEach(function (form) {
-        form.addEventListener('submit', function (e) {
-            if (!window.fetch) return;
-            if (!overlay) return;
-            e.preventDefault();
-            var btn = form.querySelector('button[type="submit"]');
-            if (btn) btn.disabled = true;
-            try {
-                showOverlay();
-            } catch (err1) {
-                if (btn) btn.disabled = false;
-                alert('Could not show progress overlay.');
-                console.error(err1);
-                return;
+    window.__showAnalyzeOverlay = function () {
+        try {
+            showOverlay();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    function submitAnalyzeForm(form, e) {
+        if (!window.fetch) return;
+        if (!overlay) return;
+        e.preventDefault();
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        try {
+            showOverlay();
+        } catch (err1) {
+            if (btn) btn.disabled = false;
+            alert('Could not show progress overlay.');
+            console.error(err1);
+            return;
+        }
+
+        var headers = {};
+        headers[HEADER] = '1';
+        headers[STREAM] = '1';
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: headers,
+            body: new FormData(form),
+            redirect: 'follow',
+            credentials: 'same-origin'
+        }).then(function (res) {
+            var ct = (res.headers.get('Content-Type') || '').toLowerCase();
+            if (res.status === 400 || res.status === 500) {
+                return res.json().then(function (data) {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert(data.error || ('Request failed (' + res.status + ')'));
+                }).catch(function () {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert('Analysis failed (' + res.status + ').');
+                });
             }
-
-            var headers = {};
-            headers[HEADER] = '1';
-            headers[STREAM] = '1';
-
-            fetch(form.action, {
-                method: 'POST',
-                headers: headers,
-                body: new FormData(form),
-                redirect: 'follow',
-                credentials: 'same-origin'
-            }).then(function (res) {
-                var ct = (res.headers.get('Content-Type') || '').toLowerCase();
-                if (res.status === 400 || res.status === 500) {
+            if (res.ok && ct.indexOf('text/event-stream') !== -1) {
+                return readAnalyzeEventStream(res, btn).catch(function (err3) {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert('Could not read the analysis stream. Check logs or try again.');
+                    console.error(err3);
+                });
+            }
+            if (res.ok) {
+                if (ct.indexOf('application/json') !== -1) {
                     return res.json().then(function (data) {
+                        if (data && data.redirect) {
+                            stopFakeProgress();
+                            appendProgressStep(100, 'Opening results…');
+                            window.location.href = data.redirect;
+                            return;
+                        }
                         hideOverlay();
                         if (btn) btn.disabled = false;
-                        alert(data.error || ('Request failed (' + res.status + ')'));
-                    }).catch(function () {
-                        hideOverlay();
-                        if (btn) btn.disabled = false;
-                        alert('Analysis failed (' + res.status + ').');
+                        alert('Analysis completed but no redirect was provided.');
                     });
                 }
-                if (res.ok && ct.indexOf('text/event-stream') !== -1) {
-                    return readAnalyzeEventStream(res, btn).catch(function (err3) {
-                        hideOverlay();
-                        if (btn) btn.disabled = false;
-                        alert('Could not read the analysis stream. Check logs or try again.');
-                        console.error(err3);
-                    });
-                }
-                if (res.ok) {
-                    return res.text().then(function (html) {
-                        stopFakeProgress();
-                        appendProgressStep(100, 'Opening results…');
-                        hideOverlay();
-                        if (btn) btn.disabled = false;
-                        document.open();
-                        document.write(html);
-                        document.close();
-                    });
+                if (res.redirected && res.url) {
+                    stopFakeProgress();
+                    appendProgressStep(100, 'Opening results…');
+                    window.location.href = res.url;
+                    return;
                 }
                 hideOverlay();
                 if (btn) btn.disabled = false;
-                alert('Unexpected response (' + res.status + ').');
-            }).catch(function (err2) {
-                hideOverlay();
-                if (btn) btn.disabled = false;
-                alert('Network error while running analysis.');
-                console.error(err2);
-            });
+                return res.text().then(function () {
+                    alert('Analysis completed but navigation was not confirmed.');
+                });
+            }
+            hideOverlay();
+            if (btn) btn.disabled = false;
+            alert('Unexpected response (' + res.status + ').');
+        }).catch(function (err2) {
+            hideOverlay();
+            if (btn) btn.disabled = false;
+            alert('Network error while running analysis.');
+            console.error(err2);
         });
-    });
+    }
+
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form || !form.classList || !form.classList.contains('graph-analysis-form')) {
+            return;
+        }
+        submitAnalyzeForm(form, e);
+    }, true);
 })();
     </script>
 </body>

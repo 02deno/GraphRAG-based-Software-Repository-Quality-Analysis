@@ -74,8 +74,15 @@ def run_repository_pipeline(
     log_lines.append(f"Building graph for repository: {repo_path}")
 
     def _graph_file_progress(stage: str, idx: int, total: int, rel_path: str) -> None:
-        """Map builder file stages into coarse percent band 7–27 for SSE / UIs."""
+        """Map builder file stages into coarse percent band 7–27 for SSE / UIs.
+
+        To keep the web popup readable, emit only phase start and phase end
+        (instead of per-file updates).
+        """
         if total <= 0:
+            return
+        current = idx + 1
+        if current != 1 and current != total:
             return
         if stage == "scan":
             lo, hi = 7, 11
@@ -84,12 +91,15 @@ def run_repository_pipeline(
         else:
             lo, hi = 24, 27
         span = hi - lo
-        pct = lo + int(span * (idx + 1) / max(1, total))
-        short = rel_path if len(rel_path) <= 100 else rel_path[:97] + "…"
+        pct = lo + int(span * current / max(1, total))
+        if current == 1:
+            message = f"Graph build [{stage}] started ({total} files)…"
+        else:
+            message = f"Graph build [{stage}] completed ({total}/{total})."
         _notify_progress(
             progress_callback,
             pct,
-            f"Graph build [{stage}] {idx + 1}/{total}: {short}",
+            message,
         )
 
     builder = GraphBuilder(repo_path)

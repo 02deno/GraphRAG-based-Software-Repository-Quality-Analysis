@@ -258,6 +258,7 @@
             redirect: 'follow',
             credentials: 'same-origin'
         }).then(function (res) {
+            var ct = (res.headers.get('Content-Type') || '').toLowerCase();
             if (res.status === 400 || res.status === 500) {
                 return res.json().then(function (data) {
                     hideOverlay();
@@ -270,12 +271,27 @@
                 });
             }
             if (res.ok) {
-                return res.text().then(function (html) {
+                if (ct.indexOf('application/json') !== -1) {
+                    return res.json().then(function (data) {
+                        if (data && data.redirect) {
+                            window.location.href = data.redirect;
+                            return;
+                        }
+                        hideOverlay();
+                        if (btn) btn.disabled = false;
+                        alert('Upload completed but no redirect was provided.');
+                    });
+                }
+                if (res.redirected && res.url) {
+                    window.location.href = res.url;
+                    return;
+                }
+                hideOverlay();
+                if (btn) btn.disabled = false;
+                return res.text().then(function () {
                     hideOverlay();
                     if (btn) btn.disabled = false;
-                    document.open();
-                    document.write(html);
-                    document.close();
+                    alert('Upload completed but navigation was not confirmed.');
                 });
             }
             hideOverlay();

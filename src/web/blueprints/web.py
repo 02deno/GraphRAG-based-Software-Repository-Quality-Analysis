@@ -8,6 +8,7 @@ import logging
 import queue
 import threading
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Dict, Iterator
 
 from flask import (
@@ -122,6 +123,8 @@ def upload_repository():
             "results_folder_slug": results_folder_slug,
             "compatibility": _serialize_compatibility_for_session(compatibility_result),
         }
+        if _wants_progressive_ui():
+            return jsonify({"ok": True, "redirect": url_for("web.compatibility_results")})
         return redirect(url_for("web.compatibility_results"))
     except ValueError as exc:
         cleanup_temp_directory(repo_path, cleanup_temp)
@@ -217,6 +220,11 @@ def analyze_repository():
         )
         cleanup_temp_directory(repo_path, cleanup_temp)
         session.pop("analysis_data", None)
+        if _wants_progressive_ui():
+            run_dir = results.get("results_run_dir", "")
+            return jsonify(
+                {"ok": True, "redirect": url_for("web.analysis_results_page", run_dir=run_dir)}
+            )
         return render_template("results_final.html", results=results)
     except Exception as exc:
         logger.exception("analyze_repository failed")
@@ -235,6 +243,28 @@ def analysis_results_page(run_dir: str):
         flash("Analysis results folder was not found or is not valid.")
         return redirect(url_for("web.index"))
     results = load_results_from_run_directory(base)
+    return render_template("results_final.html", results=results)
+
+
+@web_bp.route("/analysis-results/latest")
+def analysis_results_latest():
+    """Load the most recent ``results/web_analysis_*`` run and render results."""
+    results_root = Path("results").resolve()
+    if not results_root.is_dir():
+        flash("No analysis results were found yet.")
+        return redirect(url_for("web.index"))
+
+    candidates = [
+        p
+        for p in results_root.iterdir()
+        if p.is_dir() and p.name.startswith("web_analysis_") and (p / "graph.json").is_file()
+    ]
+    if not candidates:
+        flash("No completed analysis run was found.")
+        return redirect(url_for("web.index"))
+
+    latest = max(candidates, key=lambda p: p.stat().st_mtime)
+    results = load_results_from_run_directory(latest)
     return render_template("results_final.html", results=results)
 
 
