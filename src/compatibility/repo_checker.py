@@ -108,7 +108,7 @@ class RepoCompatibilityChecker:
 
                 results.append(check_result)
                 total_weight += weight
-                total_score += score
+                total_score += score * weight
 
                 if warning:
                     warnings.append(warning)
@@ -126,6 +126,7 @@ class RepoCompatibilityChecker:
                 total_weight += weight
                 warnings.append(f"Error checking {check['name']}: {exc!s}")
 
+        # Per-check ``score`` is in [0, 1]; aggregate as a weighted mean, then scale to %.
         final_score = (total_score / total_weight * 100) if total_weight > 0 else 0.0
 
         return {

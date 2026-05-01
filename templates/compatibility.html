@@ -176,7 +176,7 @@
             </div>
             <div class="check-details">
                 <div class="check-name">{{ check.description }}</div>
-                <div class="check-weight">Weight: {{ check.weight * 100 }}% | Score: {{ (check.score / check.weight * 100) if check.weight > 0 else 0 }}%</div>
+                <div class="check-weight">Weight: {{ (check.weight * 100)|round(1) }}% | Check score: {{ (check.score * 100)|round(1) }}%</div>
             </div>
         </div>
         {% endfor %}
