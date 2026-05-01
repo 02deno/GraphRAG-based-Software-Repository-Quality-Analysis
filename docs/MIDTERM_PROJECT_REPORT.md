@@ -94,13 +94,14 @@ flowchart TB
 | `IMPORTS` | **File → File** (resolved import to another module file in the repo). |
 | `IN_FILE` | **Function or Class → File** (symbol defined in that file). |
 | `TESTS` | **Test → Function or Class** (static inferred link). |
+| `CALLS` | **Function → Function or Class** (static AST call-site heuristic by callee name/attribute). |
 
 ### 4.3 Reserved in schema but not emitted by current extractors
 
 Defined in `src/graph/schema.py` for forward compatibility:
 
 - **Nodes:** `Commit`  
-- **Edges:** `CALLS`, `MODIFIED_BY`  
+- **Edges:** `MODIFIED_BY`  
 
 These are **not** produced by `GraphBuilder` today; the results UI lists only **implemented** types present in the graph document.
 
@@ -200,7 +201,7 @@ Any small single-package repo (e.g. a course homework folder with a handful of m
 |------|-------------|------------------|
 | Languages | Python `.py` under repo root | Other languages; notebooks |
 | Nodes | File, Function, Class, Test | `Commit` nodes |
-| Edges | IMPORTS, IN_FILE, TESTS | `CALLS`, `MODIFIED_BY` |
+| Edges | IMPORTS, IN_FILE, TESTS, CALLS | `MODIFIED_BY` |
 | Analysis | Static degree / ranking text | PageRank, communities, temporal graphs |
 | Viz | Matplotlib + NetworkX PNGs | Interactive webGL graph explorer |
 | Web | Upload URL/path, compatibility, analyze, results, DOCX | ZIP upload in main UI (handler exists) |
@@ -225,7 +226,7 @@ Any small single-package repo (e.g. a course homework folder with a handful of m
 
 **Plausible next milestones for the final report:**
 
-1. Emit **`CALLS`** edges from static analysis (caller → callee) under a feature flag.  
+1. Improve **`CALLS`** precision (disambiguation across modules/classes beyond simple name/attribute heuristic).  
 2. **Interactive graph** (subset) in the browser with zoom/filter by edge type.  
 3. **ZIP** upload exposed in `index.html` with the same compatibility gate.  
 4. Optional **embedding** step: chunk symbols/files → vector index → “ask the repo” (true GraphRAG).

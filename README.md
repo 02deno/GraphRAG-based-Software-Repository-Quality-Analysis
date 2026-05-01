@@ -42,7 +42,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 
 ### Core Analysis Features
 - **Graph Construction**: File, Function, Class, and Test nodes (all ``*.py`` under the repo root, including e.g. ``backend/`` — not limited to a top-level ``src/`` layout)
-- **Relationship Mapping**: IMPORTS, IN_FILE, and TESTS edges
+- **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, and TESTS edges
 - **Quality Metrics**: Degree centrality and structural analysis
 - **Visualization Support**: Graph structure and analysis reports
 
@@ -154,7 +154,7 @@ python src/main_pipeline.py --repo "PATH_TO_REPO" --top-k 10
 - **Web Application**: Full Flask-based interface
 - **Compatibility Checking**: Smart scoring system
 - **Graph Construction**: File, Function, Class, Test nodes
-- **Relationship Mapping**: IMPORTS, IN_FILE, TESTS edges
+- **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, TESTS edges
 - **Analysis**: Degree centrality and basic metrics
 - **Visualization**: Graph structure and analysis reports
 

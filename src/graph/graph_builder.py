@@ -17,6 +17,7 @@ from src.extractors import (
 )
 from src.graph.edges.imports_edge import ImportsEdge
 from src.graph.edges.in_file_edge import InFileEdge
+from src.graph.edges.calls_edge import CallsEdge
 from src.graph.edges.tests_edge import TestsEdge
 from src.graph.nodes.file_node import FileNode
 from src.graph.nodes.function_node import FunctionNode
@@ -75,6 +76,7 @@ class GraphBuilder:
                 logger.info("graph_build_scan %d/%d %s", i + 1, n_py, file_id)
 
         n_files = len(file_nodes)
+        unresolved_calls: List[tuple[str, str]] = []
         for i, file_node in enumerate(file_nodes):
             source_path = self.repo_path / file_node.path
             if file_progress is not None:
@@ -84,18 +86,32 @@ class GraphBuilder:
             imports = extract_imports(source_path)
             self.edges.extend(self._build_import_edges(file_node.path, imports))
 
-            functions, classes, in_file_edges = extract_functions_and_classes(
+            functions, classes, in_file_edges, file_calls = extract_functions_and_classes(
                 source_path,
                 self.repo_path,
                 file_node.module,
             )
             self.edges.extend(in_file_edges)
+            unresolved_calls.extend(file_calls)
             for function_node in functions:
                 self.nodes[function_node.id] = function_node
                 self.nodes_by_type["Function"][function_node.name] = function_node.id
             for class_node in classes:
                 self.nodes[class_node.id] = class_node
                 self.nodes_by_type["Class"][class_node.name] = class_node.id
+
+        seen_calls: set[tuple[str, str]] = set()
+        for caller_id, callee_name in unresolved_calls:
+            target_id = self.nodes_by_type.get("Function", {}).get(callee_name)
+            if target_id is None:
+                target_id = self.nodes_by_type.get("Class", {}).get(callee_name)
+            if not target_id or target_id == caller_id:
+                continue
+            pair = (caller_id, target_id)
+            if pair in seen_calls:
+                continue
+            self.edges.append(CallsEdge(source=caller_id, target=target_id))
+            seen_calls.add(pair)
 
         test_nodes: List[TestNode] = []
         test_edges: List[TestsEdge] = []

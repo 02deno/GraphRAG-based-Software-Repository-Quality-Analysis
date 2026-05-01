@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.graph import GraphBuilder, save_graph
+from src.graph.graph_builder import GraphBuilder, save_graph
 from src.graph.schema import graph_to_dict, validate_graph_contract
 
 

@@ -103,7 +103,7 @@ GraphRAG_Project/
 
 ### Visualization Layer (`src/visualization/`)
 **Purpose**: Graph visualization and reporting
-- **`graph_visualization.py`**: Structure subgraphs and degree bar charts per edge kind (IMPORTS, IN_FILE, TESTS, plus combined)
+- **`graph_visualization.py`**: Structure subgraphs and degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, plus combined)
 - **`__init__.py`**: Visualization utilities and exports
 
 ### Statistics Layer (`src/stats/`)

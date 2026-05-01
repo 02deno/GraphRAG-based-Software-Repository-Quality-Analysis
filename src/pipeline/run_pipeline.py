@@ -7,7 +7,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from src.analysis.graph_analysis import generate_analysis_text_report, save_analysis_report
-from src.graph import GraphBuilder, graph_to_dict, save_graph, validate_graph_contract
+from src.graph.graph_builder import GraphBuilder, save_graph
+from src.graph.schema import graph_to_dict, validate_graph_contract
 from src.visualization.graph_visualization import generate_visual_summary, save_visual_summary
 
 from .output_paths import default_cli_graph_path, default_cli_visual_summary_path

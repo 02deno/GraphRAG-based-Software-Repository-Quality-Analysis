@@ -1,0 +1,33 @@
+---
+description: Enforce single-class-per-file modular refactors
+globs: src/**/*.py
+alwaysApply: true
+---
+
+# Modularity and class split rule (`src/`)
+
+Refactors in this project must prioritize low coupling and small, understandable modules.
+
+## Class/file constraint
+
+- **One top-level class per file** for new code and for files touched during refactor.
+- If a file grows and contains multiple top-level classes, split into focused modules (`foo_service.py`, `foo_parser.py`, etc.).
+- Keep class names and filenames aligned so ownership is obvious.
+
+## Module boundaries
+
+- Keep orchestration, parsing, graph modeling, and web concerns in separate modules.
+- Move reusable logic into functions/helpers rather than adding more responsibilities to an existing class.
+- Prefer dependency injection (arguments/protocols) over importing sibling concrete classes directly.
+
+## Exceptions
+
+- Pure function modules (no class) are allowed.
+- `__init__.py` files can re-export symbols and do not need classes.
+- Small dataclass/value-object modules are fine as single-class files.
+
+## Anti-patterns
+
+- Avoid "god files" that collect multiple classes for convenience.
+- Avoid adding a second class to an existing class file unless explicitly requested by the user.
+- Avoid mixing unrelated responsibilities in one class just to keep code local.

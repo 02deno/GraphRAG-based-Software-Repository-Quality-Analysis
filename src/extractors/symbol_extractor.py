@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
+from .calls_extractor import CallCollector
 from ..graph.edges.in_file_edge import InFileEdge
 from ..graph.nodes.class_node import ClassNode
 from ..graph.nodes.function_node import FunctionNode
@@ -68,7 +69,7 @@ def extract_functions_and_classes(
     file_path: Path,
     repo_path: Path,
     module_name: str,
-) -> Tuple[List[FunctionNode], List[ClassNode], List[InFileEdge]]:
+) -> Tuple[List[FunctionNode], List[ClassNode], List[InFileEdge], List[tuple[str, str]]]:
     """Parse *file_path* and return function/class nodes plus IN_FILE containment edges.
 
     Args:
@@ -77,14 +78,15 @@ def extract_functions_and_classes(
         module_name: Dotted module name for qualified symbols.
 
     Returns:
-        Tuple ``(functions, classes, in_file_edges)``. On parse errors, three empty lists.
+        Tuple ``(functions, classes, in_file_edges, unresolved_call_sites)``.
+        On parse errors, four empty lists.
     """
     file_id = str(file_path.relative_to(repo_path))
     try:
         source = file_path.read_text(encoding="utf-8")
         tree = ast.parse(source)
     except (OSError, SyntaxError, UnicodeDecodeError):
-        return [], [], []
+        return [], [], [], []
 
     collector = SymbolCollector(module_name=module_name, file_id=file_id)
     collector.visit(tree)
@@ -94,4 +96,11 @@ def extract_functions_and_classes(
     for class_node in collector.class_nodes:
         in_file_edges.append(InFileEdge(source=class_node.id, target=file_id))
 
-    return collector.function_nodes, collector.class_nodes, in_file_edges
+    function_ids_by_qualified: Dict[str, str] = {}
+    for fn in collector.function_nodes:
+        function_ids_by_qualified[fn.qualified_name] = fn.id
+    call_collector = CallCollector(module_name=module_name, function_ids_by_qualified=function_ids_by_qualified)
+    call_collector.visit(tree)
+    unresolved_calls = sorted(call_collector.call_sites)
+
+    return collector.function_nodes, collector.class_nodes, in_file_edges, unresolved_calls
