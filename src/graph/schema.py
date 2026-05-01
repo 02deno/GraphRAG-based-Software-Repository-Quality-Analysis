@@ -61,12 +61,22 @@ def graph_to_dict(nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]) -> D
         edges: List of edge dicts ready for JSON.
 
     Returns:
-        Document suitable for persistence and web templates.
+        Document suitable for persistence and web templates. Includes
+        ``implemented_*`` type lists derived from the actual ``nodes`` / ``edges``
+        (for UI that should not imply unimplemented node or edge kinds exist).
     """
+    implemented_node_types = sorted(
+        {str(n.get("type", "")) for n in nodes if n.get("type")}
+    )
+    implemented_edge_types = sorted(
+        {str(e.get("type", "")) for e in edges if e.get("type")}
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "schema_node_types": sorted(NODE_TYPES),
         "schema_edge_types": sorted(EDGE_TYPES),
+        "implemented_node_types": implemented_node_types,
+        "implemented_edge_types": implemented_edge_types,
         "nodes": nodes,
         "edges": edges,
     }

@@ -31,7 +31,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
 - **📊 Real-time Analysis**: Automatic graph analysis for compatible repositories
-- **📥 Downloadable Results**: Export JSON graphs and text reports
+- **📥 Downloadable Results**: Export JSON graphs, analysis text, and (when generated) visual summary text from the results page; each run also stores PNG charts under that run’s folder in ``results/``
 - **📱 Responsive Design**: Mobile-friendly interface
 
 ### Core Analysis Features
@@ -45,6 +45,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 ```
 GraphRAG_Project/
 ├── 📁 src/                          # Backend Core
+│   ├── 📁 utils/                    # Cross-layer helpers (repo → safe path slug)
 │   ├── 📁 web/                      # Web Application
 │   │   ├── app.py                    # Flask application
 │   │   └── __init__.py

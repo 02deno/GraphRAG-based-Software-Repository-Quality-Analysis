@@ -149,6 +149,11 @@
         }
         .flow-label { font-weight: 600; color: #333; }
         .flow-desc { color: #666; font-size: 13px; margin-top: 2px; }
+        .schema-note {
+            font-size: 13px;
+            color: #666;
+            margin-top: 12px;
+        }
     </style>
 </head>
 <body>
@@ -177,8 +182,8 @@
             <li>
                 <span class="flow-step-num">✓</span>
                 <div>
-                    <div class="flow-label">Analysis report</div>
-                    <div class="flow-desc">Metrics and text report generated (visualization skipped in web run).</div>
+                    <div class="flow-label">Analysis & visualization</div>
+                    <div class="flow-desc">Text report, metrics, and chart PNGs under this run&rsquo;s results folder.</div>
                 </div>
             </li>
         </ol>
@@ -193,28 +198,26 @@
                 <div class="stat-label">Total Edges</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{{ results.graph_data.schema_node_types|length }}</div>
-                <div class="stat-label">Node Types</div>
+                <div class="stat-number">{{ (results.graph_data.implemented_node_types or [])|length }}</div>
+                <div class="stat-label">Node types (in this graph)</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{{ results.graph_data.schema_edge_types|length }}</div>
-                <div class="stat-label">Edge Types</div>
+                <div class="stat-number">{{ (results.graph_data.implemented_edge_types or [])|length }}</div>
+                <div class="stat-label">Edge types (in this graph)</div>
             </div>
         </div>
 
         <!-- Graph Structure Information -->
         <div class="results-section">
-            <h3>📊 Graph Structure</h3>
+            <h3>📊 Graph structure (this run)</h3>
             <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
-                <p><strong>Schema Version:</strong> {{ results.graph_data.schema_version }}</p>
-                <p><strong>Node Types:</strong> {{ results.graph_data.schema_node_types|join(', ') }}</p>
-                <p><strong>Edge Types:</strong> {{ results.graph_data.schema_edge_types|join(', ') }}</p>
-                {% if results.graph_data.implemented_node_types %}
-                <p><strong>Implemented Node Types:</strong> {{ results.graph_data.implemented_node_types|join(', ') }}</p>
-                {% endif %}
-                {% if results.graph_data.implemented_edge_types %}
-                <p><strong>Implemented Edge Types:</strong> {{ results.graph_data.implemented_edge_types|join(', ') }}</p>
-                {% endif %}
+                <p><strong>Schema version:</strong> {{ results.graph_data.schema_version }}</p>
+                <p><strong>Node types present:</strong> {{ (results.graph_data.implemented_node_types or [])|join(', ') }}</p>
+                <p><strong>Edge types present:</strong> {{ (results.graph_data.implemented_edge_types or [])|join(', ') }}</p>
+                <p class="schema-note">
+                    The schema also defines other node/edge kinds (e.g. Commit, CALLS) for future work;
+                    only types that appear in <strong>this</strong> graph are listed above.
+                </p>
             </div>
         </div>
 
@@ -223,6 +226,13 @@
             <h3>🔍 Quality Analysis Results</h3>
             <div class="analysis-text">{{ results.analysis_text }}</div>
         </div>
+
+        {% if results.visual_summary_text %}
+        <div class="results-section">
+            <h3>📈 Visual summary</h3>
+            <div class="analysis-text">{{ results.visual_summary_text }}</div>
+        </div>
+        {% endif %}
 
         <!-- Pipeline Output -->
         {% if results.pipeline_output %}
@@ -236,28 +246,48 @@
         <div class="download-section">
             <h4>📥 Download Results</h4>
             <p>Download the complete analysis results for further investigation:</p>
-            
-            <button onclick="downloadJSON()" class="btn btn-success">
+
+            <button type="button" onclick="downloadJSON()" class="btn btn-success">
                 📄 Download Graph JSON
             </button>
-            
-            <button onclick="downloadAnalysis()" class="btn btn-success">
+
+            <button type="button" onclick="downloadAnalysis()" class="btn btn-success">
                 📝 Download Analysis Report
             </button>
-            
+
+            {% if results.visual_summary_text %}
+            <button type="button" onclick="downloadVisualSummary()" class="btn btn-success">
+                📊 Download Visual Summary (text)
+            </button>
+            {% endif %}
+
             <a href="{{ url_for('web.index') }}" class="btn btn-secondary">
                 🔄 Analyze Another Repository
             </a>
         </div>
 
+        <script id="results-bootstrap" type="application/json">
+{{ {"graph": results.graph_data, "analysis": results.analysis_text, "visual": results.visual_summary_text or ""}|tojson }}
+        </script>
         <script>
-            // Store results data globally using safe JSON serialization
-            var graphData = JSON.parse('{{ results.graph_data|tojson|safe }}');
-            var analysisText = JSON.parse('{{ results.analysis_text|tojson|safe }}');
+(function () {
+            var el = document.getElementById('results-bootstrap');
+            var payload = {};
+            try {
+                payload = JSON.parse(el.textContent);
+            } catch (e) {
+                console.error('Failed to parse embedded results', e);
+            }
+            var graphData = payload.graph;
+            var analysisText = payload.analysis;
+            var visualSummaryText = payload.visual;
 
             function downloadJSON() {
-                var jsonData = JSON.stringify(graphData, null, 2);
-                var blob = new Blob([jsonData], {type: 'application/json'});
+                if (graphData === undefined || graphData === null) {
+                    alert('Graph data is not available to download.');
+                    return;
+                }
+                var blob = new Blob([JSON.stringify(graphData, null, 2)], {type: 'application/json'});
                 var url = window.URL.createObjectURL(blob);
                 var a = document.createElement('a');
                 a.href = url;
@@ -269,7 +299,11 @@
             }
 
             function downloadAnalysis() {
-                var blob = new Blob([analysisText], {type: 'text/plain'});
+                if (analysisText === undefined || analysisText === null) {
+                    alert('Analysis text is not available to download.');
+                    return;
+                }
+                var blob = new Blob([String(analysisText)], {type: 'text/plain;charset=utf-8'});
                 var url = window.URL.createObjectURL(blob);
                 var a = document.createElement('a');
                 a.href = url;
@@ -279,6 +313,27 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
             }
+
+            function downloadVisualSummary() {
+                if (!visualSummaryText) {
+                    alert('Visual summary is not available to download.');
+                    return;
+                }
+                var blob = new Blob([String(visualSummaryText)], {type: 'text/plain;charset=utf-8'});
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'visual_summary.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
+            window.downloadJSON = downloadJSON;
+            window.downloadAnalysis = downloadAnalysis;
+            window.downloadVisualSummary = downloadVisualSummary;
+})();
         </script>
 
         {% else %}

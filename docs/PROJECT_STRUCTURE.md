@@ -8,6 +8,7 @@ This document describes the current full-stack architecture with optimal backend
 GraphRAG_Project/
 ├── src/                              # Backend Core
 │   ├── web/                          # Web Application Layer
+│   ├── utils/                         # Cross-layer filesystem helpers (e.g. repo slugs)
 │   ├── compatibility/                 # Compatibility Checking Layer
 │   ├── pipeline/                      # End-to-end pipeline orchestration (CLI + web)
 │   ├── graph/                         # Graph Model & Construction Layer
@@ -54,10 +55,14 @@ GraphRAG_Project/
 - **Core Checks (70%)**: Python language, package-root/tests layout (root or ``backend/`` monorepo paths), static imports; headline score is **capped under 50%** when the repo is not Python-primary (see ``repo_checker``)
 - **Additional Checks (30%)**: Package structure, repo size, requirements, README
 
+### Shared helpers (`src/utils/`)
+**Purpose**: Small modules without Flask/HTTP dependencies, safe for pipeline and web imports.
+- **`repo_slug.py`**: Sanitize labels for temp upload prefixes and ``results/web_analysis_<slug>_…`` directory names
+
 ### Pipeline Layer (`src/pipeline/`)
-**Purpose**: Single place to run build → validate → save graph → analyze → (optional) visualize, shared by **`main_pipeline.py`** and the web **`AnalysisService`** (no subprocess indirection).
+**Purpose**: Single place to run build → validate → save graph → analyze → visualize (skippable via flag), shared by **`main_pipeline.py`** and the web **`AnalysisService`** (no subprocess indirection). The web app runs visualization by default and writes PNGs under each session’s ``results/…/visuals/`` via ``visual_artifacts_dir``.
 - **`run_pipeline.py`**: ``run_repository_pipeline`` orchestration
-- **`output_paths.py`**: Default output directories for CLI and web sessions
+- **`output_paths.py`**: Default output directories for CLI and web sessions (web uses ``new_web_session_results_dir(repo_slug)`` so folders include the repository label from upload/clone)
 - **`result.py`**: ``PipelineRunResult`` structured return type
 
 ### Graph Model & Construction Layer (`src/graph/`)

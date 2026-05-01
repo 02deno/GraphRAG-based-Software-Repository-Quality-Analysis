@@ -16,6 +16,16 @@ class CompatibilityService(Protocol):
 class AnalysisPipelineService(Protocol):
     """Port for full graph build and analysis used after compatibility passes."""
 
-    def run_analysis_pipeline(self, repo_path: str) -> Dict[str, Any]:
-        """Return graph payload, report text, logs, and output directory paths."""
+    def run_analysis_pipeline(
+        self, repo_path: str, *, results_folder_slug: str | None = None
+    ) -> Dict[str, Any]:
+        """Return graph payload, reports, logs, and artifact paths.
+
+        Optional ``results_folder_slug`` names ``results/web_analysis_<slug>_…`` folders.
+
+        Expected keys include ``graph_data`` (dict with ``nodes``, ``edges``,
+        ``implemented_node_types``, ``implemented_edge_types``, …),
+        ``analysis_text``, ``pipeline_output``, ``results_dir``,
+        ``visual_summary_text``, and ``visual_summary_path`` (path or ``None``).
+        """
         ...

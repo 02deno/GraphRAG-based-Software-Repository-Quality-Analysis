@@ -18,6 +18,7 @@ def run_repository_pipeline(
     graph_output: Path,
     analysis_output: Path | None = None,
     visual_summary_output: Path | None = None,
+    visual_artifacts_dir: Path | None = None,
     skip_visualization: bool = False,
     top_k: int = 10,
 ) -> PipelineRunResult:
@@ -29,6 +30,9 @@ def run_repository_pipeline(
         analysis_output: Where to write the text analysis report; if omitted, uses
             the default path derived by :func:`generate_analysis_text_report`.
         visual_summary_output: Optional path for the visual summary text file.
+        visual_artifacts_dir: When set, PNG charts and structure plots are written under
+            this directory (used by the web app per session). When omitted, defaults
+            inside :func:`generate_visual_summary` apply (CLI).
         skip_visualization: When True, skip matplotlib/networkx visualization steps.
         top_k: Rank depth for analysis and visualization summaries.
 
@@ -75,11 +79,27 @@ def run_repository_pipeline(
 
     log_lines.append("")
     log_lines.append("Generating visualization outputs...")
-    report_lines, summary_data = generate_visual_summary(
-        graph_output,
-        top_k=top_k,
-        summary_output=visual_summary_output,
-    )
+    if visual_artifacts_dir is not None:
+        vdir = visual_artifacts_dir.resolve()
+        vdir.mkdir(parents=True, exist_ok=True)
+        prefix = graph_output.parent.name
+        report_lines, summary_data = generate_visual_summary(
+            graph_output,
+            top_k=top_k,
+            structure_output=vdir / f"{prefix}_structure.png",
+            structure_output_imports=vdir / f"{prefix}_structure_imports.png",
+            structure_output_in_file=vdir / f"{prefix}_structure_in_file.png",
+            analysis_output=vdir / f"{prefix}_degree_analysis.png",
+            analysis_output_imports=vdir / f"{prefix}_degree_analysis_imports.png",
+            analysis_output_in_file=vdir / f"{prefix}_degree_analysis_in_file.png",
+            summary_output=visual_summary_output,
+        )
+    else:
+        report_lines, summary_data = generate_visual_summary(
+            graph_output,
+            top_k=top_k,
+            summary_output=visual_summary_output,
+        )
     save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])
     visual_path = Path(str(summary_data["summary_output"]))
     log_lines.extend(report_lines)

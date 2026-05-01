@@ -30,35 +30,50 @@ class AnalysisService:
         """
         return self.compatibility_checker.analyze_repository(repo_path)
 
-    def run_analysis_pipeline(self, repo_path: str) -> Dict[str, Any]:
+    def run_analysis_pipeline(
+        self, repo_path: str, *, results_folder_slug: str | None = None
+    ) -> Dict[str, Any]:
         """Execute the full build/analyze (and optional visualize) pipeline.
 
         Args:
             repo_path: Filesystem path to the repository root.
+            results_folder_slug: Short label for ``results/web_analysis_*`` folder names
+                (from upload/clone; optional for backward compatibility).
 
         Returns:
-            Keys: ``graph_data``, ``analysis_text``, ``pipeline_output``, ``results_dir``.
+            Keys: ``graph_data``, ``analysis_text``, ``pipeline_output``, ``results_dir``,
+            ``visual_summary_text`` (when visualization runs), and ``visual_summary_path``.
 
         Raises:
             OSError: If reading or writing pipeline artifacts fails.
             ValueError: If graph validation fails.
         """
-        results_dir = new_web_session_results_dir()
+        results_dir = new_web_session_results_dir(results_folder_slug)
         graph_output = results_dir / "graph.json"
         analysis_output = results_dir / "analysis.txt"
+        visual_summary_output = results_dir / "visual_summary.txt"
 
         result = run_repository_pipeline(
             Path(repo_path).resolve(),
             graph_output=graph_output,
             analysis_output=analysis_output,
-            visual_summary_output=None,
-            skip_visualization=True,
+            visual_summary_output=visual_summary_output,
+            visual_artifacts_dir=results_dir / "visuals",
+            skip_visualization=False,
             top_k=10,
         )
+
+        visual_summary_text = ""
+        if result.visual_summary_path is not None:
+            visual_summary_text = Path(result.visual_summary_path).read_text(encoding="utf-8")
 
         return {
             "graph_data": dict(result.graph_document),
             "analysis_text": result.analysis_text,
             "pipeline_output": "\n".join(result.log_lines),
             "results_dir": str(results_dir),
+            "visual_summary_text": visual_summary_text,
+            "visual_summary_path": str(result.visual_summary_path)
+            if result.visual_summary_path
+            else None,
         }

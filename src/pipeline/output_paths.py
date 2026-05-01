@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import date, datetime
 from pathlib import Path
 
+from src.utils.repo_slug import filesystem_slug
+
 
 def cli_dated_results_dir(repo_path: Path) -> Path:
     """Return ``results/<repo_name>_<YYYYMMDD>/``, creating parents as needed.
@@ -31,12 +33,19 @@ def default_cli_visual_summary_path(repo_path: Path) -> Path:
     return cli_dated_results_dir(repo_path) / f"{repo_path.name}_pipeline_visual_summary.txt"
 
 
-def new_web_session_results_dir() -> Path:
+def new_web_session_results_dir(repo_slug: str | None = None) -> Path:
     """Create a timestamped directory under ``results/`` for web-triggered runs.
 
+    Args:
+        repo_slug: Short name for the repository (e.g. ``owner_repo`` from GitHub);
+            sanitized and embedded in the folder name.
+
     Returns:
-        Newly created directory path such as ``results/web_analysis_YYYYMMDD_HHMMSS``.
+        Newly created directory path such as
+        ``results/web_analysis_<slug>_YYYYMMDD_HHMMSS``.
     """
-    results_dir = Path("results") / f"web_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    slug = filesystem_slug(repo_slug) if repo_slug else "repo"
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results_dir = Path("results") / f"web_analysis_{slug}_{stamp}"
     results_dir.mkdir(parents=True, exist_ok=True)
     return results_dir

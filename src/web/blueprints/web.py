@@ -96,11 +96,12 @@ def upload_repository():
     cleanup_temp = False
 
     try:
-        repo_path, cleanup_temp = handle_repository_upload(_repo_handler())
+        repo_path, cleanup_temp, results_folder_slug = handle_repository_upload(_repo_handler())
         compatibility_result = _analysis_service().run_compatibility_check(repo_path)
         session["analysis_data"] = {
             "repo_path": repo_path,
             "cleanup_temp": cleanup_temp,
+            "results_folder_slug": results_folder_slug,
             "compatibility": _serialize_compatibility_for_session(compatibility_result),
         }
         return redirect(url_for("web.compatibility_results"))
@@ -132,9 +133,12 @@ def analyze_repository():
 
     repo_path = analysis_data["repo_path"]
     cleanup_temp = analysis_data["cleanup_temp"]
+    results_folder_slug = analysis_data.get("results_folder_slug")
 
     try:
-        results = _analysis_service().run_analysis_pipeline(repo_path)
+        results = _analysis_service().run_analysis_pipeline(
+            repo_path, results_folder_slug=results_folder_slug
+        )
         cleanup_temp_directory(repo_path, cleanup_temp)
         session.pop("analysis_data", None)
         return render_template("results_final.html", results=results)

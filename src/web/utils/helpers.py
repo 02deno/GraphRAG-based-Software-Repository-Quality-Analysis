@@ -21,14 +21,15 @@ def cleanup_temp_directory(repo_path: str, cleanup_needed: bool) -> None:
         shutil.rmtree(repo_path, ignore_errors=True)
 
 
-def handle_repository_upload(repo_handler: RepositoryHandler) -> Tuple[str, bool]:
+def handle_repository_upload(repo_handler: RepositoryHandler) -> Tuple[str, bool, str]:
     """Handle repository upload from form data.
-    
+
     Args:
         repo_handler: RepositoryHandler instance
-        
+
     Returns:
-        Tuple[str, bool]: (repository_path, cleanup_needed)
+        ``(repository_path, cleanup_needed, results_folder_slug)`` for naming
+        ``results/web_analysis_*`` folders and temp upload directories.
         
     Raises:
         ValueError: If no valid repository provided
@@ -41,12 +42,11 @@ def handle_repository_upload(repo_handler: RepositoryHandler) -> Tuple[str, bool
             return repo_handler.handle_zip_upload(file)
 
     # Handle repository URL
-    if 'repository_url' in request.form:
-        repo_url = request.form['repository_url'].strip()
+    if "repository_url" in request.form:
+        repo_url = request.form["repository_url"].strip()
         if repo_url:
             if is_github_clone_url(repo_url):
                 return repo_handler.clone_github_repository(repo_url)
-            else:
-                return repo_handler.handle_local_repository(repo_url)
+            return repo_handler.handle_local_repository(repo_url)
     
     raise ValueError('Please provide either a file or URL')

@@ -170,10 +170,11 @@ export FLASK_DEBUG=False
 - **Accessibility**: Semantic HTML and keyboard navigation
 
 #### Analysis Results (`templates/results_final.html`)
-- **Data Visualization**: Charts and statistics display
-- **Interactive Downloads**: JavaScript-powered file downloads
+- **Graph stats**: Shows **implemented** node/edge types (what appears in the built graph), not the full schema contract reserved for future edge kinds
+- **Pipeline timeline**: Includes the visualization step (PNG artifacts under the run’s ``results/…/visuals/`` folder on disk)
+- **Interactive Downloads**: Client-side downloads read from an embedded JSON payload (avoids fragile string interpolation that could yield empty or ``undefined`` files for large graphs)
 - **Error Handling**: Failed analysis presentation
-- **Export Options**: Multiple format support
+- **Export Options**: Graph JSON, analysis report text, and visual summary text when available
 
 ## 🛠️ Configuration
 
