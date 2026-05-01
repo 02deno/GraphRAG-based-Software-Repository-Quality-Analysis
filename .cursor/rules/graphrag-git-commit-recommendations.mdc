@@ -1,0 +1,36 @@
+---
+description: After edits, recommend a clear commit message and exact git add paths/commands
+alwaysApply: true
+---
+
+# Git commit recommendations after changes
+
+When you finish a task that changed files in this workspace, **end the response** with a short **Git** section unless the user explicitly said not to (e.g. they will commit themselves later and opted out).
+
+## What to include
+
+1. **Scope**: Which paths belong in **one** commit for this task (only files you actually touched for the request—not drive-by or unrelated files).
+2. **Suggested message**: One line, **[Conventional Commits](https://www.conventionalcommits.org/)** style where it fits:
+   - Types: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `style`, etc.
+   - Optional scope in parentheses: `fix(web)`, `docs(readme)`, `refactor(compatibility)`.
+   - **Imperative mood**, ~72 characters or less for the subject line.
+3. **Commands**: Copy-paste–ready, with **literal paths** matching the repo layout (use paths relative to the **git repository root**; if unsure, prefer paths under `GraphRAG_Project/…` when changes are there).
+
+## Command template
+
+Adapt paths and message to the actual edits:
+
+```bash
+git status
+git add "GraphRAG_Project/path/to/file_a.py" "GraphRAG_Project/path/to/file_b.html"
+git commit -m "fix(web): short description of the change"
+```
+
+- On **Windows**, quoting paths with spaces (e.g. parent folders) avoids shell issues; adjust if the user’s shell/repo root differs.
+- If both **`.cursor/rules`** and **`GraphRAG_Project/`** changed, show **separate** `git add` lines or one block with all listed paths—still one suggested commit unless the user asked for a split.
+
+## Rules for the agent
+
+- **Recommend** the message and commands; **do not** run `git commit` (or `git push`) unless the user asked you to perform the commit.
+- Prefer **one commit** per completed task; if the diff naturally splits (e.g. unrelated bugfix + feature), suggest **two** commits with two message/command blocks and disjoint file lists.
+- If nothing was saved to disk, say so and skip the Git section.
