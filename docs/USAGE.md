@@ -23,7 +23,7 @@ python run_web_app.py
 - **ZIP**: Supported by the upload handler; the default UI hides the ZIP field until a later release (see ``templates/index.html``)
 
 #### 2. Compatibility Check
-The system automatically analyzes repository compatibility:
+The system analyzes compatibility in the same step as upload, then sends you to ``GET /compatibility``. There you get a short **step timeline**, a collapsible **how scoring works** note, and **per-check** ``<details>`` blocks with plain-language explanations.
 
 **Scoring Categories:**
 - **Core Checks (70%)**: Python language, src/tests folders, static imports
@@ -35,8 +35,8 @@ The system automatically analyzes repository compatibility:
 - : Low - User confirmation required
 
 #### 3. Analysis Execution
-- **Score ≥ 50%**: Analysis starts automatically
-- **Score < 50%**: Warning dialog with "Analyze Anyway" option
+- **Score ≥ 50%**: Use **Start Graph Analysis**; a progress overlay runs until the pipeline finishes (same-origin ``fetch`` + full HTML swap for results).
+- **Score < 50%**: Low-score path with **Analyze Anyway**; same progress behavior.
 
 #### 4. Results Display
 - Graph statistics (nodes, edges, types)
@@ -44,8 +44,8 @@ The system automatically analyzes repository compatibility:
 - Downloadable JSON and text reports
 
 ### Web Application Features
-- **Smart Upload**: File validation and progress indicators
-- **Real-time Analysis**: Immediate compatibility checking
+- **Smart Upload**: Validation plus a client-side **progress overlay** while clone/check runs; errors from ``POST /upload`` can return JSON when the progressive-UI header is sent
+- **Compatibility page**: Session-backed ``/compatibility`` with expandable scoring help and per-check explanations
 - **Interactive Results**: Downloadable analysis reports
 - **Responsive Design**: Mobile-friendly interface
 - **Error Handling**: Graceful failure management

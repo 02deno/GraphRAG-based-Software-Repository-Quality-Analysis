@@ -110,7 +110,8 @@ GraphRAG_Project/
    - ZIP upload is not shown in the UI yet; the server-side upload handler remains for future use
 
 2. **Compatibility Check**
-   - Automated analysis runs immediately
+   - After submit, the UI shows a short progress state, then **redirects** to `/compatibility` with scores, expandable explanations per check, and a “how scoring works” section
+   - Automated analysis runs in the same request as upload (before the redirect)
    - Detailed scoring with pass/fail indicators
    - Warnings and recommendations provided
 

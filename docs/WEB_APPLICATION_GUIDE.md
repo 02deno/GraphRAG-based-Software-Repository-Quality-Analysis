@@ -138,7 +138,7 @@ export FLASK_DEBUG=False
 ### Backend Components
 
 #### Flask Application (`src/web/app.py`)
-- **Routes**: `/` (upload), `/upload` (processing), `/analyze` (execution)
+- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; same-origin fetch shows progress then replaces the page with results HTML)
 - **Session Management**: Analysis state preservation
 - **Error Handling**: Comprehensive exception management
 - **File Management**: Temporary upload handling
@@ -340,8 +340,9 @@ server {
 ### REST Endpoints
 ```http
 GET  /                    # Upload interface
-POST /upload             # Repository upload processing
-POST /analyze            # Analysis execution
+POST /upload             # Repository upload + compatibility; redirects to GET /compatibility
+GET /compatibility       # Renders last compatibility snapshot from session
+POST /analyze            # Full pipeline; returns results HTML (or JSON error if X-GraphRAG-Progressive-UI)
 ```
 
 ### Response Formats

@@ -14,3 +14,4 @@ class CheckItem:
     weight: float
     passed: bool
     score: float  # 0..1 quality for this criterion (not multiplied by weight)
+    explanation: str = ""

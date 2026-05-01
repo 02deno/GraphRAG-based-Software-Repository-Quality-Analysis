@@ -18,6 +18,59 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
+        .flow-timeline {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 24px 0;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .flow-timeline li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+            color: #444;
+        }
+        .flow-timeline li:last-child { border-bottom: none; }
+        .flow-step-num {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            color: #fff;
+        }
+        .flow-done { background: #28a745; }
+        .flow-pending { background: #adb5bd; }
+        .flow-label { font-weight: 600; color: #333; }
+        .flow-desc { color: #666; font-size: 13px; margin-top: 2px; }
+        .score-help {
+            margin: 16px 0 20px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .score-help summary {
+            cursor: pointer;
+            padding: 12px 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .score-help[open] summary { border-bottom: 1px solid #dee2e6; }
+        .score-help-body {
+            padding: 12px 14px 14px 14px;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+        }
         .score-display {
             text-align: center;
             margin-bottom: 30px;
@@ -37,52 +90,51 @@
         .score-high { background: #28a745; }
         .score-medium { background: #ffc107; color: #333; }
         .score-low { background: #dc3545; }
-        
-        .check-item {
-            display: flex;
-            align-items: center;
-            padding: 12px;
+
+        details.check-item {
             margin: 8px 0;
-            background: #f8f9fa;
             border-radius: 6px;
+            border: 1px solid #e9ecef;
+            background: #fafafa;
             border-left: 4px solid #ddd;
         }
-        .check-passed { border-left-color: #28a745; }
-        .check-failed { border-left-color: #dc3545; }
-        
+        details.check-item.check-passed { border-left-color: #28a745; }
+        details.check-item.check-failed { border-left-color: #dc3545; }
+        details.check-item > summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 12px 12px 8px;
+        }
+        details.check-item > summary::-webkit-details-marker { display: none; }
         .check-icon {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            margin-right: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 11px;
+            flex-shrink: 0;
         }
         .icon-pass { background: #28a745; }
         .icon-fail { background: #dc3545; }
-        
-        .check-details {
-            flex: 1;
-        }
-        .check-name {
-            font-weight: 600;
-            color: #333;
-        }
-        .check-desc {
+        .check-details { flex: 1; min-width: 0; }
+        .check-name { font-weight: 600; color: #333; }
+        .check-hint { font-size: 12px; color: #888; margin-top: 4px; }
+        .check-explain-body {
+            padding: 0 14px 14px 46px;
             font-size: 14px;
-            color: #666;
-            margin-top: 2px;
+            color: #555;
+            line-height: 1.5;
+            border-top: 1px dashed #e9ecef;
+            margin: 0 8px 8px 8px;
+            padding-top: 12px;
         }
-        .check-weight {
-            font-size: 12px;
-            color: #999;
-            margin-left: 10px;
-        }
-        
         .warnings {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -99,7 +151,7 @@
             padding-left: 20px;
             color: #856404;
         }
-        
+
         .btn {
             background: #007bff;
             color: white;
@@ -114,29 +166,15 @@
             display: inline-block;
             text-align: center;
         }
-        .btn:hover {
-            background: #0056b3;
-        }
-        .btn-success {
-            background: #28a745;
-        }
-        .btn-success:hover {
-            background: #1e7e34;
-        }
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
-        }
-        .btn-warning:hover {
-            background: #e0a800;
-        }
-        .btn-danger {
-            background: #dc3545;
-        }
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
+        .btn:hover { background: #0056b3; }
+        .btn:disabled { background: #adb5bd; cursor: not-allowed; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+
         .confirmation-prompt {
             background: #f8d7da;
             border: 1px solid #f5c6cb;
@@ -149,36 +187,140 @@
             color: #721c24;
             margin-top: 0;
         }
+
+        .progress-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.92);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .progress-overlay.hidden { display: none; }
+        .progress-card {
+            max-width: 420px;
+            width: 100%;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 24px;
+            text-align: center;
+        }
+        .progress-card h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.15rem;
+            color: #333;
+        }
+        .progress-status {
+            min-height: 3.2em;
+            color: #555;
+            font-size: 14px;
+            margin: 16px 0;
+            line-height: 1.4;
+        }
+        .progress-bar {
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar > span {
+            display: block;
+            height: 100%;
+            width: 35%;
+            background: linear-gradient(90deg, #007bff, #20c997);
+            border-radius: 3px;
+            animation: progress-slide 1.2s ease-in-out infinite;
+        }
+        @keyframes progress-slide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
     </style>
 </head>
 <body>
+    <div id="analyze-progress" class="progress-overlay hidden" aria-hidden="true">
+        <div class="progress-card">
+            <h2>Running graph pipeline</h2>
+            <p class="progress-status" id="analyze-progress-label">Preparing…</p>
+            <div class="progress-bar"><span></span></div>
+        </div>
+    </div>
+
     <div class="container">
         <h1>🔍 Repository Compatibility Check</h1>
-        
+
+        <ol class="flow-timeline">
+            <li>
+                <span class="flow-step-num flow-done">✓</span>
+                <div>
+                    <div class="flow-label">Repository ready</div>
+                    <div class="flow-desc">Source tree is available for analysis.</div>
+                </div>
+            </li>
+            <li>
+                <span class="flow-step-num flow-done">✓</span>
+                <div>
+                    <div class="flow-label">Compatibility scoring</div>
+                    <div class="flow-desc">Weighted checks completed (see details below).</div>
+                </div>
+            </li>
+            <li>
+                <span class="flow-step-num flow-pending">3</span>
+                <div>
+                    <div class="flow-label">Graph analysis</div>
+                    <div class="flow-desc">Build graph, validate, run metrics — starts when you submit below.</div>
+                </div>
+            </li>
+        </ol>
+
+        <details class="score-help">
+            <summary>How is the overall score calculated?</summary>
+            <div class="score-help-body">
+                Each row is one <strong>check</strong> with a weight (sums to 100%). The
+                <strong>check score</strong> is a value between 0% and 100% for that criterion only
+                (not “points earned” yet). The headline percentage is the
+                <strong>weighted mean</strong>:
+                <code style="background:#eee;padding:2px 6px;border-radius:4px;">Σ (weight × check score) / Σ weights</code>,
+                then scaled to 0–100%. Expand any row for what that check measures.
+            </div>
+        </details>
+
         <div class="score-display">
             <div class="score-circle {{ 'score-high' if score >= 70 else 'score-medium' if score >= 50 else 'score-low' }}">
                 {{ score }}%
             </div>
             <h2>{{ 'Excellent Compatibility' if score >= 70 else 'Good Compatibility' if score >= 50 else 'Low Compatibility' }}</h2>
             <p style="color: #666;">
-                {{ 'This repository is well-suited for graph analysis' if score >= 70 else 
-                   'This repository should work with graph analysis' if score >= 50 else 
+                {{ 'This repository is well-suited for graph analysis' if score >= 70 else
+                   'This repository should work with graph analysis' if score >= 50 else
                    'This repository may have compatibility issues' }}
             </p>
         </div>
 
         <h3>📋 Detailed Check Results</h3>
-        
+        <p style="color:#666;font-size:14px;margin-top:-8px;">Open a row for a plain-language explanation of that signal.</p>
+
         {% for check in details %}
-        <div class="check-item {{ 'check-passed' if check.passed else 'check-failed' }}">
-            <div class="check-icon {{ 'icon-pass' if check.passed else 'icon-fail' }}">
-                {{ '✓' if check.passed else '✗' }}
+        <details class="check-item {{ 'check-passed' if check.passed else 'check-failed' }}">
+            <summary>
+                <span class="check-icon {{ 'icon-pass' if check.passed else 'icon-fail' }}">{{ '✓' if check.passed else '✗' }}</span>
+                <div class="check-details">
+                    <div class="check-name">{{ check.description }}</div>
+                    <div class="check-hint">Weight {{ (check.weight * 100)|round(1) }}% · Check score {{ (check.score * 100)|round(1) }}% · tap to expand</div>
+                </div>
+            </summary>
+            <div class="check-explain-body">
+                {% if check.explanation %}
+                    {{ check.explanation }}
+                {% else %}
+                    No extended description for this check.
+                {% endif %}
             </div>
-            <div class="check-details">
-                <div class="check-name">{{ check.description }}</div>
-                <div class="check-weight">Weight: {{ (check.weight * 100)|round(1) }}% | Check score: {{ (check.score * 100)|round(1) }}%</div>
-            </div>
-        </div>
+        </details>
         {% endfor %}
 
         {% if warnings %}
@@ -192,9 +334,8 @@
         </div>
         {% endif %}
 
-        <!-- Action Buttons -->
         {% if score >= 50 %}
-            <form action="{{ url_for('web.analyze_repository') }}" method="post">
+            <form class="graph-analysis-form" action="{{ url_for('web.analyze_repository') }}" method="post">
                 <button type="submit" class="btn btn-success">
                     🚀 Start Graph Analysis
                 </button>
@@ -204,13 +345,13 @@
                 <h3>⚠️ Low Compatibility Score</h3>
                 <p>This repository scored below 50% and may not produce reliable results.</p>
                 <p><strong>Are you sure you want to proceed with analysis?</strong></p>
-                
-                <form action="{{ url_for('web.analyze_repository') }}" method="post" style="margin-top: 20px;">
+
+                <form class="graph-analysis-form" action="{{ url_for('web.analyze_repository') }}" method="post" style="margin-top: 20px;">
                     <button type="submit" class="btn btn-danger">
                         ⚠️ Yes, Analyze Anyway
                     </button>
                 </form>
-                
+
                 <a href="{{ url_for('web.index') }}" class="btn btn-warning" style="margin-top: 10px;">
                     📁 Choose Different Repository
                 </a>
@@ -231,5 +372,82 @@
             </ul>
         </div>
     </div>
+
+    <script>
+(function () {
+    var HEADER = 'X-GraphRAG-Progressive-UI';
+    var overlay = document.getElementById('analyze-progress');
+    var labelEl = document.getElementById('analyze-progress-label');
+    var messages = [
+        'Building graph from Python sources…',
+        'Validating graph contract…',
+        'Computing analysis and text report…',
+        'Finishing — almost done…'
+    ];
+    var step = 0;
+    var tick = null;
+
+    function showOverlay() {
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        step = 0;
+        if (labelEl) labelEl.textContent = messages[0];
+        tick = setInterval(function () {
+            step = (step + 1) % messages.length;
+            if (labelEl) labelEl.textContent = messages[step];
+        }, 2800);
+    }
+    function hideOverlay() {
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (tick) clearInterval(tick);
+        tick = null;
+    }
+
+    document.querySelectorAll('.graph-analysis-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (!window.fetch) return;
+            e.preventDefault();
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) btn.disabled = true;
+            showOverlay();
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: (function () { var h = {}; h[HEADER] = '1'; return h; })(),
+                body: new FormData(form),
+                redirect: 'manual',
+                credentials: 'same-origin'
+            }).then(function (res) {
+                if (res.status === 302 || res.status === 303) {
+                    var loc = res.headers.get('Location');
+                    if (loc) window.location.href = new URL(loc, window.location.origin).href;
+                    return;
+                }
+                if (res.ok) {
+                    return res.text().then(function (html) {
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    });
+                }
+                return res.json().then(function (data) {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert(data.error || ('Request failed (' + res.status + ')'));
+                }).catch(function () {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert('Analysis failed (' + res.status + ').');
+                });
+            }).catch(function () {
+                hideOverlay();
+                if (btn) btn.disabled = false;
+                alert('Network error while running analysis.');
+            });
+        });
+    });
+})();
+    </script>
 </body>
 </html>

@@ -86,9 +86,67 @@
             font-size: 14px;
             margin: 10px 0;
         }
+        .progress-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.92);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .progress-overlay.hidden { display: none; }
+        .progress-card {
+            max-width: 420px;
+            width: 100%;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 24px;
+            text-align: center;
+        }
+        .progress-card h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.15rem;
+            color: #333;
+        }
+        .progress-status {
+            min-height: 3.2em;
+            color: #555;
+            font-size: 14px;
+            margin: 16px 0;
+            line-height: 1.4;
+        }
+        .progress-bar {
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar > span {
+            display: block;
+            height: 100%;
+            width: 35%;
+            background: linear-gradient(90deg, #007bff, #20c997);
+            border-radius: 3px;
+            animation: progress-slide 1.2s ease-in-out infinite;
+        }
+        @keyframes progress-slide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
     </style>
 </head>
 <body>
+    <div id="upload-progress" class="progress-overlay hidden" aria-hidden="true">
+        <div class="progress-card">
+            <h2>Working on your repository</h2>
+            <p class="progress-status" id="upload-progress-label">Starting…</p>
+            <div class="progress-bar"><span></span></div>
+        </div>
+    </div>
     <div class="container">
         <h1>🔍 GraphRAG Repository Analysis</h1>
         <p style="text-align: center; color: #666; margin-bottom: 30px;">
@@ -103,7 +161,7 @@
             {% endif %}
         {% endwith %}
 
-        <form action="{{ url_for('web.upload_repository') }}" method="post" enctype="multipart/form-data">
+        <form id="repo-upload-form" action="{{ url_for('web.upload_repository') }}" method="post" enctype="multipart/form-data">
             <div class="upload-section">
                 {# ZIP upload: keep markup for a future UI release; set hidden=false to show. #}
                 <div class="upload-method" id="repository-zip-upload" hidden>
@@ -139,20 +197,90 @@
     </div>
 
     <script>
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const urlInput = document.querySelector('input[name="repository_url"]');
-            const zipSection = document.getElementById('repository-zip-upload');
-            const fileInput = document.querySelector('input[name="repository_file"]');
-            const hasFile = zipSection && !zipSection.hidden && fileInput && fileInput.files.length > 0;
-            const hasUrl = urlInput.value.trim() !== '';
+(function () {
+    var form = document.getElementById('repo-upload-form');
+    var overlay = document.getElementById('upload-progress');
+    var labelEl = document.getElementById('upload-progress-label');
+    var HEADER = 'X-GraphRAG-Progressive-UI';
+    var messages = [
+        'Preparing upload or clone…',
+        'Reading the repository tree…',
+        'Running compatibility checks…',
+        'Almost done…'
+    ];
+    var tick = null;
 
-            if (!hasUrl && !hasFile) {
-                e.preventDefault();
-                alert('Please enter a GitHub repository URL or a local repository path.');
-                return false;
+    function showOverlay() {
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        var step = 0;
+        if (labelEl) labelEl.textContent = messages[0];
+        tick = setInterval(function () {
+            step = (step + 1) % messages.length;
+            if (labelEl) labelEl.textContent = messages[step];
+        }, 2800);
+    }
+    function hideOverlay() {
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (tick) clearInterval(tick);
+        tick = null;
+    }
+
+    form.addEventListener('submit', function (e) {
+        var urlInput = document.querySelector('input[name="repository_url"]');
+        var zipSection = document.getElementById('repository-zip-upload');
+        var fileInput = document.querySelector('input[name="repository_file"]');
+        var hasFile = zipSection && !zipSection.hidden && fileInput && fileInput.files.length > 0;
+        var hasUrl = urlInput.value.trim() !== '';
+
+        if (!hasUrl && !hasFile) {
+            e.preventDefault();
+            alert('Please enter a GitHub repository URL or a local repository path.');
+            return;
+        }
+
+        if (!window.fetch) return;
+
+        e.preventDefault();
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        showOverlay();
+
+        var headers = {};
+        headers[HEADER] = '1';
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: headers,
+            body: new FormData(form),
+            redirect: 'manual',
+            credentials: 'same-origin'
+        }).then(function (res) {
+            if (res.status === 302 || res.status === 303) {
+                var loc = res.headers.get('Location');
+                if (loc) {
+                    window.location.href = new URL(loc, window.location.origin).href;
+                    return;
+                }
             }
+            if (res.status === 400 || res.status === 500) {
+                return res.json().then(function (data) {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert(data.error || ('Request failed (' + res.status + ')'));
+                });
+            }
+            hideOverlay();
+            if (btn) btn.disabled = false;
+            alert('Unexpected response (' + res.status + '). Try again or disable script blockers.');
+        }).catch(function () {
+            hideOverlay();
+            if (btn) btn.disabled = false;
+            alert('Network error while uploading.');
         });
+    });
+})();
     </script>
 </body>
 </html>

@@ -31,7 +31,7 @@ GraphRAG_Project/
 **Purpose**: Flask-based web interface for repository analysis
 - **`app.py`**: Exposes ``app = create_app()`` for ``run_web_app`` / WSGI servers
 - **`factory.py`**: ``create_app()`` wires config, extensions, and blueprints
-- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → use ``url_for('web.index')`` etc.)
+- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting.
 - **`service_protocols.py`**: ``typing.Protocol`` ports for services (dependency inversion)
 - **`config.py`**: Project root resolution and Flask configuration (e.g. ``FLASK_SECRET_KEY``)
 - **`handlers/`**: Upload and repository filesystem operations

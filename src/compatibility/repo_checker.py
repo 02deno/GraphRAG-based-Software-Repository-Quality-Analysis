@@ -17,7 +17,8 @@ class RepoCompatibilityChecker:
         """Build check descriptors bound to this instance's handler methods.
 
         Returns:
-            List of dicts with keys ``name``, ``description``, ``weight``, ``check_fn``.
+            List of dicts with keys ``name``, ``description``, ``weight``, ``check_fn``,
+            and ``explanation`` (help text for the UI).
         """
         return [
             {
@@ -25,48 +26,87 @@ class RepoCompatibilityChecker:
                 "description": "Primary language is Python",
                 "weight": 0.25,
                 "check_fn": self._check_python_primary,
+                "explanation": (
+                    "Compares counts of ``.py`` files to other common source extensions "
+                    "(``.js``, ``.java``, ``.go``, …). The check score reflects how "
+                    "Python-dominant the tree is; mixed-language repos score lower by design."
+                ),
             },
             {
                 "name": "src_folder_exists",
                 "description": "src/ folder exists",
                 "weight": 0.15,
                 "check_fn": self._check_src_folder,
+                "explanation": (
+                    "Looks for a conventional top-level ``src/`` directory (or close "
+                    "substitutes such as ``lib/``). That layout usually makes package "
+                    "roots easier to infer for static extraction."
+                ),
             },
             {
                 "name": "tests_folder_exists",
                 "description": "tests/ folder exists",
                 "weight": 0.10,
                 "check_fn": self._check_tests_folder,
+                "explanation": (
+                    "Detects ``tests/``, ``test/``, or ``specs/`` at the repository root. "
+                    "Tests improve confidence that TESTS edges and coverage-related signals "
+                    "can be mined."
+                ),
             },
             {
                 "name": "static_imports",
                 "description": "Mostly static imports (parseable by AST)",
                 "weight": 0.20,
                 "check_fn": self._check_static_imports,
+                "explanation": (
+                    "Samples up to 20 Python files and classifies ``import`` / ``from`` lines "
+                    "versus dynamic patterns (``importlib``, ``__import__``, etc.). Static "
+                    "imports resolve more reliably into IMPORTS edges in the graph."
+                ),
             },
             {
                 "name": "package_structure",
                 "description": "Reasonable package structure",
                 "weight": 0.10,
                 "check_fn": self._check_package_structure,
+                "explanation": (
+                    "Uses ``__init__.py`` presence relative to all ``.py`` files as a proxy "
+                    "for package layout. Flat script-only trees score lower; many packages "
+                    "with inits score higher (capped at 1.0)."
+                ),
             },
             {
                 "name": "repo_size_manageable",
                 "description": "Repository size is manageable",
                 "weight": 0.10,
                 "check_fn": self._check_repo_size,
+                "explanation": (
+                    "Counts Python files across the tree. Very large codebases may be slow "
+                    "or noisy for a local AST pass; tiny repos may lack structure. Buckets "
+                    "map to partial or full credit."
+                ),
             },
             {
                 "name": "has_requirements",
                 "description": "Has requirements.txt or setup.py",
                 "weight": 0.05,
                 "check_fn": self._check_requirements,
+                "explanation": (
+                    "Looks at the repo root for ``requirements.txt``, ``setup.py``, "
+                    "``pyproject.toml``, or ``Pipfile``. Dependency manifests help orient "
+                    "the project; this is a light signal with small weight."
+                ),
             },
             {
                 "name": "readme_exists",
                 "description": "README file exists",
                 "weight": 0.05,
                 "check_fn": self._check_readme,
+                "explanation": (
+                    "Checks for common README filenames at the root. Documentation presence "
+                    "is a weak proxy for maturity; it does not directly affect graph edges."
+                ),
             },
         ]
 
@@ -104,6 +144,7 @@ class RepoCompatibilityChecker:
                     weight=weight,
                     passed=passed,
                     score=score,
+                    explanation=str(check.get("explanation", "")),
                 )
 
                 results.append(check_result)
@@ -121,6 +162,10 @@ class RepoCompatibilityChecker:
                     weight=weight,
                     passed=False,
                     score=0.0,
+                    explanation=(
+                        "This check failed with an internal error and is scored at 0. "
+                        "See warnings above for the exception message."
+                    ),
                 )
                 results.append(check_result)
                 total_weight += weight
