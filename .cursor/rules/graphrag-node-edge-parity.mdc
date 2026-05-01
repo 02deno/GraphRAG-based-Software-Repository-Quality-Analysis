@@ -1,0 +1,33 @@
+---
+description: Enforce node-edge parity updates across code, UI, and docs
+globs:
+  - src/**/*.py
+  - templates/**/*.html
+  - docs/**/*.md
+  - README.md
+alwaysApply: true
+---
+
+# Node/edge parity rule (`GraphRAG_Project`)
+
+When adding or changing a graph **node type** or **edge type**, keep parity with existing implemented types in the same change set.
+
+## Required update checklist
+
+- Update schema and contracts together (`src/graph/schema.py`, `src/schema_contract.py`, edge/node dataclasses).
+- Update producers and resolvers together (extractors, `graph_builder`, serializer payload fields).
+- Update analysis outputs so new types appear in in-degree/out-degree text sections where other types already appear.
+- Update visualization outputs so new types have matching per-type charts/structure exports where applicable.
+- Update UI schema explanations in compatibility/results templates so node and edge descriptions stay accurate.
+- Update docs (`README.md`, `docs/PROJECT_STRUCTURE.md`, and relevant feature docs) in the same PR.
+
+## Consistency expectations
+
+- Do not leave a new type only in extraction code while omitting analysis/visual/UI text updates.
+- Do not mark implemented types as "future work" in templates/docs after code support lands.
+- Keep naming consistent across code + UI + docs (same edge/node token and semantics).
+
+## Verification before finishing
+
+- Run the smallest relevant check (import smoke, pipeline run, or targeted script) that exercises the new type.
+- Confirm generated artifacts and report text include the new type where peers are listed.

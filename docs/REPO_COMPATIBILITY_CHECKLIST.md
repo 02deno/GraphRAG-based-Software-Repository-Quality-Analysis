@@ -1,6 +1,6 @@
 # Repository Compatibility Checklist (Current Prototype)
 
-Use this checklist before running the current `File + IMPORTS` pipeline on a new repository.
+Use this checklist before running the current graph pipeline on a new repository.
 
 ## Quick Result Legend
 
@@ -33,6 +33,9 @@ Use this checklist before running the current `File + IMPORTS` pipeline on a new
 
 - [ ] `File` nodes are generated.
 - [ ] `IMPORTS` edges (`File -> File`, when resolvable) are generated.
+- [ ] `IN_FILE` edges (`Function/Class -> File`) are generated.
+- [ ] `CALLS` edges (`Function -> Function/Class`, static heuristic) are generated.
+- [ ] `TESTS` edges (`Test -> Function/Class`) are generated.
 - [ ] Degree-based analysis is available (`in-degree`, `out-degree`, top-k).
 - [ ] Visualization and summary reports can be produced.
 - [ ] Basic Python repo stats can be produced.
@@ -40,7 +43,7 @@ Use this checklist before running the current `File + IMPORTS` pipeline on a new
 ## E) What Is Not Implemented Yet
 
 - [x] Function/class-level graph extraction (`Function`, `Class` nodes) is in the active pipeline.
-- [ ] Call graph edges (`CALLS`) are not extracted.
+- [x] Call graph edges (`CALLS`) are extracted with static name-based matching.
 - [x] Test linkage (`TESTS`) is partially extracted for pytest/unittest-style tests.
 - [ ] Commit-history edges (`MODIFIED_BY`) are not extracted.
 - [ ] Issue-tracker integration is not extracted.
@@ -56,4 +59,4 @@ Use this checklist before running the current `File + IMPORTS` pipeline on a new
 
 1. Start with one Python-first repo and generate a stable baseline graph.
 2. Report known extraction boundaries explicitly (dynamic imports, unresolved modules).
-3. Add one next-phase feature incrementally (for example `Function/Class` extraction) and compare results.
+3. Add one next-phase feature incrementally (for example `MODIFIED_BY`) and compare results.

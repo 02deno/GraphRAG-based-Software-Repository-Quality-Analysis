@@ -65,6 +65,8 @@ def format_analysis_report(
     imports_out: List[Tuple[str, int]],
     in_file_in: List[Tuple[str, int]],
     in_file_out: List[Tuple[str, int]],
+    calls_in: List[Tuple[str, int]],
+    calls_out: List[Tuple[str, int]],
     tests_in: List[Tuple[str, int]],
     tests_out: List[Tuple[str, int]],
     path_by_id: Dict[str, str],
@@ -81,6 +83,8 @@ def format_analysis_report(
         imports_out: Top nodes by outgoing IMPORTS edges.
         in_file_in: Top nodes by incoming IN_FILE edges.
         in_file_out: Top nodes by outgoing IN_FILE edges.
+        calls_in: Top nodes by incoming CALLS edges.
+        calls_out: Top nodes by outgoing CALLS edges.
         tests_in: Top nodes by incoming TESTS edges.
         tests_out: Top nodes by outgoing TESTS edges.
         path_by_id: Node id to path map for display.
@@ -128,6 +132,22 @@ def format_analysis_report(
         format_top_nodes_section(
             f"Top {top_k_value} nodes by outgoing IN_FILE edges:",
             in_file_out,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by incoming CALLS edges:",
+            calls_in,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} nodes by outgoing CALLS edges:",
+            calls_out,
             path_by_id,
         )
     )
@@ -194,9 +214,10 @@ def generate_analysis_text_report(
     edge_type_counts = Counter(edge.get("type", "UNKNOWN") for edge in edges)
     imports_in, imports_out = degrees_by_type.get("IMPORTS", (Counter(), Counter()))
     in_file_in, in_file_out = degrees_by_type.get("IN_FILE", (Counter(), Counter()))
+    calls_in, calls_out = degrees_by_type.get("CALLS", (Counter(), Counter()))
     tests_in, tests_out = degrees_by_type.get("TESTS", (Counter(), Counter()))
 
-    _notify(64, "Analysis: assembling plain-text sections (imports, IN_FILE, TESTS)…")
+    _notify(64, "Analysis: assembling plain-text sections (imports, IN_FILE, CALLS, TESTS)…")
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
@@ -206,6 +227,8 @@ def generate_analysis_text_report(
         imports_out=top_k(imports_out, top_k_value),
         in_file_in=top_k(in_file_in, top_k_value),
         in_file_out=top_k(in_file_out, top_k_value),
+        calls_in=top_k(calls_in, top_k_value),
+        calls_out=top_k(calls_out, top_k_value),
         tests_in=top_k(tests_in, top_k_value),
         tests_out=top_k(tests_out, top_k_value),
         path_by_id=path_by_id,

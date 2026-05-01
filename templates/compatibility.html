@@ -494,9 +494,10 @@
                 <h4>Edge types (implemented)</h4>
                 <p class="edge-def"><code>IMPORTS</code> — <strong>File → File</strong>. The source file’s import statements resolve to another module file in this repo.</p>
                 <p class="edge-def"><code>IN_FILE</code> — <strong>Function or Class → File</strong>. The symbol lives inside that file (nests code structure under files).</p>
+                <p class="edge-def"><code>CALLS</code> — <strong>Function → Function or Class</strong>. Static call-sites inside function bodies are linked to known symbols by name.</p>
                 <p class="edge-def"><code>TESTS</code> — <strong>Test → Function or Class</strong>. The test is inferred to cover or reference that symbol (static link, not runtime coverage).</p>
                 <p style="margin:14px 0 0 0;font-size:13px;color:#666;">
-                    The JSON schema also reserves other kinds (e.g. <code>Commit</code>, <code>CALLS</code>) for future work; they are not emitted by the current Python extractor.
+                    The JSON schema also reserves other kinds (e.g. <code>Commit</code>) for future work; they are not emitted by the current Python extractor.
                 </p>
             </div>
         </details>
@@ -534,7 +535,7 @@
             </p>
             <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
                 <li>Extract File, Function, Class, and Test nodes</li>
-                <li>Build IMPORTS, IN_FILE, and TESTS relationships</li>
+                <li>Build IMPORTS, IN_FILE, CALLS, and TESTS relationships</li>
                 <li>Generate degree centrality metrics</li>
                 <li>Identify potential quality risks and architectural insights</li>
                 <li>Provide visual summaries and detailed reports</li>

@@ -20,9 +20,11 @@ def _png_display_title(filename: str) -> str:
     ordered = (
         ("structure_imports", "Structure (IMPORTS only)"),
         ("structure_in_file", "Structure (IN_FILE only)"),
+        ("structure_calls", "Structure (CALLS only)"),
         ("structure_tests", "Structure (TESTS only)"),
         ("degree_analysis_imports", "Degree chart (IMPORTS)"),
         ("degree_analysis_in_file", "Degree chart (IN_FILE)"),
+        ("degree_analysis_calls", "Degree chart (CALLS)"),
         ("degree_analysis_tests", "Degree chart (TESTS)"),
         ("degree_analysis", "Degree chart (combined)"),
         ("_structure", "Structure (all edges)"),

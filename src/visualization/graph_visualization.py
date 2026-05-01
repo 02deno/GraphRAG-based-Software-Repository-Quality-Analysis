@@ -224,10 +224,12 @@ def generate_visual_summary(
     structure_output: Path | None = None,
     structure_output_imports: Path | None = None,
     structure_output_in_file: Path | None = None,
+    structure_output_calls: Path | None = None,
     structure_output_tests: Path | None = None,
     analysis_output: Path | None = None,
     analysis_output_imports: Path | None = None,
     analysis_output_in_file: Path | None = None,
+    analysis_output_calls: Path | None = None,
     analysis_output_tests: Path | None = None,
     summary_output: Path | None = None,
     progress_callback: Callable[[int, str], None] | None = None,
@@ -242,10 +244,12 @@ def generate_visual_summary(
         structure_output: Optional path for the full-graph structure image.
         structure_output_imports: Optional path for IMPORTS-only structure image.
         structure_output_in_file: Optional path for IN_FILE-only structure image.
+        structure_output_calls: Optional path for CALLS-only structure image.
         structure_output_tests: Optional path for TESTS-only structure image.
         analysis_output: Optional path for combined degree bar chart image.
         analysis_output_imports: Optional path for IMPORTS degree bar chart.
         analysis_output_in_file: Optional path for IN_FILE degree bar chart.
+        analysis_output_calls: Optional path for CALLS degree bar chart.
         analysis_output_tests: Optional path for TESTS degree bar chart.
         summary_output: Optional path for the textual summary file.
         progress_callback: Optional ``(percent, message)`` updates during matplotlib work.
@@ -277,12 +281,14 @@ def generate_visual_summary(
 
     imports_edges = [edge for edge in edges if edge.get("type") == "IMPORTS"]
     in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
+    calls_edges = [edge for edge in edges if edge.get("type") == "CALLS"]
     tests_edges = [edge for edge in edges if edge.get("type") == "TESTS"]
 
     repo_name = graph_stem_display_name(graph_path)
     graph_label = f"{repo_name} — {human_readable_graph_edge_label(edges)}"
     imports_graph_label = f"{repo_name} — IMPORTS graph"
     in_file_graph_label = f"{repo_name} — IN_FILE graph"
+    calls_graph_label = f"{repo_name} — CALLS graph"
     tests_graph_label = f"{repo_name} — TESTS graph"
 
     structure_output = (
@@ -296,6 +302,10 @@ def generate_visual_summary(
     structure_output_in_file = (
         structure_output_in_file
         or Path(f"results/visuals/{repo_name}_graph_structure_in_file.png").resolve()
+    )
+    structure_output_calls = (
+        structure_output_calls
+        or Path(f"results/visuals/{repo_name}_graph_structure_calls.png").resolve()
     )
     structure_output_tests = (
         structure_output_tests
@@ -312,6 +322,10 @@ def generate_visual_summary(
     analysis_output_in_file = (
         analysis_output_in_file
         or Path(f"results/visuals/{repo_name}_graph_degree_analysis_in_file.png").resolve()
+    )
+    analysis_output_calls = (
+        analysis_output_calls
+        or Path(f"results/visuals/{repo_name}_graph_degree_analysis_calls.png").resolve()
     )
     analysis_output_tests = (
         analysis_output_tests
@@ -338,9 +352,11 @@ def generate_visual_summary(
 
         imports_graph = compute_graph_for_edge_type(nodes, edges, "IMPORTS")
         in_file_graph = compute_graph_for_edge_type(nodes, edges, "IN_FILE")
+        calls_graph = compute_graph_for_edge_type(nodes, edges, "CALLS")
         tests_graph = compute_graph_for_edge_type(nodes, edges, "TESTS")
         imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
         in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
+        calls_in_degree, calls_out_degree = compute_in_out_degrees(calls_edges)
         tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
 
         imports_selected = select_structure_nodes(
@@ -353,6 +369,12 @@ def generate_visual_summary(
             graph=in_file_graph,
             in_degree=in_file_in_degree,
             out_degree=in_file_out_degree,
+            top_n=max(5, structure_nodes),
+        )
+        calls_selected = select_structure_nodes(
+            graph=calls_graph,
+            in_degree=calls_in_degree,
+            out_degree=calls_out_degree,
             top_n=max(5, structure_nodes),
         )
         tests_selected = select_structure_nodes(
@@ -386,6 +408,18 @@ def generate_visual_summary(
             logger.info("visualization_saved path=%s", structure_output_in_file)
             report_lines.append(f"IN_FILE structure visualization saved to: {structure_output_in_file}")
 
+        if calls_selected:
+            _pv(85, f"Visualization: CALLS-only structure → {structure_output_calls.name}")
+            plot_structure_subgraph(
+                calls_graph,
+                calls_selected,
+                path_by_id,
+                structure_output_calls,
+                calls_graph_label,
+            )
+            logger.info("visualization_saved path=%s", structure_output_calls)
+            report_lines.append(f"CALLS structure visualization saved to: {structure_output_calls}")
+
         if tests_selected:
             _pv(86, f"Visualization: TESTS-only structure → {structure_output_tests.name}")
             plot_structure_subgraph(
@@ -408,6 +442,7 @@ def generate_visual_summary(
 
     imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
     in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
+    calls_in_degree, calls_out_degree = compute_in_out_degrees(calls_edges)
     tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
 
     _pv(88, f"Visualization: IMPORTS degree bars → {analysis_output_imports.name}")
@@ -434,7 +469,19 @@ def generate_visual_summary(
     logger.info("visualization_saved path=%s", analysis_output_in_file)
     report_lines.append(f"IN_FILE degree analysis saved to: {analysis_output_in_file}")
 
-    _pv(91, f"Visualization: TESTS degree bars → {analysis_output_tests.name}")
+    _pv(91, f"Visualization: CALLS degree bars → {analysis_output_calls.name}")
+    plot_degree_bars(
+        calls_in_degree,
+        calls_out_degree,
+        path_by_id,
+        top_k,
+        analysis_output_calls,
+        calls_graph_label,
+    )
+    logger.info("visualization_saved path=%s", analysis_output_calls)
+    report_lines.append(f"CALLS degree analysis saved to: {analysis_output_calls}")
+
+    _pv(92, f"Visualization: TESTS degree bars → {analysis_output_tests.name}")
     plot_degree_bars(
         tests_in_degree,
         tests_out_degree,
@@ -496,6 +543,11 @@ def main() -> None:
         help="Output image for IN_FILE structure graph",
     )
     parser.add_argument(
+        "--structure-output-calls",
+        default="results/visuals/graph_structure_calls.png",
+        help="Output image for CALLS structure graph",
+    )
+    parser.add_argument(
         "--structure-output-tests",
         default="results/visuals/graph_structure_tests.png",
         help="Output image for TESTS structure graph",
@@ -514,6 +566,11 @@ def main() -> None:
         "--analysis-output-in-file",
         default="results/visuals/graph_degree_analysis_in_file.png",
         help="Output image for IN_FILE degree analysis",
+    )
+    parser.add_argument(
+        "--analysis-output-calls",
+        default="results/visuals/graph_degree_analysis_calls.png",
+        help="Output image for CALLS degree analysis",
     )
     parser.add_argument(
         "--analysis-output-tests",
@@ -548,10 +605,12 @@ def main() -> None:
         structure_output=Path(args.structure_output).resolve(),
         structure_output_imports=Path(args.structure_output_imports).resolve(),
         structure_output_in_file=Path(args.structure_output_in_file).resolve(),
+        structure_output_calls=Path(args.structure_output_calls).resolve(),
         structure_output_tests=Path(args.structure_output_tests).resolve(),
         analysis_output=Path(args.analysis_output).resolve(),
         analysis_output_imports=Path(args.analysis_output_imports).resolve(),
         analysis_output_in_file=Path(args.analysis_output_in_file).resolve(),
+        analysis_output_calls=Path(args.analysis_output_calls).resolve(),
         analysis_output_tests=Path(args.analysis_output_tests).resolve(),
         summary_output=Path(args.summary_output).resolve(),
     )

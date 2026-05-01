@@ -254,10 +254,11 @@
                 </p>
                 <p class="schema-edge-def"><code>IMPORTS</code> — <strong>File → File</strong>. The importing module file depends on another file that provides the resolved import.</p>
                 <p class="schema-edge-def"><code>IN_FILE</code> — <strong>Function or Class → File</strong>. The symbol is defined inside that file.</p>
+                <p class="schema-edge-def"><code>CALLS</code> — <strong>Function → Function or Class</strong>. A function body includes a statically extracted call-site targeting that symbol.</p>
                 <p class="schema-edge-def"><code>TESTS</code> — <strong>Test → Function or Class</strong>. The test is statically linked to the symbol it targets (not a runtime coverage metric).</p>
                 <p class="schema-note" style="margin-bottom:0;">
                     Node meanings: <code>File</code> = one Python module path; <code>Function</code> / <code>Class</code> = definitions;
-                    <code>Test</code> = extracted test entity. Reserved schema types (e.g. <code>Commit</code>, <code>CALLS</code>) are not listed above unless they appear in this graph.
+                    <code>Test</code> = extracted test entity. Reserved schema types (e.g. <code>Commit</code>) are not listed above unless they appear in this graph.
                 </p>
             </div>
         </div>
