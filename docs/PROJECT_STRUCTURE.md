@@ -79,8 +79,8 @@ GraphRAG_Project/
 **Purpose**: AST-based code extraction modules
 - **`symbol_extractor.py`**: Functions and classes extraction
 - **`import_extractor.py`**: Import relationship extraction
-- **`test_extractor.py`**: Test discovery and mapping
-- **`python_file_collector.py`**: Python file discovery
+- **`test_extractor.py`**: Test discovery and mapping (``test_*.py``, parents named ``tests`` / ``test`` / ``specs``, etc.)
+- **`python_file_collector.py`**: Recursive ``*.py`` discovery from the repo root (includes ``backend/``, ``src/``, etc.; excludes name-based dirs like ``node_modules``)
 - **`__init__.py`**: Extraction utilities and exports
 
 ### Graph Analysis Layer (`src/analysis/`)

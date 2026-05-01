@@ -35,7 +35,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **📱 Responsive Design**: Mobile-friendly interface
 
 ### Core Analysis Features
-- **Graph Construction**: File, Function, Class, and Test nodes
+- **Graph Construction**: File, Function, Class, and Test nodes (all ``*.py`` under the repo root, including e.g. ``backend/`` — not limited to a top-level ``src/`` layout)
 - **Relationship Mapping**: IMPORTS, IN_FILE, and TESTS edges
 - **Quality Metrics**: Degree centrality and structural analysis
 - **Visualization Support**: Graph structure and analysis reports

@@ -1,0 +1,81 @@
+Graph file: C:\Users\ASUS Zenbook\Desktop\İTÜ - Yüksek Lisans\1 - 2026 Bahar Dönemi\Graph Theory\Project\GraphRAG_Project\results\web_analysis_20260501_034325\graph.json
+Graph type: IMPORTS+IN_FILE+TESTS graph
+Total nodes: 271
+Total edges: 317
+
+Edge counts by type:
+- IMPORTS: 79
+- IN_FILE: 164
+- TESTS: 74
+
+Top 10 nodes by incoming IMPORTS edges:
+- backend\app\models.py: 16
+- backend\app\core\config.py: 16
+- backend\app\__init__.py: 7
+- backend\app\core\security.py: 6
+- backend\tests\utils\utils.py: 6
+- backend\app\core\db.py: 5
+- backend\app\api\deps.py: 5
+- backend\tests\utils\user.py: 4
+- backend\app\utils.py: 4
+- backend\app\core\__init__.py: 3
+
+Top 10 nodes by outgoing IMPORTS edges:
+- backend\tests\api\routes\test_login.py: 7
+- backend\tests\conftest.py: 6
+- backend\tests\api\routes\test_users.py: 6
+- backend\app\api\routes\login.py: 6
+- backend\app\api\routes\users.py: 6
+- backend\tests\crud\test_user.py: 4
+- backend\tests\utils\item.py: 4
+- backend\tests\utils\user.py: 4
+- backend\app\api\deps.py: 4
+- backend\app\core\db.py: 3
+
+Top 10 nodes by incoming IN_FILE edges:
+- backend\tests\api\routes\test_users.py: 27
+- backend\app\models.py: 20
+- backend\tests\api\routes\test_items.py: 11
+- backend\tests\crud\test_user.py: 10
+- backend\app\api\routes\users.py: 10
+- backend\tests\api\routes\test_login.py: 9
+- backend\app\utils.py: 8
+- backend\app\core\config.py: 8
+- backend\app\crud.py: 5
+- backend\app\api\routes\items.py: 5
+
+Top 10 nodes by outgoing IN_FILE edges:
+- function::scripts\add_latest_release_date.py::scripts.add_latest_release_date.main: 1
+- function::backend\app\backend_pre_start.py::backend.app.backend_pre_start.init: 1
+- function::backend\app\backend_pre_start.py::backend.app.backend_pre_start.main: 1
+- function::backend\app\crud.py::backend.app.crud.create_user: 1
+- function::backend\app\crud.py::backend.app.crud.update_user: 1
+- function::backend\app\crud.py::backend.app.crud.get_user_by_email: 1
+- function::backend\app\crud.py::backend.app.crud.authenticate: 1
+- function::backend\app\crud.py::backend.app.crud.create_item: 1
+- function::backend\app\initial_data.py::backend.app.initial_data.init: 1
+- function::backend\app\initial_data.py::backend.app.initial_data.main: 1
+
+Top 10 nodes by incoming TESTS edges:
+- backend\tests\api\routes\test_users.py: 27
+- backend\tests\api\routes\test_items.py: 11
+- backend\tests\crud\test_user.py: 10
+- backend\tests\api\routes\test_login.py: 9
+- function::backend\app\api\routes\users.py::backend.app.api.routes.users.create_user: 2
+- function::backend\app\api\routes\users.py::backend.app.api.routes.users.update_user: 2
+- backend\tests\scripts\test_backend_pre_start.py: 1
+- backend\tests\scripts\test_test_pre_start.py: 1
+- backend\tests\api\routes\test_private.py: 1
+- function::backend\app\api\routes\items.py::backend.app.api.routes.items.create_item: 1
+
+Top 10 nodes by outgoing TESTS edges:
+- test::backend\tests\crud\test_user.py::backend.tests.crud.test_user.test_create_user: 2
+- test::backend\tests\crud\test_user.py::backend.tests.crud.test_user.test_update_user: 2
+- test::backend\tests\api\routes\test_items.py::backend.tests.api.routes.test_items.test_create_item: 2
+- test::backend\tests\api\routes\test_items.py::backend.tests.api.routes.test_items.test_read_item: 2
+- test::backend\tests\api\routes\test_items.py::backend.tests.api.routes.test_items.test_read_items: 2
+- test::backend\tests\api\routes\test_items.py::backend.tests.api.routes.test_items.test_update_item: 2
+- test::backend\tests\api\routes\test_items.py::backend.tests.api.routes.test_items.test_delete_item: 2
+- test::backend\tests\api\routes\test_login.py::backend.tests.api.routes.test_login.test_reset_password: 2
+- test::backend\tests\api\routes\test_private.py::backend.tests.api.routes.test_private.test_create_user: 2
+- test::backend\tests\api\routes\test_users.py::backend.tests.api.routes.test_users.test_update_user_me: 2

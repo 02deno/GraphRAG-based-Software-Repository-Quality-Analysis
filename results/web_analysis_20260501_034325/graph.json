@@ -1,0 +1,3503 @@
+{
+  "schema_version": "0.1.0",
+  "schema_node_types": [
+    "Class",
+    "Commit",
+    "File",
+    "Function",
+    "Test"
+  ],
+  "schema_edge_types": [
+    "CALLS",
+    "IMPORTS",
+    "IN_FILE",
+    "MODIFIED_BY",
+    "TESTS"
+  ],
+  "nodes": [
+    {
+      "id": ".copier\\update_dotenv.py",
+      "type": "File",
+      "path": ".copier\\update_dotenv.py",
+      "module": ".copier.update_dotenv",
+      "language": "python"
+    },
+    {
+      "id": "hooks\\post_gen_project.py",
+      "type": "File",
+      "path": "hooks\\post_gen_project.py",
+      "module": "hooks.post_gen_project",
+      "language": "python"
+    },
+    {
+      "id": "scripts\\add_latest_release_date.py",
+      "type": "File",
+      "path": "scripts\\add_latest_release_date.py",
+      "module": "scripts.add_latest_release_date",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\backend_pre_start.py",
+      "type": "File",
+      "path": "backend\\app\\backend_pre_start.py",
+      "module": "backend.app.backend_pre_start",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\crud.py",
+      "type": "File",
+      "path": "backend\\app\\crud.py",
+      "module": "backend.app.crud",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\initial_data.py",
+      "type": "File",
+      "path": "backend\\app\\initial_data.py",
+      "module": "backend.app.initial_data",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\main.py",
+      "type": "File",
+      "path": "backend\\app\\main.py",
+      "module": "backend.app.main",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\models.py",
+      "type": "File",
+      "path": "backend\\app\\models.py",
+      "module": "backend.app.models",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\tests_pre_start.py",
+      "type": "File",
+      "path": "backend\\app\\tests_pre_start.py",
+      "module": "backend.app.tests_pre_start",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\utils.py",
+      "type": "File",
+      "path": "backend\\app\\utils.py",
+      "module": "backend.app.utils",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\__init__.py",
+      "type": "File",
+      "path": "backend\\app\\__init__.py",
+      "module": "backend.app",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\conftest.py",
+      "type": "File",
+      "path": "backend\\tests\\conftest.py",
+      "module": "backend.tests.conftest",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\__init__.py",
+      "type": "File",
+      "path": "backend\\tests\\__init__.py",
+      "module": "backend.tests",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\api\\__init__.py",
+      "type": "File",
+      "path": "backend\\tests\\api\\__init__.py",
+      "module": "backend.tests.api",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\crud\\test_user.py",
+      "type": "File",
+      "path": "backend\\tests\\crud\\test_user.py",
+      "module": "backend.tests.crud.test_user",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\crud\\__init__.py",
+      "type": "File",
+      "path": "backend\\tests\\crud\\__init__.py",
+      "module": "backend.tests.crud",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\scripts\\test_backend_pre_start.py",
+      "type": "File",
+      "path": "backend\\tests\\scripts\\test_backend_pre_start.py",
+      "module": "backend.tests.scripts.test_backend_pre_start",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\scripts\\test_test_pre_start.py",
+      "type": "File",
+      "path": "backend\\tests\\scripts\\test_test_pre_start.py",
+      "module": "backend.tests.scripts.test_test_pre_start",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\scripts\\__init__.py",
+      "type": "File",
+      "path": "backend\\tests\\scripts\\__init__.py",
+      "module": "backend.tests.scripts",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\utils\\item.py",
+      "type": "File",
+      "path": "backend\\tests\\utils\\item.py",
+      "module": "backend.tests.utils.item",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\utils\\user.py",
+      "type": "File",
+      "path": "backend\\tests\\utils\\user.py",
+      "module": "backend.tests.utils.user",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\utils\\utils.py",
+      "type": "File",
+      "path": "backend\\tests\\utils\\utils.py",
+      "module": "backend.tests.utils.utils",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\utils\\__init__.py",
+      "type": "File",
+      "path": "backend\\tests\\utils\\__init__.py",
+      "module": "backend.tests.utils",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "File",
+      "path": "backend\\tests\\api\\routes\\test_items.py",
+      "module": "backend.tests.api.routes.test_items",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "File",
+      "path": "backend\\tests\\api\\routes\\test_login.py",
+      "module": "backend.tests.api.routes.test_login",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\api\\routes\\test_private.py",
+      "type": "File",
+      "path": "backend\\tests\\api\\routes\\test_private.py",
+      "module": "backend.tests.api.routes.test_private",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "File",
+      "path": "backend\\tests\\api\\routes\\test_users.py",
+      "module": "backend.tests.api.routes.test_users",
+      "language": "python"
+    },
+    {
+      "id": "backend\\tests\\api\\routes\\__init__.py",
+      "type": "File",
+      "path": "backend\\tests\\api\\routes\\__init__.py",
+      "module": "backend.tests.api.routes",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\alembic\\env.py",
+      "type": "File",
+      "path": "backend\\app\\alembic\\env.py",
+      "module": "backend.app.alembic.env",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\deps.py",
+      "type": "File",
+      "path": "backend\\app\\api\\deps.py",
+      "module": "backend.app.api.deps",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\main.py",
+      "type": "File",
+      "path": "backend\\app\\api\\main.py",
+      "module": "backend.app.api.main",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\__init__.py",
+      "type": "File",
+      "path": "backend\\app\\api\\__init__.py",
+      "module": "backend.app.api",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\core\\config.py",
+      "type": "File",
+      "path": "backend\\app\\core\\config.py",
+      "module": "backend.app.core.config",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\core\\db.py",
+      "type": "File",
+      "path": "backend\\app\\core\\db.py",
+      "module": "backend.app.core.db",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\core\\security.py",
+      "type": "File",
+      "path": "backend\\app\\core\\security.py",
+      "module": "backend.app.core.security",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\core\\__init__.py",
+      "type": "File",
+      "path": "backend\\app\\core\\__init__.py",
+      "module": "backend.app.core",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\routes\\items.py",
+      "type": "File",
+      "path": "backend\\app\\api\\routes\\items.py",
+      "module": "backend.app.api.routes.items",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\routes\\login.py",
+      "type": "File",
+      "path": "backend\\app\\api\\routes\\login.py",
+      "module": "backend.app.api.routes.login",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\routes\\private.py",
+      "type": "File",
+      "path": "backend\\app\\api\\routes\\private.py",
+      "module": "backend.app.api.routes.private",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\routes\\users.py",
+      "type": "File",
+      "path": "backend\\app\\api\\routes\\users.py",
+      "module": "backend.app.api.routes.users",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\routes\\utils.py",
+      "type": "File",
+      "path": "backend\\app\\api\\routes\\utils.py",
+      "module": "backend.app.api.routes.utils",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\api\\routes\\__init__.py",
+      "type": "File",
+      "path": "backend\\app\\api\\routes\\__init__.py",
+      "module": "backend.app.api.routes",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py",
+      "type": "File",
+      "path": "backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py",
+      "module": "backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py",
+      "type": "File",
+      "path": "backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py",
+      "module": "backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py",
+      "type": "File",
+      "path": "backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py",
+      "module": "backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py",
+      "type": "File",
+      "path": "backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py",
+      "module": "backend.app.alembic.versions.e2412789c190_initialize_models",
+      "language": "python"
+    },
+    {
+      "id": "backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py",
+      "type": "File",
+      "path": "backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py",
+      "module": "backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item",
+      "language": "python"
+    },
+    {
+      "id": "function::scripts\\add_latest_release_date.py::scripts.add_latest_release_date.main",
+      "type": "Function",
+      "name": "main",
+      "qualified_name": "scripts.add_latest_release_date.main",
+      "file_path": "scripts\\add_latest_release_date.py"
+    },
+    {
+      "id": "function::backend\\app\\backend_pre_start.py::backend.app.backend_pre_start.init",
+      "type": "Function",
+      "name": "init",
+      "qualified_name": "backend.app.backend_pre_start.init",
+      "file_path": "backend\\app\\backend_pre_start.py"
+    },
+    {
+      "id": "function::backend\\app\\backend_pre_start.py::backend.app.backend_pre_start.main",
+      "type": "Function",
+      "name": "main",
+      "qualified_name": "backend.app.backend_pre_start.main",
+      "file_path": "backend\\app\\backend_pre_start.py"
+    },
+    {
+      "id": "function::backend\\app\\crud.py::backend.app.crud.create_user",
+      "type": "Function",
+      "name": "create_user",
+      "qualified_name": "backend.app.crud.create_user",
+      "file_path": "backend\\app\\crud.py"
+    },
+    {
+      "id": "function::backend\\app\\crud.py::backend.app.crud.update_user",
+      "type": "Function",
+      "name": "update_user",
+      "qualified_name": "backend.app.crud.update_user",
+      "file_path": "backend\\app\\crud.py"
+    },
+    {
+      "id": "function::backend\\app\\crud.py::backend.app.crud.get_user_by_email",
+      "type": "Function",
+      "name": "get_user_by_email",
+      "qualified_name": "backend.app.crud.get_user_by_email",
+      "file_path": "backend\\app\\crud.py"
+    },
+    {
+      "id": "function::backend\\app\\crud.py::backend.app.crud.authenticate",
+      "type": "Function",
+      "name": "authenticate",
+      "qualified_name": "backend.app.crud.authenticate",
+      "file_path": "backend\\app\\crud.py"
+    },
+    {
+      "id": "function::backend\\app\\crud.py::backend.app.crud.create_item",
+      "type": "Function",
+      "name": "create_item",
+      "qualified_name": "backend.app.crud.create_item",
+      "file_path": "backend\\app\\crud.py"
+    },
+    {
+      "id": "function::backend\\app\\initial_data.py::backend.app.initial_data.init",
+      "type": "Function",
+      "name": "init",
+      "qualified_name": "backend.app.initial_data.init",
+      "file_path": "backend\\app\\initial_data.py"
+    },
+    {
+      "id": "function::backend\\app\\initial_data.py::backend.app.initial_data.main",
+      "type": "Function",
+      "name": "main",
+      "qualified_name": "backend.app.initial_data.main",
+      "file_path": "backend\\app\\initial_data.py"
+    },
+    {
+      "id": "function::backend\\app\\main.py::backend.app.main.custom_generate_unique_id",
+      "type": "Function",
+      "name": "custom_generate_unique_id",
+      "qualified_name": "backend.app.main.custom_generate_unique_id",
+      "file_path": "backend\\app\\main.py"
+    },
+    {
+      "id": "function::backend\\app\\models.py::backend.app.models.get_datetime_utc",
+      "type": "Function",
+      "name": "get_datetime_utc",
+      "qualified_name": "backend.app.models.get_datetime_utc",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UserBase",
+      "type": "Class",
+      "name": "UserBase",
+      "qualified_name": "backend.app.models.UserBase",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UserCreate",
+      "type": "Class",
+      "name": "UserCreate",
+      "qualified_name": "backend.app.models.UserCreate",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UserRegister",
+      "type": "Class",
+      "name": "UserRegister",
+      "qualified_name": "backend.app.models.UserRegister",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UserUpdate",
+      "type": "Class",
+      "name": "UserUpdate",
+      "qualified_name": "backend.app.models.UserUpdate",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UserUpdateMe",
+      "type": "Class",
+      "name": "UserUpdateMe",
+      "qualified_name": "backend.app.models.UserUpdateMe",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UpdatePassword",
+      "type": "Class",
+      "name": "UpdatePassword",
+      "qualified_name": "backend.app.models.UpdatePassword",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.User",
+      "type": "Class",
+      "name": "User",
+      "qualified_name": "backend.app.models.User",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UserPublic",
+      "type": "Class",
+      "name": "UserPublic",
+      "qualified_name": "backend.app.models.UserPublic",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.UsersPublic",
+      "type": "Class",
+      "name": "UsersPublic",
+      "qualified_name": "backend.app.models.UsersPublic",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.ItemBase",
+      "type": "Class",
+      "name": "ItemBase",
+      "qualified_name": "backend.app.models.ItemBase",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.ItemCreate",
+      "type": "Class",
+      "name": "ItemCreate",
+      "qualified_name": "backend.app.models.ItemCreate",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.ItemUpdate",
+      "type": "Class",
+      "name": "ItemUpdate",
+      "qualified_name": "backend.app.models.ItemUpdate",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.Item",
+      "type": "Class",
+      "name": "Item",
+      "qualified_name": "backend.app.models.Item",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.ItemPublic",
+      "type": "Class",
+      "name": "ItemPublic",
+      "qualified_name": "backend.app.models.ItemPublic",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.ItemsPublic",
+      "type": "Class",
+      "name": "ItemsPublic",
+      "qualified_name": "backend.app.models.ItemsPublic",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.Message",
+      "type": "Class",
+      "name": "Message",
+      "qualified_name": "backend.app.models.Message",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.Token",
+      "type": "Class",
+      "name": "Token",
+      "qualified_name": "backend.app.models.Token",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.TokenPayload",
+      "type": "Class",
+      "name": "TokenPayload",
+      "qualified_name": "backend.app.models.TokenPayload",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "class::backend\\app\\models.py::backend.app.models.NewPassword",
+      "type": "Class",
+      "name": "NewPassword",
+      "qualified_name": "backend.app.models.NewPassword",
+      "file_path": "backend\\app\\models.py"
+    },
+    {
+      "id": "function::backend\\app\\tests_pre_start.py::backend.app.tests_pre_start.init",
+      "type": "Function",
+      "name": "init",
+      "qualified_name": "backend.app.tests_pre_start.init",
+      "file_path": "backend\\app\\tests_pre_start.py"
+    },
+    {
+      "id": "function::backend\\app\\tests_pre_start.py::backend.app.tests_pre_start.main",
+      "type": "Function",
+      "name": "main",
+      "qualified_name": "backend.app.tests_pre_start.main",
+      "file_path": "backend\\app\\tests_pre_start.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.render_email_template",
+      "type": "Function",
+      "name": "render_email_template",
+      "qualified_name": "backend.app.utils.render_email_template",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.send_email",
+      "type": "Function",
+      "name": "send_email",
+      "qualified_name": "backend.app.utils.send_email",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.generate_test_email",
+      "type": "Function",
+      "name": "generate_test_email",
+      "qualified_name": "backend.app.utils.generate_test_email",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.generate_reset_password_email",
+      "type": "Function",
+      "name": "generate_reset_password_email",
+      "qualified_name": "backend.app.utils.generate_reset_password_email",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.generate_new_account_email",
+      "type": "Function",
+      "name": "generate_new_account_email",
+      "qualified_name": "backend.app.utils.generate_new_account_email",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.generate_password_reset_token",
+      "type": "Function",
+      "name": "generate_password_reset_token",
+      "qualified_name": "backend.app.utils.generate_password_reset_token",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\utils.py::backend.app.utils.verify_password_reset_token",
+      "type": "Function",
+      "name": "verify_password_reset_token",
+      "qualified_name": "backend.app.utils.verify_password_reset_token",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "class::backend\\app\\utils.py::backend.app.utils.EmailData",
+      "type": "Class",
+      "name": "EmailData",
+      "qualified_name": "backend.app.utils.EmailData",
+      "file_path": "backend\\app\\utils.py"
+    },
+    {
+      "id": "function::backend\\tests\\conftest.py::backend.tests.conftest.db",
+      "type": "Function",
+      "name": "db",
+      "qualified_name": "backend.tests.conftest.db",
+      "file_path": "backend\\tests\\conftest.py"
+    },
+    {
+      "id": "function::backend\\tests\\conftest.py::backend.tests.conftest.client",
+      "type": "Function",
+      "name": "client",
+      "qualified_name": "backend.tests.conftest.client",
+      "file_path": "backend\\tests\\conftest.py"
+    },
+    {
+      "id": "function::backend\\tests\\conftest.py::backend.tests.conftest.superuser_token_headers",
+      "type": "Function",
+      "name": "superuser_token_headers",
+      "qualified_name": "backend.tests.conftest.superuser_token_headers",
+      "file_path": "backend\\tests\\conftest.py"
+    },
+    {
+      "id": "function::backend\\tests\\conftest.py::backend.tests.conftest.normal_user_token_headers",
+      "type": "Function",
+      "name": "normal_user_token_headers",
+      "qualified_name": "backend.tests.conftest.normal_user_token_headers",
+      "file_path": "backend\\tests\\conftest.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_create_user",
+      "type": "Function",
+      "name": "test_create_user",
+      "qualified_name": "backend.tests.crud.test_user.test_create_user",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user",
+      "type": "Function",
+      "name": "test_authenticate_user",
+      "qualified_name": "backend.tests.crud.test_user.test_authenticate_user",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_not_authenticate_user",
+      "type": "Function",
+      "name": "test_not_authenticate_user",
+      "qualified_name": "backend.tests.crud.test_user.test_not_authenticate_user",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active",
+      "type": "Function",
+      "name": "test_check_if_user_is_active",
+      "qualified_name": "backend.tests.crud.test_user.test_check_if_user_is_active",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active_inactive",
+      "type": "Function",
+      "name": "test_check_if_user_is_active_inactive",
+      "qualified_name": "backend.tests.crud.test_user.test_check_if_user_is_active_inactive",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser",
+      "type": "Function",
+      "name": "test_check_if_user_is_superuser",
+      "qualified_name": "backend.tests.crud.test_user.test_check_if_user_is_superuser",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser_normal_user",
+      "type": "Function",
+      "name": "test_check_if_user_is_superuser_normal_user",
+      "qualified_name": "backend.tests.crud.test_user.test_check_if_user_is_superuser_normal_user",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_get_user",
+      "type": "Function",
+      "name": "test_get_user",
+      "qualified_name": "backend.tests.crud.test_user.test_get_user",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_update_user",
+      "type": "Function",
+      "name": "test_update_user",
+      "qualified_name": "backend.tests.crud.test_user.test_update_user",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "type": "Function",
+      "name": "test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "qualified_name": "backend.tests.crud.test_user.test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "file_path": "backend\\tests\\crud\\test_user.py"
+    },
+    {
+      "id": "function::backend\\tests\\scripts\\test_backend_pre_start.py::backend.tests.scripts.test_backend_pre_start.test_init_successful_connection",
+      "type": "Function",
+      "name": "test_init_successful_connection",
+      "qualified_name": "backend.tests.scripts.test_backend_pre_start.test_init_successful_connection",
+      "file_path": "backend\\tests\\scripts\\test_backend_pre_start.py"
+    },
+    {
+      "id": "function::backend\\tests\\scripts\\test_test_pre_start.py::backend.tests.scripts.test_test_pre_start.test_init_successful_connection",
+      "type": "Function",
+      "name": "test_init_successful_connection",
+      "qualified_name": "backend.tests.scripts.test_test_pre_start.test_init_successful_connection",
+      "file_path": "backend\\tests\\scripts\\test_test_pre_start.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\item.py::backend.tests.utils.item.create_random_item",
+      "type": "Function",
+      "name": "create_random_item",
+      "qualified_name": "backend.tests.utils.item.create_random_item",
+      "file_path": "backend\\tests\\utils\\item.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\user.py::backend.tests.utils.user.user_authentication_headers",
+      "type": "Function",
+      "name": "user_authentication_headers",
+      "qualified_name": "backend.tests.utils.user.user_authentication_headers",
+      "file_path": "backend\\tests\\utils\\user.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\user.py::backend.tests.utils.user.create_random_user",
+      "type": "Function",
+      "name": "create_random_user",
+      "qualified_name": "backend.tests.utils.user.create_random_user",
+      "file_path": "backend\\tests\\utils\\user.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\user.py::backend.tests.utils.user.authentication_token_from_email",
+      "type": "Function",
+      "name": "authentication_token_from_email",
+      "qualified_name": "backend.tests.utils.user.authentication_token_from_email",
+      "file_path": "backend\\tests\\utils\\user.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\utils.py::backend.tests.utils.utils.random_lower_string",
+      "type": "Function",
+      "name": "random_lower_string",
+      "qualified_name": "backend.tests.utils.utils.random_lower_string",
+      "file_path": "backend\\tests\\utils\\utils.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\utils.py::backend.tests.utils.utils.random_email",
+      "type": "Function",
+      "name": "random_email",
+      "qualified_name": "backend.tests.utils.utils.random_email",
+      "file_path": "backend\\tests\\utils\\utils.py"
+    },
+    {
+      "id": "function::backend\\tests\\utils\\utils.py::backend.tests.utils.utils.get_superuser_token_headers",
+      "type": "Function",
+      "name": "get_superuser_token_headers",
+      "qualified_name": "backend.tests.utils.utils.get_superuser_token_headers",
+      "file_path": "backend\\tests\\utils\\utils.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_create_item",
+      "type": "Function",
+      "name": "test_create_item",
+      "qualified_name": "backend.tests.api.routes.test_items.test_create_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item",
+      "type": "Function",
+      "name": "test_read_item",
+      "qualified_name": "backend.tests.api.routes.test_items.test_read_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_found",
+      "type": "Function",
+      "name": "test_read_item_not_found",
+      "qualified_name": "backend.tests.api.routes.test_items.test_read_item_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_enough_permissions",
+      "type": "Function",
+      "name": "test_read_item_not_enough_permissions",
+      "qualified_name": "backend.tests.api.routes.test_items.test_read_item_not_enough_permissions",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_items",
+      "type": "Function",
+      "name": "test_read_items",
+      "qualified_name": "backend.tests.api.routes.test_items.test_read_items",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item",
+      "type": "Function",
+      "name": "test_update_item",
+      "qualified_name": "backend.tests.api.routes.test_items.test_update_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_found",
+      "type": "Function",
+      "name": "test_update_item_not_found",
+      "qualified_name": "backend.tests.api.routes.test_items.test_update_item_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_enough_permissions",
+      "type": "Function",
+      "name": "test_update_item_not_enough_permissions",
+      "qualified_name": "backend.tests.api.routes.test_items.test_update_item_not_enough_permissions",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item",
+      "type": "Function",
+      "name": "test_delete_item",
+      "qualified_name": "backend.tests.api.routes.test_items.test_delete_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_found",
+      "type": "Function",
+      "name": "test_delete_item_not_found",
+      "qualified_name": "backend.tests.api.routes.test_items.test_delete_item_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_enough_permissions",
+      "type": "Function",
+      "name": "test_delete_item_not_enough_permissions",
+      "qualified_name": "backend.tests.api.routes.test_items.test_delete_item_not_enough_permissions",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token",
+      "type": "Function",
+      "name": "test_get_access_token",
+      "qualified_name": "backend.tests.api.routes.test_login.test_get_access_token",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token_incorrect_password",
+      "type": "Function",
+      "name": "test_get_access_token_incorrect_password",
+      "qualified_name": "backend.tests.api.routes.test_login.test_get_access_token_incorrect_password",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_use_access_token",
+      "type": "Function",
+      "name": "test_use_access_token",
+      "qualified_name": "backend.tests.api.routes.test_login.test_use_access_token",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password",
+      "type": "Function",
+      "name": "test_recovery_password",
+      "qualified_name": "backend.tests.api.routes.test_login.test_recovery_password",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password_user_not_exits",
+      "type": "Function",
+      "name": "test_recovery_password_user_not_exits",
+      "qualified_name": "backend.tests.api.routes.test_login.test_recovery_password_user_not_exits",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password",
+      "type": "Function",
+      "name": "test_reset_password",
+      "qualified_name": "backend.tests.api.routes.test_login.test_reset_password",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password_invalid_token",
+      "type": "Function",
+      "name": "test_reset_password_invalid_token",
+      "qualified_name": "backend.tests.api.routes.test_login.test_reset_password_invalid_token",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_bcrypt_password_upgrades_to_argon2",
+      "type": "Function",
+      "name": "test_login_with_bcrypt_password_upgrades_to_argon2",
+      "qualified_name": "backend.tests.api.routes.test_login.test_login_with_bcrypt_password_upgrades_to_argon2",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_argon2_password_keeps_hash",
+      "type": "Function",
+      "name": "test_login_with_argon2_password_keeps_hash",
+      "qualified_name": "backend.tests.api.routes.test_login.test_login_with_argon2_password_keeps_hash",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_private.py::backend.tests.api.routes.test_private.test_create_user",
+      "type": "Function",
+      "name": "test_create_user",
+      "qualified_name": "backend.tests.api.routes.test_private.test_create_user",
+      "file_path": "backend\\tests\\api\\routes\\test_private.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_superuser_me",
+      "type": "Function",
+      "name": "test_get_users_superuser_me",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_users_superuser_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_normal_user_me",
+      "type": "Function",
+      "name": "test_get_users_normal_user_me",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_users_normal_user_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_new_email",
+      "type": "Function",
+      "name": "test_create_user_new_email",
+      "qualified_name": "backend.tests.api.routes.test_users.test_create_user_new_email",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_as_superuser",
+      "type": "Function",
+      "name": "test_get_existing_user_as_superuser",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_existing_user_as_superuser",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_as_superuser",
+      "type": "Function",
+      "name": "test_get_non_existing_user_as_superuser",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_non_existing_user_as_superuser",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_current_user",
+      "type": "Function",
+      "name": "test_get_existing_user_current_user",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_existing_user_current_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_permissions_error",
+      "type": "Function",
+      "name": "test_get_existing_user_permissions_error",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_existing_user_permissions_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_permissions_error",
+      "type": "Function",
+      "name": "test_get_non_existing_user_permissions_error",
+      "qualified_name": "backend.tests.api.routes.test_users.test_get_non_existing_user_permissions_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_existing_username",
+      "type": "Function",
+      "name": "test_create_user_existing_username",
+      "qualified_name": "backend.tests.api.routes.test_users.test_create_user_existing_username",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_by_normal_user",
+      "type": "Function",
+      "name": "test_create_user_by_normal_user",
+      "qualified_name": "backend.tests.api.routes.test_users.test_create_user_by_normal_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_retrieve_users",
+      "type": "Function",
+      "name": "test_retrieve_users",
+      "qualified_name": "backend.tests.api.routes.test_users.test_retrieve_users",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me",
+      "type": "Function",
+      "name": "test_update_user_me",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_user_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me",
+      "type": "Function",
+      "name": "test_update_password_me",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_password_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_incorrect_password",
+      "type": "Function",
+      "name": "test_update_password_me_incorrect_password",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_password_me_incorrect_password",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me_email_exists",
+      "type": "Function",
+      "name": "test_update_user_me_email_exists",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_user_me_email_exists",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_same_password_error",
+      "type": "Function",
+      "name": "test_update_password_me_same_password_error",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_password_me_same_password_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user",
+      "type": "Function",
+      "name": "test_register_user",
+      "qualified_name": "backend.tests.api.routes.test_users.test_register_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user_already_exists_error",
+      "type": "Function",
+      "name": "test_register_user_already_exists_error",
+      "qualified_name": "backend.tests.api.routes.test_users.test_register_user_already_exists_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user",
+      "type": "Function",
+      "name": "test_update_user",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_not_exists",
+      "type": "Function",
+      "name": "test_update_user_not_exists",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_user_not_exists",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_email_exists",
+      "type": "Function",
+      "name": "test_update_user_email_exists",
+      "qualified_name": "backend.tests.api.routes.test_users.test_update_user_email_exists",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me",
+      "type": "Function",
+      "name": "test_delete_user_me",
+      "qualified_name": "backend.tests.api.routes.test_users.test_delete_user_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me_as_superuser",
+      "type": "Function",
+      "name": "test_delete_user_me_as_superuser",
+      "qualified_name": "backend.tests.api.routes.test_users.test_delete_user_me_as_superuser",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_super_user",
+      "type": "Function",
+      "name": "test_delete_user_super_user",
+      "qualified_name": "backend.tests.api.routes.test_users.test_delete_user_super_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_not_found",
+      "type": "Function",
+      "name": "test_delete_user_not_found",
+      "qualified_name": "backend.tests.api.routes.test_users.test_delete_user_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_current_super_user_error",
+      "type": "Function",
+      "name": "test_delete_user_current_super_user_error",
+      "qualified_name": "backend.tests.api.routes.test_users.test_delete_user_current_super_user_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_without_privileges",
+      "type": "Function",
+      "name": "test_delete_user_without_privileges",
+      "qualified_name": "backend.tests.api.routes.test_users.test_delete_user_without_privileges",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\env.py::backend.app.alembic.env.get_url",
+      "type": "Function",
+      "name": "get_url",
+      "qualified_name": "backend.app.alembic.env.get_url",
+      "file_path": "backend\\app\\alembic\\env.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\env.py::backend.app.alembic.env.run_migrations_offline",
+      "type": "Function",
+      "name": "run_migrations_offline",
+      "qualified_name": "backend.app.alembic.env.run_migrations_offline",
+      "file_path": "backend\\app\\alembic\\env.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\env.py::backend.app.alembic.env.run_migrations_online",
+      "type": "Function",
+      "name": "run_migrations_online",
+      "qualified_name": "backend.app.alembic.env.run_migrations_online",
+      "file_path": "backend\\app\\alembic\\env.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\deps.py::backend.app.api.deps.get_db",
+      "type": "Function",
+      "name": "get_db",
+      "qualified_name": "backend.app.api.deps.get_db",
+      "file_path": "backend\\app\\api\\deps.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\deps.py::backend.app.api.deps.get_current_user",
+      "type": "Function",
+      "name": "get_current_user",
+      "qualified_name": "backend.app.api.deps.get_current_user",
+      "file_path": "backend\\app\\api\\deps.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\deps.py::backend.app.api.deps.get_current_active_superuser",
+      "type": "Function",
+      "name": "get_current_active_superuser",
+      "qualified_name": "backend.app.api.deps.get_current_active_superuser",
+      "file_path": "backend\\app\\api\\deps.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.parse_cors",
+      "type": "Function",
+      "name": "parse_cors",
+      "qualified_name": "backend.app.core.config.parse_cors",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings.all_cors_origins",
+      "type": "Function",
+      "name": "all_cors_origins",
+      "qualified_name": "backend.app.core.config.Settings.all_cors_origins",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings.SQLALCHEMY_DATABASE_URI",
+      "type": "Function",
+      "name": "SQLALCHEMY_DATABASE_URI",
+      "qualified_name": "backend.app.core.config.Settings.SQLALCHEMY_DATABASE_URI",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings._set_default_emails_from",
+      "type": "Function",
+      "name": "_set_default_emails_from",
+      "qualified_name": "backend.app.core.config.Settings._set_default_emails_from",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings.emails_enabled",
+      "type": "Function",
+      "name": "emails_enabled",
+      "qualified_name": "backend.app.core.config.Settings.emails_enabled",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings._check_default_secret",
+      "type": "Function",
+      "name": "_check_default_secret",
+      "qualified_name": "backend.app.core.config.Settings._check_default_secret",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings._enforce_non_default_secrets",
+      "type": "Function",
+      "name": "_enforce_non_default_secrets",
+      "qualified_name": "backend.app.core.config.Settings._enforce_non_default_secrets",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "class::backend\\app\\core\\config.py::backend.app.core.config.Settings",
+      "type": "Class",
+      "name": "Settings",
+      "qualified_name": "backend.app.core.config.Settings",
+      "file_path": "backend\\app\\core\\config.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\db.py::backend.app.core.db.init_db",
+      "type": "Function",
+      "name": "init_db",
+      "qualified_name": "backend.app.core.db.init_db",
+      "file_path": "backend\\app\\core\\db.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\security.py::backend.app.core.security.create_access_token",
+      "type": "Function",
+      "name": "create_access_token",
+      "qualified_name": "backend.app.core.security.create_access_token",
+      "file_path": "backend\\app\\core\\security.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\security.py::backend.app.core.security.verify_password",
+      "type": "Function",
+      "name": "verify_password",
+      "qualified_name": "backend.app.core.security.verify_password",
+      "file_path": "backend\\app\\core\\security.py"
+    },
+    {
+      "id": "function::backend\\app\\core\\security.py::backend.app.core.security.get_password_hash",
+      "type": "Function",
+      "name": "get_password_hash",
+      "qualified_name": "backend.app.core.security.get_password_hash",
+      "file_path": "backend\\app\\core\\security.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.read_items",
+      "type": "Function",
+      "name": "read_items",
+      "qualified_name": "backend.app.api.routes.items.read_items",
+      "file_path": "backend\\app\\api\\routes\\items.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.read_item",
+      "type": "Function",
+      "name": "read_item",
+      "qualified_name": "backend.app.api.routes.items.read_item",
+      "file_path": "backend\\app\\api\\routes\\items.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.create_item",
+      "type": "Function",
+      "name": "create_item",
+      "qualified_name": "backend.app.api.routes.items.create_item",
+      "file_path": "backend\\app\\api\\routes\\items.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.update_item",
+      "type": "Function",
+      "name": "update_item",
+      "qualified_name": "backend.app.api.routes.items.update_item",
+      "file_path": "backend\\app\\api\\routes\\items.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.delete_item",
+      "type": "Function",
+      "name": "delete_item",
+      "qualified_name": "backend.app.api.routes.items.delete_item",
+      "file_path": "backend\\app\\api\\routes\\items.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.login_access_token",
+      "type": "Function",
+      "name": "login_access_token",
+      "qualified_name": "backend.app.api.routes.login.login_access_token",
+      "file_path": "backend\\app\\api\\routes\\login.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.test_token",
+      "type": "Function",
+      "name": "test_token",
+      "qualified_name": "backend.app.api.routes.login.test_token",
+      "file_path": "backend\\app\\api\\routes\\login.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.recover_password",
+      "type": "Function",
+      "name": "recover_password",
+      "qualified_name": "backend.app.api.routes.login.recover_password",
+      "file_path": "backend\\app\\api\\routes\\login.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.reset_password",
+      "type": "Function",
+      "name": "reset_password",
+      "qualified_name": "backend.app.api.routes.login.reset_password",
+      "file_path": "backend\\app\\api\\routes\\login.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.recover_password_html_content",
+      "type": "Function",
+      "name": "recover_password_html_content",
+      "qualified_name": "backend.app.api.routes.login.recover_password_html_content",
+      "file_path": "backend\\app\\api\\routes\\login.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\private.py::backend.app.api.routes.private.create_user",
+      "type": "Function",
+      "name": "create_user",
+      "qualified_name": "backend.app.api.routes.private.create_user",
+      "file_path": "backend\\app\\api\\routes\\private.py"
+    },
+    {
+      "id": "class::backend\\app\\api\\routes\\private.py::backend.app.api.routes.private.PrivateUserCreate",
+      "type": "Class",
+      "name": "PrivateUserCreate",
+      "qualified_name": "backend.app.api.routes.private.PrivateUserCreate",
+      "file_path": "backend\\app\\api\\routes\\private.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.read_users",
+      "type": "Function",
+      "name": "read_users",
+      "qualified_name": "backend.app.api.routes.users.read_users",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.create_user",
+      "type": "Function",
+      "name": "create_user",
+      "qualified_name": "backend.app.api.routes.users.create_user",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user_me",
+      "type": "Function",
+      "name": "update_user_me",
+      "qualified_name": "backend.app.api.routes.users.update_user_me",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_password_me",
+      "type": "Function",
+      "name": "update_password_me",
+      "qualified_name": "backend.app.api.routes.users.update_password_me",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.read_user_me",
+      "type": "Function",
+      "name": "read_user_me",
+      "qualified_name": "backend.app.api.routes.users.read_user_me",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.delete_user_me",
+      "type": "Function",
+      "name": "delete_user_me",
+      "qualified_name": "backend.app.api.routes.users.delete_user_me",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.register_user",
+      "type": "Function",
+      "name": "register_user",
+      "qualified_name": "backend.app.api.routes.users.register_user",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.read_user_by_id",
+      "type": "Function",
+      "name": "read_user_by_id",
+      "qualified_name": "backend.app.api.routes.users.read_user_by_id",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user",
+      "type": "Function",
+      "name": "update_user",
+      "qualified_name": "backend.app.api.routes.users.update_user",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.delete_user",
+      "type": "Function",
+      "name": "delete_user",
+      "qualified_name": "backend.app.api.routes.users.delete_user",
+      "file_path": "backend\\app\\api\\routes\\users.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\utils.py::backend.app.api.routes.utils.test_email",
+      "type": "Function",
+      "name": "test_email",
+      "qualified_name": "backend.app.api.routes.utils.test_email",
+      "file_path": "backend\\app\\api\\routes\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\api\\routes\\utils.py::backend.app.api.routes.utils.health_check",
+      "type": "Function",
+      "name": "health_check",
+      "qualified_name": "backend.app.api.routes.utils.health_check",
+      "file_path": "backend\\app\\api\\routes\\utils.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py::backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships.upgrade",
+      "type": "Function",
+      "name": "upgrade",
+      "qualified_name": "backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships.upgrade",
+      "file_path": "backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py::backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships.downgrade",
+      "type": "Function",
+      "name": "downgrade",
+      "qualified_name": "backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships.downgrade",
+      "file_path": "backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py::backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_.upgrade",
+      "type": "Function",
+      "name": "upgrade",
+      "qualified_name": "backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_.upgrade",
+      "file_path": "backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py::backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_.downgrade",
+      "type": "Function",
+      "name": "downgrade",
+      "qualified_name": "backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_.downgrade",
+      "file_path": "backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py::backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_.upgrade",
+      "type": "Function",
+      "name": "upgrade",
+      "qualified_name": "backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_.upgrade",
+      "file_path": "backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py::backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_.downgrade",
+      "type": "Function",
+      "name": "downgrade",
+      "qualified_name": "backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_.downgrade",
+      "file_path": "backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py::backend.app.alembic.versions.e2412789c190_initialize_models.upgrade",
+      "type": "Function",
+      "name": "upgrade",
+      "qualified_name": "backend.app.alembic.versions.e2412789c190_initialize_models.upgrade",
+      "file_path": "backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py::backend.app.alembic.versions.e2412789c190_initialize_models.downgrade",
+      "type": "Function",
+      "name": "downgrade",
+      "qualified_name": "backend.app.alembic.versions.e2412789c190_initialize_models.downgrade",
+      "file_path": "backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py::backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item.upgrade",
+      "type": "Function",
+      "name": "upgrade",
+      "qualified_name": "backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item.upgrade",
+      "file_path": "backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py"
+    },
+    {
+      "id": "function::backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py::backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item.downgrade",
+      "type": "Function",
+      "name": "downgrade",
+      "qualified_name": "backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item.downgrade",
+      "file_path": "backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_create_user",
+      "type": "Test",
+      "name": "test_create_user",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_create_user"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user",
+      "type": "Test",
+      "name": "test_authenticate_user",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_authenticate_user"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_not_authenticate_user",
+      "type": "Test",
+      "name": "test_not_authenticate_user",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_not_authenticate_user"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active",
+      "type": "Test",
+      "name": "test_check_if_user_is_active",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_check_if_user_is_active"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active_inactive",
+      "type": "Test",
+      "name": "test_check_if_user_is_active_inactive",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_check_if_user_is_active_inactive"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser",
+      "type": "Test",
+      "name": "test_check_if_user_is_superuser",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_check_if_user_is_superuser"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser_normal_user",
+      "type": "Test",
+      "name": "test_check_if_user_is_superuser_normal_user",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_check_if_user_is_superuser_normal_user"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_get_user",
+      "type": "Test",
+      "name": "test_get_user",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_get_user"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_update_user",
+      "type": "Test",
+      "name": "test_update_user",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_update_user"
+    },
+    {
+      "id": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "type": "Test",
+      "name": "test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "file_path": "backend\\tests\\crud\\test_user.py",
+      "target_hint": "test_authenticate_user_with_bcrypt_upgrades_to_argon2"
+    },
+    {
+      "id": "test::backend\\tests\\scripts\\test_backend_pre_start.py::backend.tests.scripts.test_backend_pre_start.test_init_successful_connection",
+      "type": "Test",
+      "name": "test_init_successful_connection",
+      "file_path": "backend\\tests\\scripts\\test_backend_pre_start.py",
+      "target_hint": "test_init_successful_connection"
+    },
+    {
+      "id": "test::backend\\tests\\scripts\\test_test_pre_start.py::backend.tests.scripts.test_test_pre_start.test_init_successful_connection",
+      "type": "Test",
+      "name": "test_init_successful_connection",
+      "file_path": "backend\\tests\\scripts\\test_test_pre_start.py",
+      "target_hint": "test_init_successful_connection"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_create_item",
+      "type": "Test",
+      "name": "test_create_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_create_item"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item",
+      "type": "Test",
+      "name": "test_read_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_read_item"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_found",
+      "type": "Test",
+      "name": "test_read_item_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_read_item_not_found"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_enough_permissions",
+      "type": "Test",
+      "name": "test_read_item_not_enough_permissions",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_read_item_not_enough_permissions"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_items",
+      "type": "Test",
+      "name": "test_read_items",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_read_items"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item",
+      "type": "Test",
+      "name": "test_update_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_update_item"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_found",
+      "type": "Test",
+      "name": "test_update_item_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_update_item_not_found"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_enough_permissions",
+      "type": "Test",
+      "name": "test_update_item_not_enough_permissions",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_update_item_not_enough_permissions"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item",
+      "type": "Test",
+      "name": "test_delete_item",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_delete_item"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_found",
+      "type": "Test",
+      "name": "test_delete_item_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_delete_item_not_found"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_enough_permissions",
+      "type": "Test",
+      "name": "test_delete_item_not_enough_permissions",
+      "file_path": "backend\\tests\\api\\routes\\test_items.py",
+      "target_hint": "test_delete_item_not_enough_permissions"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token",
+      "type": "Test",
+      "name": "test_get_access_token",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_get_access_token"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token_incorrect_password",
+      "type": "Test",
+      "name": "test_get_access_token_incorrect_password",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_get_access_token_incorrect_password"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_use_access_token",
+      "type": "Test",
+      "name": "test_use_access_token",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_use_access_token"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password",
+      "type": "Test",
+      "name": "test_recovery_password",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_recovery_password"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password_user_not_exits",
+      "type": "Test",
+      "name": "test_recovery_password_user_not_exits",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_recovery_password_user_not_exits"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password",
+      "type": "Test",
+      "name": "test_reset_password",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_reset_password"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password_invalid_token",
+      "type": "Test",
+      "name": "test_reset_password_invalid_token",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_reset_password_invalid_token"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_bcrypt_password_upgrades_to_argon2",
+      "type": "Test",
+      "name": "test_login_with_bcrypt_password_upgrades_to_argon2",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_login_with_bcrypt_password_upgrades_to_argon2"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_argon2_password_keeps_hash",
+      "type": "Test",
+      "name": "test_login_with_argon2_password_keeps_hash",
+      "file_path": "backend\\tests\\api\\routes\\test_login.py",
+      "target_hint": "test_login_with_argon2_password_keeps_hash"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_private.py::backend.tests.api.routes.test_private.test_create_user",
+      "type": "Test",
+      "name": "test_create_user",
+      "file_path": "backend\\tests\\api\\routes\\test_private.py",
+      "target_hint": "test_create_user"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_superuser_me",
+      "type": "Test",
+      "name": "test_get_users_superuser_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_users_superuser_me"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_normal_user_me",
+      "type": "Test",
+      "name": "test_get_users_normal_user_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_users_normal_user_me"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_new_email",
+      "type": "Test",
+      "name": "test_create_user_new_email",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_create_user_new_email"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_as_superuser",
+      "type": "Test",
+      "name": "test_get_existing_user_as_superuser",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_existing_user_as_superuser"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_as_superuser",
+      "type": "Test",
+      "name": "test_get_non_existing_user_as_superuser",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_non_existing_user_as_superuser"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_current_user",
+      "type": "Test",
+      "name": "test_get_existing_user_current_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_existing_user_current_user"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_permissions_error",
+      "type": "Test",
+      "name": "test_get_existing_user_permissions_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_existing_user_permissions_error"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_permissions_error",
+      "type": "Test",
+      "name": "test_get_non_existing_user_permissions_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_get_non_existing_user_permissions_error"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_existing_username",
+      "type": "Test",
+      "name": "test_create_user_existing_username",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_create_user_existing_username"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_by_normal_user",
+      "type": "Test",
+      "name": "test_create_user_by_normal_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_create_user_by_normal_user"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_retrieve_users",
+      "type": "Test",
+      "name": "test_retrieve_users",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_retrieve_users"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me",
+      "type": "Test",
+      "name": "test_update_user_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_user_me"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me",
+      "type": "Test",
+      "name": "test_update_password_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_password_me"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_incorrect_password",
+      "type": "Test",
+      "name": "test_update_password_me_incorrect_password",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_password_me_incorrect_password"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me_email_exists",
+      "type": "Test",
+      "name": "test_update_user_me_email_exists",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_user_me_email_exists"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_same_password_error",
+      "type": "Test",
+      "name": "test_update_password_me_same_password_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_password_me_same_password_error"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user",
+      "type": "Test",
+      "name": "test_register_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_register_user"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user_already_exists_error",
+      "type": "Test",
+      "name": "test_register_user_already_exists_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_register_user_already_exists_error"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user",
+      "type": "Test",
+      "name": "test_update_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_user"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_not_exists",
+      "type": "Test",
+      "name": "test_update_user_not_exists",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_user_not_exists"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_email_exists",
+      "type": "Test",
+      "name": "test_update_user_email_exists",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_update_user_email_exists"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me",
+      "type": "Test",
+      "name": "test_delete_user_me",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_delete_user_me"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me_as_superuser",
+      "type": "Test",
+      "name": "test_delete_user_me_as_superuser",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_delete_user_me_as_superuser"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_super_user",
+      "type": "Test",
+      "name": "test_delete_user_super_user",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_delete_user_super_user"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_not_found",
+      "type": "Test",
+      "name": "test_delete_user_not_found",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_delete_user_not_found"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_current_super_user_error",
+      "type": "Test",
+      "name": "test_delete_user_current_super_user_error",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_delete_user_current_super_user_error"
+    },
+    {
+      "id": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_without_privileges",
+      "type": "Test",
+      "name": "test_delete_user_without_privileges",
+      "file_path": "backend\\tests\\api\\routes\\test_users.py",
+      "target_hint": "test_delete_user_without_privileges"
+    }
+  ],
+  "edges": [
+    {
+      "source": "function::scripts\\add_latest_release_date.py::scripts.add_latest_release_date.main",
+      "target": "scripts\\add_latest_release_date.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\backend_pre_start.py",
+      "target": "backend\\app\\core\\db.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\backend_pre_start.py::backend.app.backend_pre_start.init",
+      "target": "backend\\app\\backend_pre_start.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\backend_pre_start.py::backend.app.backend_pre_start.main",
+      "target": "backend\\app\\backend_pre_start.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\crud.py",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\crud.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\crud.py::backend.app.crud.create_user",
+      "target": "backend\\app\\crud.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\crud.py::backend.app.crud.update_user",
+      "target": "backend\\app\\crud.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\crud.py::backend.app.crud.get_user_by_email",
+      "target": "backend\\app\\crud.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\crud.py::backend.app.crud.authenticate",
+      "target": "backend\\app\\crud.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\crud.py::backend.app.crud.create_item",
+      "target": "backend\\app\\crud.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\initial_data.py",
+      "target": "backend\\app\\core\\db.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\initial_data.py::backend.app.initial_data.init",
+      "target": "backend\\app\\initial_data.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\initial_data.py::backend.app.initial_data.main",
+      "target": "backend\\app\\initial_data.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\main.py",
+      "target": "backend\\app\\api\\main.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\main.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\main.py::backend.app.main.custom_generate_unique_id",
+      "target": "backend\\app\\main.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\models.py::backend.app.models.get_datetime_utc",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UserBase",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UserCreate",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UserRegister",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UserUpdate",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UserUpdateMe",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UpdatePassword",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.User",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UserPublic",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.UsersPublic",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.ItemBase",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.ItemCreate",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.ItemUpdate",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.Item",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.ItemPublic",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.ItemsPublic",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.Message",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.Token",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.TokenPayload",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\models.py::backend.app.models.NewPassword",
+      "target": "backend\\app\\models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\tests_pre_start.py",
+      "target": "backend\\app\\core\\db.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\tests_pre_start.py::backend.app.tests_pre_start.init",
+      "target": "backend\\app\\tests_pre_start.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\tests_pre_start.py::backend.app.tests_pre_start.main",
+      "target": "backend\\app\\tests_pre_start.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\utils.py",
+      "target": "backend\\app\\core\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\utils.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.render_email_template",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.send_email",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.generate_test_email",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.generate_reset_password_email",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.generate_new_account_email",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.generate_password_reset_token",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\utils.py::backend.app.utils.verify_password_reset_token",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\utils.py::backend.app.utils.EmailData",
+      "target": "backend\\app\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\conftest.py",
+      "target": "backend\\app\\main.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\conftest.py",
+      "target": "backend\\app\\core\\db.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\conftest.py",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\conftest.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\conftest.py",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\conftest.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\conftest.py::backend.tests.conftest.db",
+      "target": "backend\\tests\\conftest.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\conftest.py::backend.tests.conftest.client",
+      "target": "backend\\tests\\conftest.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\conftest.py::backend.tests.conftest.superuser_token_headers",
+      "target": "backend\\tests\\conftest.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\conftest.py::backend.tests.conftest.normal_user_token_headers",
+      "target": "backend\\tests\\conftest.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\crud\\test_user.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\crud\\test_user.py",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\crud\\test_user.py",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\crud\\test_user.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_create_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_not_authenticate_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active_inactive",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser_normal_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_get_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_update_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\scripts\\test_backend_pre_start.py",
+      "target": "backend\\app\\backend_pre_start.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\scripts\\test_backend_pre_start.py::backend.tests.scripts.test_backend_pre_start.test_init_successful_connection",
+      "target": "backend\\tests\\scripts\\test_backend_pre_start.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\scripts\\test_test_pre_start.py",
+      "target": "backend\\app\\tests_pre_start.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\scripts\\test_test_pre_start.py::backend.tests.scripts.test_test_pre_start.test_init_successful_connection",
+      "target": "backend\\tests\\scripts\\test_test_pre_start.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\utils\\item.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\utils\\item.py",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\utils\\item.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\utils\\item.py",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\item.py::backend.tests.utils.item.create_random_item",
+      "target": "backend\\tests\\utils\\item.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\utils\\user.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\utils\\user.py",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\utils\\user.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\utils\\user.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\user.py::backend.tests.utils.user.user_authentication_headers",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\user.py::backend.tests.utils.user.create_random_user",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\user.py::backend.tests.utils.user.authentication_token_from_email",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\utils\\utils.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\utils.py::backend.tests.utils.utils.random_lower_string",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\utils.py::backend.tests.utils.utils.random_email",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\utils\\utils.py::backend.tests.utils.utils.get_superuser_token_headers",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_items.py",
+      "target": "backend\\tests\\utils\\item.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_items.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_create_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_found",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_enough_permissions",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_items",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_found",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_enough_permissions",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_found",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_enough_permissions",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\app\\crud.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\app\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_login.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token_incorrect_password",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_use_access_token",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password_user_not_exits",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password_invalid_token",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_bcrypt_password_upgrades_to_argon2",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_argon2_password_keeps_hash",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_private.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_private.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_private.py::backend.tests.api.routes.test_private.test_create_user",
+      "target": "backend\\tests\\api\\routes\\test_private.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_users.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_users.py",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_users.py",
+      "target": "backend\\tests\\utils\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_users.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_users.py",
+      "target": "backend\\tests\\utils\\user.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\tests\\api\\routes\\test_users.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_superuser_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_normal_user_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_new_email",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_as_superuser",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_as_superuser",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_current_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_permissions_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_permissions_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_existing_username",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_by_normal_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_retrieve_users",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_incorrect_password",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me_email_exists",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_same_password_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user_already_exists_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_not_exists",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_email_exists",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me_as_superuser",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_super_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_not_found",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_current_super_user_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_without_privileges",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\alembic\\env.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\alembic\\env.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\env.py::backend.app.alembic.env.get_url",
+      "target": "backend\\app\\alembic\\env.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\env.py::backend.app.alembic.env.run_migrations_offline",
+      "target": "backend\\app\\alembic\\env.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\env.py::backend.app.alembic.env.run_migrations_online",
+      "target": "backend\\app\\alembic\\env.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\deps.py",
+      "target": "backend\\app\\core\\db.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\deps.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\deps.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\deps.py",
+      "target": "backend\\app\\core\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\api\\deps.py::backend.app.api.deps.get_db",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\deps.py::backend.app.api.deps.get_current_user",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\deps.py::backend.app.api.deps.get_current_active_superuser",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\main.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\main.py",
+      "target": "backend\\app\\api\\routes\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.parse_cors",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings.all_cors_origins",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings.SQLALCHEMY_DATABASE_URI",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings._set_default_emails_from",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings.emails_enabled",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings._check_default_secret",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\config.py::backend.app.core.config.Settings._enforce_non_default_secrets",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\core\\config.py::backend.app.core.config.Settings",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\core\\db.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\core\\db.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\core\\db.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\core\\db.py::backend.app.core.db.init_db",
+      "target": "backend\\app\\core\\db.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\core\\security.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\core\\security.py::backend.app.core.security.create_access_token",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\security.py::backend.app.core.security.verify_password",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\core\\security.py::backend.app.core.security.get_password_hash",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\items.py",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\items.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.read_items",
+      "target": "backend\\app\\api\\routes\\items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.read_item",
+      "target": "backend\\app\\api\\routes\\items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.create_item",
+      "target": "backend\\app\\api\\routes\\items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.update_item",
+      "target": "backend\\app\\api\\routes\\items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.delete_item",
+      "target": "backend\\app\\api\\routes\\items.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\login.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\login.py",
+      "target": "backend\\app\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\login.py",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\login.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\login.py",
+      "target": "backend\\app\\core\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\login.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.login_access_token",
+      "target": "backend\\app\\api\\routes\\login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.test_token",
+      "target": "backend\\app\\api\\routes\\login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.recover_password",
+      "target": "backend\\app\\api\\routes\\login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.reset_password",
+      "target": "backend\\app\\api\\routes\\login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.recover_password_html_content",
+      "target": "backend\\app\\api\\routes\\login.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\private.py",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\private.py",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\private.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\private.py::backend.app.api.routes.private.create_user",
+      "target": "backend\\app\\api\\routes\\private.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "class::backend\\app\\api\\routes\\private.py::backend.app.api.routes.private.PrivateUserCreate",
+      "target": "backend\\app\\api\\routes\\private.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\users.py",
+      "target": "backend\\app\\__init__.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\users.py",
+      "target": "backend\\app\\core\\security.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\users.py",
+      "target": "backend\\app\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\users.py",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\users.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\users.py",
+      "target": "backend\\app\\core\\config.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.read_users",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.create_user",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user_me",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_password_me",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.read_user_me",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.delete_user_me",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.register_user",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.read_user_by_id",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.delete_user",
+      "target": "backend\\app\\api\\routes\\users.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\utils.py",
+      "target": "backend\\app\\utils.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\utils.py",
+      "target": "backend\\app\\api\\deps.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "backend\\app\\api\\routes\\utils.py",
+      "target": "backend\\app\\models.py",
+      "type": "IMPORTS"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\utils.py::backend.app.api.routes.utils.test_email",
+      "target": "backend\\app\\api\\routes\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\api\\routes\\utils.py::backend.app.api.routes.utils.health_check",
+      "target": "backend\\app\\api\\routes\\utils.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py::backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships.upgrade",
+      "target": "backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py::backend.app.alembic.versions.1a31ce608336_add_cascade_delete_relationships.downgrade",
+      "target": "backend\\app\\alembic\\versions\\1a31ce608336_add_cascade_delete_relationships.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py::backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_.upgrade",
+      "target": "backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py::backend.app.alembic.versions.9c0a54914c78_add_max_length_for_string_varchar_.downgrade",
+      "target": "backend\\app\\alembic\\versions\\9c0a54914c78_add_max_length_for_string_varchar_.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py::backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_.upgrade",
+      "target": "backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py::backend.app.alembic.versions.d98dd8ec85a3_edit_replace_id_integers_in_all_models_.downgrade",
+      "target": "backend\\app\\alembic\\versions\\d98dd8ec85a3_edit_replace_id_integers_in_all_models_.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py::backend.app.alembic.versions.e2412789c190_initialize_models.upgrade",
+      "target": "backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py::backend.app.alembic.versions.e2412789c190_initialize_models.downgrade",
+      "target": "backend\\app\\alembic\\versions\\e2412789c190_initialize_models.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py::backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item.upgrade",
+      "target": "backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "function::backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py::backend.app.alembic.versions.fe56fa70289e_add_created_at_to_user_and_item.downgrade",
+      "target": "backend\\app\\alembic\\versions\\fe56fa70289e_add_created_at_to_user_and_item.py",
+      "type": "IN_FILE"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_create_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_not_authenticate_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_active_inactive",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_check_if_user_is_superuser_normal_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_get_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_update_user",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_authenticate_user_with_bcrypt_upgrades_to_argon2",
+      "target": "backend\\tests\\crud\\test_user.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\scripts\\test_backend_pre_start.py::backend.tests.scripts.test_backend_pre_start.test_init_successful_connection",
+      "target": "backend\\tests\\scripts\\test_backend_pre_start.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\scripts\\test_test_pre_start.py::backend.tests.scripts.test_test_pre_start.test_init_successful_connection",
+      "target": "backend\\tests\\scripts\\test_test_pre_start.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_create_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_found",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item_not_enough_permissions",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_items",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_found",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item_not_enough_permissions",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_found",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item_not_enough_permissions",
+      "target": "backend\\tests\\api\\routes\\test_items.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_get_access_token_incorrect_password",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_use_access_token",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_recovery_password_user_not_exits",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password_invalid_token",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_bcrypt_password_upgrades_to_argon2",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_login_with_argon2_password_keeps_hash",
+      "target": "backend\\tests\\api\\routes\\test_login.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_private.py::backend.tests.api.routes.test_private.test_create_user",
+      "target": "backend\\tests\\api\\routes\\test_private.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_superuser_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_users_normal_user_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_new_email",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_as_superuser",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_as_superuser",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_current_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_existing_user_permissions_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_get_non_existing_user_permissions_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_existing_username",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_create_user_by_normal_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_retrieve_users",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_incorrect_password",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me_email_exists",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me_same_password_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user_already_exists_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_not_exists",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_email_exists",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me_as_superuser",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_super_user",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_not_found",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_current_super_user_error",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_without_privileges",
+      "target": "backend\\tests\\api\\routes\\test_users.py",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_create_user",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.create_user",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\crud\\test_user.py::backend.tests.crud.test_user.test_update_user",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_create_item",
+      "target": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.create_item",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_item",
+      "target": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.read_item",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_read_items",
+      "target": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.read_items",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_update_item",
+      "target": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.update_item",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_items.py::backend.tests.api.routes.test_items.test_delete_item",
+      "target": "function::backend\\app\\api\\routes\\items.py::backend.app.api.routes.items.delete_item",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_login.py::backend.tests.api.routes.test_login.test_reset_password",
+      "target": "function::backend\\app\\api\\routes\\login.py::backend.app.api.routes.login.reset_password",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_private.py::backend.tests.api.routes.test_private.test_create_user",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.create_user",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user_me",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user_me",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_password_me",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_password_me",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_register_user",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.register_user",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_update_user",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.update_user",
+      "type": "TESTS"
+    },
+    {
+      "source": "test::backend\\tests\\api\\routes\\test_users.py::backend.tests.api.routes.test_users.test_delete_user_me",
+      "target": "function::backend\\app\\api\\routes\\users.py::backend.app.api.routes.users.delete_user_me",
+      "type": "TESTS"
+    }
+  ]
+}

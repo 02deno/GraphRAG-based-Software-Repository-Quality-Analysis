@@ -7,6 +7,9 @@ from typing import Dict, List, Optional, Tuple
 from ..graph.edges.tests_edge import TestsEdge
 from ..graph.nodes.test_node import TestNode
 
+# Parent directory names (any depth under the repo) that usually contain pytest modules.
+_TEST_PARENT_DIR_NAMES = frozenset({"tests", "test", "specs"})
+
 
 def is_test_file(file_path: Path) -> bool:
     """Return True if the path looks like a pytest-style test module.
@@ -15,9 +18,18 @@ def is_test_file(file_path: Path) -> bool:
         file_path: Candidate Python file.
 
     Returns:
-        True when the filename starts with ``test_`` or parent directory suggests tests.
+        True when the filename starts with ``test_``, the immediate parent looks like a
+        test package (``test_*`` prefix or names such as ``tests`` / ``specs``), matching
+        layouts like ``backend/tests/conftest.py`` as well as ``test_foo.py``.
     """
-    return file_path.name.startswith("test_") or file_path.parent.name.startswith("test_")
+    if file_path.name.startswith("test_"):
+        return True
+    parent = file_path.parent.name
+    if parent.startswith("test_"):
+        return True
+    if parent.lower() in _TEST_PARENT_DIR_NAMES:
+        return True
+    return False
 
 
 class TestCollector(ast.NodeVisitor):
