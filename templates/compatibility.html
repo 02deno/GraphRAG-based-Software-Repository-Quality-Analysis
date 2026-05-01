@@ -459,6 +459,46 @@
         overlay.setAttribute('aria-hidden', 'true');
     }
 
+    function handleSsePayload(payload, btn) {
+        if (payload.type === 'progress') {
+            setProgressUi(payload.percent, payload.message);
+            return false;
+        }
+        if (payload.type === 'error') {
+            hideOverlay();
+            if (btn) btn.disabled = false;
+            alert(payload.error || 'Analysis failed.');
+            return true;
+        }
+        if (payload.type === 'complete') {
+            if (payload.redirect) {
+                hideOverlay();
+                window.location.href = payload.redirect;
+            } else {
+                hideOverlay();
+                if (btn) btn.disabled = false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    function processSseTextBlock(block, btn) {
+        var lines = block.split(/\r?\n/);
+        for (var j = 0; j < lines.length; j++) {
+            var line = lines[j];
+            if (line.indexOf('data: ') !== 0) continue;
+            var payload;
+            try {
+                payload = JSON.parse(line.slice(6));
+            } catch (err) {
+                continue;
+            }
+            if (handleSsePayload(payload, btn)) return true;
+        }
+        return false;
+    }
+
     function readAnalyzeEventStream(res, btn) {
         var reader = res.body.getReader();
         var dec = new TextDecoder();
@@ -468,41 +508,24 @@
                 if (result.value) {
                     buf += dec.decode(result.value, { stream: !result.done });
                 }
-                var parts = buf.split('\n\n');
+                if (result.done) {
+                    try {
+                        buf += dec.decode();
+                    } catch (e1) { /* ignore */ }
+                }
+                var parts = buf.split(/\n\n/);
                 buf = parts.pop() || '';
                 for (var i = 0; i < parts.length; i++) {
-                    var lines = parts[i].split('\n');
-                    for (var j = 0; j < lines.length; j++) {
-                        var line = lines[j];
-                        if (line.indexOf('data: ') !== 0) continue;
-                        var payload;
-                        try {
-                            payload = JSON.parse(line.slice(6));
-                        } catch (err) {
-                            continue;
-                        }
-                        if (payload.type === 'progress') {
-                            setProgressUi(payload.percent, payload.message);
-                        } else if (payload.type === 'error') {
-                            hideOverlay();
-                            if (btn) btn.disabled = false;
-                            alert(payload.error || 'Analysis failed.');
-                            return;
-                        } else if (payload.type === 'complete') {
-                            if (payload.redirect) {
-                                hideOverlay();
-                                window.location.href = payload.redirect;
-                            } else {
-                                hideOverlay();
-                                if (btn) btn.disabled = false;
-                            }
-                            return;
-                        }
-                    }
+                    if (processSseTextBlock(parts[i], btn)) return;
                 }
                 if (result.done) {
+                    // Last chunk often has no trailing "\n\n"; flush tail so "complete" still runs.
+                    if (buf.trim() && processSseTextBlock(buf, btn)) return;
                     hideOverlay();
                     if (btn) btn.disabled = false;
+                    if (buf.trim()) {
+                        console.warn('analyze stream ended without a handled complete event; tail:', buf.slice(0, 500));
+                    }
                     return;
                 }
                 return pump();
