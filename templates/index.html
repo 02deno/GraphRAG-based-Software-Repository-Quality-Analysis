@@ -254,21 +254,28 @@
             method: 'POST',
             headers: headers,
             body: new FormData(form),
-            redirect: 'manual',
+            // ``manual`` often yields opaque redirects (status 0, no Location) in browsers.
+            redirect: 'follow',
             credentials: 'same-origin'
         }).then(function (res) {
-            if (res.status === 302 || res.status === 303) {
-                var loc = res.headers.get('Location');
-                if (loc) {
-                    window.location.href = new URL(loc, window.location.origin).href;
-                    return;
-                }
-            }
             if (res.status === 400 || res.status === 500) {
                 return res.json().then(function (data) {
                     hideOverlay();
                     if (btn) btn.disabled = false;
                     alert(data.error || ('Request failed (' + res.status + ')'));
+                }).catch(function () {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    alert('Request failed (' + res.status + ').');
+                });
+            }
+            if (res.ok) {
+                return res.text().then(function (html) {
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    document.open();
+                    document.write(html);
+                    document.close();
                 });
             }
             hideOverlay();

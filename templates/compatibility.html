@@ -239,6 +239,22 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(400%); }
         }
+        .back-nav {
+            margin: 0 0 18px 0;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #007bff;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+            color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -251,6 +267,9 @@
     </div>
 
     <div class="container">
+        <nav class="back-nav" aria-label="Breadcrumb">
+            <a href="{{ url_for('web.index') }}" class="back-link">← Back to home</a>
+        </nav>
         <h1>🔍 Repository Compatibility Check</h1>
 
         <ol class="flow-timeline">
@@ -416,30 +435,32 @@
                 method: 'POST',
                 headers: (function () { var h = {}; h[HEADER] = '1'; return h; })(),
                 body: new FormData(form),
-                redirect: 'manual',
+                redirect: 'follow',
                 credentials: 'same-origin'
             }).then(function (res) {
-                if (res.status === 302 || res.status === 303) {
-                    var loc = res.headers.get('Location');
-                    if (loc) window.location.href = new URL(loc, window.location.origin).href;
-                    return;
+                if (res.status === 400 || res.status === 500) {
+                    return res.json().then(function (data) {
+                        hideOverlay();
+                        if (btn) btn.disabled = false;
+                        alert(data.error || ('Request failed (' + res.status + ')'));
+                    }).catch(function () {
+                        hideOverlay();
+                        if (btn) btn.disabled = false;
+                        alert('Analysis failed (' + res.status + ').');
+                    });
                 }
                 if (res.ok) {
                     return res.text().then(function (html) {
+                        hideOverlay();
+                        if (btn) btn.disabled = false;
                         document.open();
                         document.write(html);
                         document.close();
                     });
                 }
-                return res.json().then(function (data) {
-                    hideOverlay();
-                    if (btn) btn.disabled = false;
-                    alert(data.error || ('Request failed (' + res.status + ')'));
-                }).catch(function () {
-                    hideOverlay();
-                    if (btn) btn.disabled = false;
-                    alert('Analysis failed (' + res.status + ').');
-                });
+                hideOverlay();
+                if (btn) btn.disabled = false;
+                alert('Unexpected response (' + res.status + ').');
             }).catch(function () {
                 hideOverlay();
                 if (btn) btn.disabled = false;
