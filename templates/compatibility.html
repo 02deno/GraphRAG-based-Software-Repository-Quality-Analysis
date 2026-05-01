@@ -231,7 +231,7 @@
         }
         .progress-overlay.hidden { display: none; }
         .progress-card {
-            max-width: 420px;
+            max-width: 520px;
             width: 100%;
             background: #fff;
             border-radius: 10px;
@@ -264,6 +264,87 @@
             border-radius: 5px;
             transition: width 0.35s ease;
         }
+        .progress-steps-wrap {
+            margin-top: 14px;
+            text-align: left;
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .progress-steps {
+            list-style: none;
+            margin: 0;
+            padding: 6px 0;
+        }
+        .progress-steps li {
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+            padding: 6px 12px;
+            font-size: 13px;
+            color: #444;
+            border-bottom: 1px solid #eee;
+        }
+        .progress-steps li:last-child { border-bottom: none; }
+        .progress-step-pct {
+            flex-shrink: 0;
+            font-weight: 700;
+            color: #007bff;
+            width: 44px;
+        }
+        .progress-step-msg {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+        .progress-steps-hint {
+            font-size: 12px;
+            color: #888;
+            margin: 10px 0 0 0;
+            text-align: left;
+        }
+        .graph-schema-help {
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .graph-schema-help summary {
+            cursor: pointer;
+            padding: 12px 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .graph-schema-help[open] summary { border-bottom: 1px solid #dee2e6; }
+        .graph-schema-help-body {
+            padding: 12px 14px 16px 14px;
+            font-size: 14px;
+            color: #444;
+            line-height: 1.55;
+        }
+        .graph-schema-help-body h4 {
+            margin: 14px 0 6px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        .graph-schema-help-body h4:first-child { margin-top: 0; }
+        .graph-schema-help-body ul {
+            margin: 6px 0 0 0;
+            padding-left: 20px;
+        }
+        .graph-schema-help-body code {
+            background: #eee;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .edge-def {
+            margin: 8px 0 0 0;
+            padding-left: 14px;
+            border-left: 3px solid #007bff;
+        }
         .back-nav {
             margin: 0 0 18px 0;
         }
@@ -293,6 +374,10 @@
             </p>
             <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="analyze-progress-bar">
                 <div class="progress-bar-fill" id="analyze-progress-fill"></div>
+            </div>
+            <p class="progress-steps-hint">Activity log: timed milestones while the server runs (the browser waits for one full response). Latest line is also shown above.</p>
+            <div class="progress-steps-wrap">
+                <ol id="analyze-progress-steps" class="progress-steps" aria-live="polite" aria-relevant="additions"></ol>
             </div>
         </div>
     </div>
@@ -390,6 +475,32 @@
         </div>
         {% endif %}
 
+        <details class="graph-schema-help">
+            <summary>What will the knowledge graph contain? (node &amp; edge types)</summary>
+            <div class="graph-schema-help-body">
+                <p style="margin-top:0;">
+                    The pipeline builds a <strong>directed graph</strong>: every edge goes from a
+                    <strong>source</strong> node id to a <strong>target</strong> node id. Below is what each
+                    <strong>implemented</strong> type means in this project (your results page will list
+                    which types actually appeared in <em>your</em> run).
+                </p>
+                <h4>Node types (implemented)</h4>
+                <ul>
+                    <li><code>File</code> — one node per Python file under the repo (id is the repo-relative path).</li>
+                    <li><code>Function</code> — a function or method; linked to its file via <code>IN_FILE</code>.</li>
+                    <li><code>Class</code> — a class definition; linked to its file via <code>IN_FILE</code>.</li>
+                    <li><code>Test</code> — a test case/fixture extracted from test files; <code>TESTS</code> edges point to what it exercises.</li>
+                </ul>
+                <h4>Edge types (implemented)</h4>
+                <p class="edge-def"><code>IMPORTS</code> — <strong>File → File</strong>. The source file’s import statements resolve to another module file in this repo.</p>
+                <p class="edge-def"><code>IN_FILE</code> — <strong>Function or Class → File</strong>. The symbol lives inside that file (nests code structure under files).</p>
+                <p class="edge-def"><code>TESTS</code> — <strong>Test → Function or Class</strong>. The test is inferred to cover or reference that symbol (static link, not runtime coverage).</p>
+                <p style="margin:14px 0 0 0;font-size:13px;color:#666;">
+                    The JSON schema also reserves other kinds (e.g. <code>Commit</code>, <code>CALLS</code>) for future work; they are not emitted by the current Python extractor.
+                </p>
+            </div>
+        </details>
+
         {% if score >= 50 %}
             <form class="graph-analysis-form" action="{{ url_for('web.analyze_repository') }}" method="post">
                 <button type="submit" class="btn btn-success">
@@ -434,12 +545,13 @@
     <script>
 (function () {
     var HEADER = 'X-GraphRAG-Progressive-UI';
-    var STREAM = 'X-GraphRAG-Analyze-Stream';
     var overlay = document.getElementById('analyze-progress');
     var labelEl = document.getElementById('analyze-progress-label');
     var pctEl = document.getElementById('analyze-progress-pct');
     var fillEl = document.getElementById('analyze-progress-fill');
     var barEl = document.getElementById('analyze-progress-bar');
+    var stepsEl = document.getElementById('analyze-progress-steps');
+    var lastProgressSig = '';
 
     function setProgressUi(percent, message) {
         var p = Math.min(100, Math.max(0, Number(percent) || 0));
@@ -449,102 +561,90 @@
         if (labelEl) labelEl.textContent = message || '…';
     }
 
+    function appendProgressStep(percent, message) {
+        var msg = message || '…';
+        var p = Math.min(100, Math.max(0, Number(percent) || 0));
+        var sig = String(p) + '\u0000' + msg;
+        if (sig === lastProgressSig) return;
+        lastProgressSig = sig;
+        setProgressUi(p, msg);
+        if (!stepsEl) return;
+        var li = document.createElement('li');
+        var pctSpan = document.createElement('span');
+        pctSpan.className = 'progress-step-pct';
+        pctSpan.textContent = Math.round(p) + '%';
+        var msgSpan = document.createElement('span');
+        msgSpan.className = 'progress-step-msg';
+        msgSpan.textContent = msg;
+        li.appendChild(pctSpan);
+        li.appendChild(msgSpan);
+        stepsEl.appendChild(li);
+        var wrap = stepsEl.parentElement;
+        if (wrap) wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    var fakeProgressTimer = null;
+
     function showOverlay() {
+        if (!overlay) return;
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
-        setProgressUi(0, 'Connecting to server…');
+        lastProgressSig = '';
+        if (stepsEl) stepsEl.innerHTML = '';
+        appendProgressStep(2, 'Waiting for server (pipeline runs on the server; this can take several minutes)…');
+        if (fakeProgressTimer) clearInterval(fakeProgressTimer);
+        var phase = 0;
+        var milestones = [
+            [12, 'Still running — building / validating the graph…'],
+            [28, 'Still running — metrics and reports…'],
+            [48, 'Still running — charts may be rendering…'],
+            [68, 'Still running — almost there…'],
+            [82, 'Still running — finishing artifacts…']
+        ];
+        fakeProgressTimer = setInterval(function () {
+            if (phase < milestones.length) {
+                var m = milestones[phase];
+                appendProgressStep(m[0], m[1]);
+                phase += 1;
+            } else {
+                appendProgressStep(Math.min(90, 82 + (phase - milestones.length) * 2), 'Still running — please keep this tab open…');
+                phase += 1;
+            }
+        }, 8000);
     }
+
+    function stopFakeProgress() {
+        if (fakeProgressTimer) {
+            clearInterval(fakeProgressTimer);
+            fakeProgressTimer = null;
+        }
+    }
+
     function hideOverlay() {
+        stopFakeProgress();
+        if (!overlay) return;
         overlay.classList.add('hidden');
         overlay.setAttribute('aria-hidden', 'true');
-    }
-
-    function handleSsePayload(payload, btn) {
-        if (payload.type === 'progress') {
-            setProgressUi(payload.percent, payload.message);
-            return false;
-        }
-        if (payload.type === 'error') {
-            hideOverlay();
-            if (btn) btn.disabled = false;
-            alert(payload.error || 'Analysis failed.');
-            return true;
-        }
-        if (payload.type === 'complete') {
-            if (payload.redirect) {
-                hideOverlay();
-                window.location.href = payload.redirect;
-            } else {
-                hideOverlay();
-                if (btn) btn.disabled = false;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    function processSseTextBlock(block, btn) {
-        var lines = block.split(/\r?\n/);
-        for (var j = 0; j < lines.length; j++) {
-            var line = lines[j];
-            if (line.indexOf('data: ') !== 0) continue;
-            var payload;
-            try {
-                payload = JSON.parse(line.slice(6));
-            } catch (err) {
-                continue;
-            }
-            if (handleSsePayload(payload, btn)) return true;
-        }
-        return false;
-    }
-
-    function readAnalyzeEventStream(res, btn) {
-        var reader = res.body.getReader();
-        var dec = new TextDecoder();
-        var buf = '';
-        function pump() {
-            return reader.read().then(function (result) {
-                if (result.value) {
-                    buf += dec.decode(result.value, { stream: !result.done });
-                }
-                if (result.done) {
-                    try {
-                        buf += dec.decode();
-                    } catch (e1) { /* ignore */ }
-                }
-                var parts = buf.split(/\n\n/);
-                buf = parts.pop() || '';
-                for (var i = 0; i < parts.length; i++) {
-                    if (processSseTextBlock(parts[i], btn)) return;
-                }
-                if (result.done) {
-                    // Last chunk often has no trailing "\n\n"; flush tail so "complete" still runs.
-                    if (buf.trim() && processSseTextBlock(buf, btn)) return;
-                    hideOverlay();
-                    if (btn) btn.disabled = false;
-                    if (buf.trim()) {
-                        console.warn('analyze stream ended without a handled complete event; tail:', buf.slice(0, 500));
-                    }
-                    return;
-                }
-                return pump();
-            });
-        }
-        return pump();
     }
 
     document.querySelectorAll('.graph-analysis-form').forEach(function (form) {
         form.addEventListener('submit', function (e) {
             if (!window.fetch) return;
+            if (!overlay) return;
             e.preventDefault();
             var btn = form.querySelector('button[type="submit"]');
             if (btn) btn.disabled = true;
-            showOverlay();
+            try {
+                showOverlay();
+            } catch (err1) {
+                if (btn) btn.disabled = false;
+                alert('Could not show progress overlay.');
+                console.error(err1);
+                return;
+            }
 
             var headers = {};
             headers[HEADER] = '1';
-            headers[STREAM] = '1';
 
             fetch(form.action, {
                 method: 'POST',
@@ -553,7 +653,6 @@
                 redirect: 'follow',
                 credentials: 'same-origin'
             }).then(function (res) {
-                var ct = (res.headers.get('Content-Type') || '').toLowerCase();
                 if (res.status === 400 || res.status === 500) {
                     return res.json().then(function (data) {
                         hideOverlay();
@@ -565,11 +664,10 @@
                         alert('Analysis failed (' + res.status + ').');
                     });
                 }
-                if (res.ok && ct.indexOf('text/event-stream') !== -1) {
-                    return readAnalyzeEventStream(res, btn);
-                }
                 if (res.ok) {
                     return res.text().then(function (html) {
+                        stopFakeProgress();
+                        appendProgressStep(100, 'Opening results…');
                         hideOverlay();
                         if (btn) btn.disabled = false;
                         document.open();
@@ -580,10 +678,11 @@
                 hideOverlay();
                 if (btn) btn.disabled = false;
                 alert('Unexpected response (' + res.status + ').');
-            }).catch(function () {
+            }).catch(function (err2) {
                 hideOverlay();
                 if (btn) btn.disabled = false;
                 alert('Network error while running analysis.');
+                console.error(err2);
             });
         });
     });

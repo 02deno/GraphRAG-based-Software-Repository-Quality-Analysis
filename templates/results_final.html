@@ -154,6 +154,17 @@
             color: #666;
             margin-top: 12px;
         }
+        .schema-edge-def {
+            margin: 10px 0 0 0;
+            padding: 8px 12px 8px 14px;
+            border-left: 3px solid #007bff;
+            background: #fff;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #444;
+        }
+        .schema-edge-def code { background: #eee; padding: 1px 5px; border-radius: 3px; }
         .visual-gallery {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -238,8 +249,15 @@
                 <p><strong>Node types present:</strong> {{ (results.graph_data.implemented_node_types or [])|join(', ') }}</p>
                 <p><strong>Edge types present:</strong> {{ (results.graph_data.implemented_edge_types or [])|join(', ') }}</p>
                 <p class="schema-note">
-                    The schema also defines other node/edge kinds (e.g. Commit, CALLS) for future work;
-                    only types that appear in <strong>this</strong> graph are listed above.
+                    Every edge is <strong>directed</strong> (<code>source</code> → <code>target</code> by node id).
+                    Below is how each <em>implemented</em> edge type connects nodes in this extractor.
+                </p>
+                <p class="schema-edge-def"><code>IMPORTS</code> — <strong>File → File</strong>. The importing module file depends on another file that provides the resolved import.</p>
+                <p class="schema-edge-def"><code>IN_FILE</code> — <strong>Function or Class → File</strong>. The symbol is defined inside that file.</p>
+                <p class="schema-edge-def"><code>TESTS</code> — <strong>Test → Function or Class</strong>. The test is statically linked to the symbol it targets (not a runtime coverage metric).</p>
+                <p class="schema-note" style="margin-bottom:0;">
+                    Node meanings: <code>File</code> = one Python module path; <code>Function</code> / <code>Class</code> = definitions;
+                    <code>Test</code> = extracted test entity. Reserved schema types (e.g. <code>Commit</code>, <code>CALLS</code>) are not listed above unless they appear in this graph.
                 </p>
             </div>
         </div>

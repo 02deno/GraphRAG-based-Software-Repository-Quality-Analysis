@@ -35,7 +35,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **📁 Repository input**: GitHub HTTPS URL (clone) or local path; ZIP upload in the web UI is reserved for a later release (handler still supports ZIP)
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
-- **📊 Real-time Analysis**: Automatic graph analysis for compatible repositories, with **percent + phase** progress over SSE while the pipeline runs
+- **📊 Analysis progress**: Graph analysis from the compatibility page uses a **scrollable milestone log** and bar while the server runs the pipeline; the browser then loads the full **HTML** results. Optional **SSE** (``X-GraphRAG-Analyze-Stream``) exists for clients that stream without buffering.
 - **📥 Downloadable Results**: Export JSON, text reports, individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
 - **📜 Structured logging**: UTC ISO timestamps and levels via ``GRAPHRAG_LOG_LEVEL``; duplicate stream to a **rotating** ``logs/graphrag.log`` (override with ``GRAPHRAG_LOG_FILE``, or set ``GRAPHRAG_LOG_TO_FILE=0`` for console-only); HTTP lines under ``src.web.request``
 - **📱 Responsive Design**: Mobile-friendly interface
