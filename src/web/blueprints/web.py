@@ -86,6 +86,12 @@ def index():
     return render_template("index.html")
 
 
+@web_bp.route("/favicon.ico")
+def favicon() -> tuple[str, int]:
+    """Return empty favicon response to avoid browser 404 noise."""
+    return ("", 204)
+
+
 @web_bp.route("/compatibility")
 def compatibility_results():
     """Show the latest compatibility outcome from the session (after upload redirect)."""

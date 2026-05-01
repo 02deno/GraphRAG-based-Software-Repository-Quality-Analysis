@@ -553,6 +553,7 @@
     var fillEl = document.getElementById('analyze-progress-fill');
     var barEl = document.getElementById('analyze-progress-bar');
     var stepsEl = document.getElementById('analyze-progress-steps');
+    var latestResultsUrl = "{{ url_for('web.analysis_results_latest') }}";
     var lastProgressSig = '';
     var highestPercentSeen = 0;
 
@@ -659,6 +660,20 @@
         overlay.setAttribute('aria-hidden', 'true');
     }
 
+    function openResultsPage(targetUrl, btn) {
+        var url = targetUrl || latestResultsUrl;
+        var before = window.location.pathname + window.location.search;
+        window.location.href = url;
+        setTimeout(function () {
+            var after = window.location.pathname + window.location.search;
+            if (after === before) {
+                if (btn) btn.disabled = false;
+                hideOverlay();
+                window.location.assign(url);
+            }
+        }, 900);
+    }
+
     function handleSsePayload(payload, btn) {
         if (payload.type === 'progress') {
             appendProgressStep(payload.percent, payload.message);
@@ -672,13 +687,8 @@
             return true;
         }
         if (payload.type === 'complete') {
-            if (payload.redirect) {
-                hideOverlay();
-                window.location.href = payload.redirect;
-            } else {
-                hideOverlay();
-                if (btn) btn.disabled = false;
-            }
+            appendProgressStep(100, 'Opening results…');
+            openResultsPage(payload.redirect || latestResultsUrl, btn);
             return true;
         }
         return false;
@@ -728,9 +738,7 @@
                         console.warn('analyze stream ended without complete; tail:', buf.slice(0, 500));
                     }
                     appendProgressStep(100, 'Finalizing and opening results…');
-                    setTimeout(function () {
-                        window.location.href = "{{ url_for('web.analysis_results_latest') }}";
-                    }, 350);
+                    openResultsPage(latestResultsUrl, btn);
                     return;
                 }
                 return pump();
@@ -804,7 +812,7 @@
                         if (data && data.redirect) {
                             stopFakeProgress();
                             appendProgressStep(100, 'Opening results…');
-                            window.location.href = data.redirect;
+                            openResultsPage(data.redirect, btn);
                             return;
                         }
                         hideOverlay();
@@ -815,7 +823,7 @@
                 if (res.redirected && res.url) {
                     stopFakeProgress();
                     appendProgressStep(100, 'Opening results…');
-                    window.location.href = res.url;
+                    openResultsPage(res.url, btn);
                     return;
                 }
                 hideOverlay();
