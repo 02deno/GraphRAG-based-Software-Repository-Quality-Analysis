@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from ..graph.edges.tests_edge import TestsEdge
-from ..graph.nodes.test_node import TestNode
+from ..graph.nodes.tests_node import TestNode
 
 # Parent directory names (any depth under the repo) that usually contain pytest modules.
 _TEST_PARENT_DIR_NAMES = frozenset({"tests", "test", "specs"})

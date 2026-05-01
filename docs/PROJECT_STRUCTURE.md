@@ -82,7 +82,7 @@ GraphRAG_Project/
   - `file_node.py`: File node model
   - `function_node.py`: Function node model
   - `class_node.py`: Class node model
-  - `test_node.py`: Test node model
+  - `tests_node.py`: Test node model
 - **`edges/`**: Individual edge type implementations
   - `imports_edge.py`: Import relationship model
   - `in_file_edge.py`: File containment model
@@ -92,7 +92,7 @@ GraphRAG_Project/
 **Purpose**: AST-based code extraction modules
 - **`symbol_extractor.py`**: Functions and classes extraction
 - **`import_extractor.py`**: Import relationship extraction
-- **`test_extractor.py`**: Test discovery and mapping (``test_*.py``, parents named ``tests`` / ``test`` / ``specs``, etc.)
+- **`tests_extractor.py`**: Test discovery and mapping (``test_*.py``, parents named ``tests`` / ``test`` / ``specs``, etc.)
 - **`python_file_collector.py`**: Recursive ``*.py`` discovery from the repo root (includes ``backend/``, ``src/``, etc.; excludes name-based dirs like ``node_modules``)
 - **`__init__.py`**: Extraction utilities and exports
 

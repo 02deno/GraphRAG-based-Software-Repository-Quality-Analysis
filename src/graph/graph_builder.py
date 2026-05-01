@@ -20,7 +20,7 @@ from src.graph.edges.in_file_edge import InFileEdge
 from src.graph.edges.tests_edge import TestsEdge
 from src.graph.nodes.file_node import FileNode
 from src.graph.nodes.function_node import FunctionNode
-from src.graph.nodes.test_node import TestNode
+from src.graph.nodes.tests_node import TestNode
 from .schema import graph_to_dict
 
 logger = logging.getLogger(__name__)

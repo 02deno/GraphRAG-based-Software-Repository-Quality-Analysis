@@ -74,12 +74,12 @@ This document explains the current package-level API and CLI entrypoints in the 
   - Extracts `Function` and `Class` nodes.
   - Builds `IN_FILE` edges linking symbols to their source file.
 
-## `src/extractors/test_extractor.py`
+## `src/extractors/tests_extractor.py`
 
 - `extract_tests(file_path, repo_path, module_name)`
   - Extracts `Test` nodes from pytest-style test files.
   - Builds placeholder `TESTS` edges to the containing file.
-- `build_tests_edges(test_nodes, nodes_by_type)`
+- `build_tests_edges(tests_nodes, nodes_by_type)`
   - Resolves test targets by heuristic name matching and creates `TESTS` edges.
 
 ## `src/graph/nodes/`

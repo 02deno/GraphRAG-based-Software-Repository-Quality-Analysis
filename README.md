@@ -66,7 +66,7 @@ GraphRAG_Project/
 │   ├── 📁 extractors/               # Data Extraction
 │   │   ├── symbol_extractor.py       # Functions & classes
 │   │   ├── import_extractor.py       # Import relationships
-│   │   ├── test_extractor.py        # Test discovery
+│   │   ├── tests_extractor.py        # Test discovery
 │   │   └── python_file_collector.py # File discovery
 │   ├── 📁 analysis/                 # Graph Analysis
 │   │   └── graph_analysis.py       # Centrality & metrics
