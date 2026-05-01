@@ -71,8 +71,28 @@ def run_repository_pipeline(
     )
     _notify_progress(progress_callback, 5, "Preparing repository graph build…")
     log_lines.append(f"Building graph for repository: {repo_path}")
+
+    def _graph_file_progress(stage: str, idx: int, total: int, rel_path: str) -> None:
+        """Map builder file stages into coarse percent band 7–27 for SSE / UIs."""
+        if total <= 0:
+            return
+        if stage == "scan":
+            lo, hi = 7, 11
+        elif stage == "extract":
+            lo, hi = 11, 24
+        else:
+            lo, hi = 24, 27
+        span = hi - lo
+        pct = lo + int(span * (idx + 1) / max(1, total))
+        short = rel_path if len(rel_path) <= 100 else rel_path[:97] + "…"
+        _notify_progress(
+            progress_callback,
+            pct,
+            f"Graph build [{stage}] {idx + 1}/{total}: {short}",
+        )
+
     builder = GraphBuilder(repo_path)
-    builder.build()
+    builder.build(file_progress=_graph_file_progress if progress_callback else None)
     _notify_progress(progress_callback, 28, "Extracted symbols and edges; validating schema…")
 
     raw = builder.to_dict()
@@ -89,11 +109,20 @@ def run_repository_pipeline(
         len(graph_document["nodes"]),
         len(graph_document["edges"]),
     )
+    _notify_progress(
+        progress_callback,
+        50,
+        f"Graph JSON written ({len(graph_document['nodes'])} nodes, {len(graph_document['edges'])} edges).",
+    )
 
     log_lines.append("")
     log_lines.append("Running analysis...")
-    _notify_progress(progress_callback, 55, "Computing degree metrics and text report…")
-    report, default_report_path = generate_analysis_text_report(graph_output, top_k_value=top_k)
+    _notify_progress(progress_callback, 52, f"Loading graph JSON for analysis: {graph_output.name}")
+    report, default_report_path = generate_analysis_text_report(
+        graph_output,
+        top_k_value=top_k,
+        progress_callback=progress_callback,
+    )
     final_analysis_path = analysis_output if analysis_output is not None else default_report_path
     save_analysis_report(report, final_analysis_path)
     log_lines.append(f"Analysis saved to: {final_analysis_path}")
@@ -133,12 +162,14 @@ def run_repository_pipeline(
             analysis_output_in_file=vdir / f"{prefix}_degree_analysis_in_file.png",
             analysis_output_tests=vdir / f"{prefix}_degree_analysis_tests.png",
             summary_output=visual_summary_output,
+            progress_callback=progress_callback,
         )
     else:
         report_lines, summary_data = generate_visual_summary(
             graph_output,
             top_k=top_k,
             summary_output=visual_summary_output,
+            progress_callback=progress_callback,
         )
     save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])
     visual_path = Path(str(summary_data["summary_output"]))

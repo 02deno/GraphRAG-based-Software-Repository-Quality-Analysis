@@ -27,13 +27,17 @@ GraphRAG_Project/
 └── README.md                         # Main Documentation
 ```
 
+## Project documentation
+
+- **`docs/MIDTERM_PROJECT_REPORT.md`** — detailed midterm-style narrative (architecture, examples, implemented vs missing). Add screenshots under **`docs/assets/`** (see `docs/assets/README.md`).
+
 ## Backend Structure (`src/`)
 
 ### Web Application Layer (`src/web/`)
 **Purpose**: Flask-based web interface for repository analysis
 - **`app.py`**: Exposes ``app = create_app()`` for ``run_web_app`` / WSGI servers
 - **`factory.py`**: ``create_app()`` wires config, extensions, and blueprints
-- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis from the compatibility page uses the same header and waits on one **HTML** response (reliable with Werkzeug); the overlay appends **timed milestone** lines until ``res.text()`` completes, then ``document.write`` replaces the page with ``results_final.html``. Optional **SSE** remains in ``analyze_repository`` when ``X-GraphRAG-Analyze-Stream`` is set (e.g. custom clients or non-buffering servers).
+- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis from the compatibility page also sends ``X-GraphRAG-Analyze-Stream`` for **SSE** (``run_repository_pipeline`` reports per-file build steps and per-chart visualization steps); **HTML** + ``document.write`` remains the fallback when streaming is buffered.
 - **`results_paths.py`**: Validates ``web_analysis_*`` run directory names and safe PNG filenames for chart URLs
 - **`report_docx.py`**: Builds a combined ``.docx`` export (text artifacts + embedded PNGs) for ``GET …/report.docx``
 - **`factory.py`**: Calls ``configure_standard_logging()`` and registers lightweight ``after_request`` access logging (``src.web.request``)

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -20,6 +22,8 @@ from src.graph.json_document import (
     map_node_id_to_path,
     graph_stem_display_name,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def build_nx_graph(nodes: List[Dict[str, str]], edges: List[Dict[str, str]]) -> nx.DiGraph:
@@ -226,6 +230,7 @@ def generate_visual_summary(
     analysis_output_in_file: Path | None = None,
     analysis_output_tests: Path | None = None,
     summary_output: Path | None = None,
+    progress_callback: Callable[[int, str], None] | None = None,
 ) -> tuple[List[str], Dict[str, object]]:
     """Render structure and degree plots plus a text summary for one graph JSON file.
 
@@ -243,15 +248,28 @@ def generate_visual_summary(
         analysis_output_in_file: Optional path for IN_FILE degree bar chart.
         analysis_output_tests: Optional path for TESTS degree bar chart.
         summary_output: Optional path for the textual summary file.
+        progress_callback: Optional ``(percent, message)`` updates during matplotlib work.
 
     Returns:
         ``(report_lines, {"summary_text": str, "summary_output": Path})`` for callers to log or save.
     """
+
+    def _pv(pct: int, message: str) -> None:
+        if progress_callback is None:
+            return
+        try:
+            progress_callback(max(0, min(100, int(pct))), message)
+        except Exception:
+            pass
+
     graph_path = graph_path.resolve()
+    _pv(78, f"Visualization: loading {graph_path.name} …")
     graph_data = load_graph_document(graph_path)
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
     path_by_id = map_node_id_to_path(nodes)
+    logger.info("visualization_loaded nodes=%d edges=%d", len(nodes), len(edges))
+    _pv(79, f"Visualization: layout + charts for {len(nodes)} nodes (matplotlib)…")
 
     in_degree, out_degree = compute_in_out_degrees(edges)
     degrees_by_type = compute_in_out_degrees_by_edge_type(edges)
@@ -313,7 +331,9 @@ def generate_visual_summary(
             top_n=max(5, structure_nodes),
         )
         if selected_nodes:
+            _pv(80, f"Visualization: structure PNG (all edge types) → {structure_output.name}")
             plot_structure_subgraph(nx_graph, selected_nodes, path_by_id, structure_output, graph_label)
+            logger.info("visualization_saved path=%s", structure_output)
             report_lines.append(f"Overall structure visualization saved to: {structure_output}")
 
         imports_graph = compute_graph_for_edge_type(nodes, edges, "IMPORTS")
@@ -343,6 +363,7 @@ def generate_visual_summary(
         )
 
         if imports_selected:
+            _pv(82, f"Visualization: IMPORTS-only structure → {structure_output_imports.name}")
             plot_structure_subgraph(
                 imports_graph,
                 imports_selected,
@@ -350,9 +371,11 @@ def generate_visual_summary(
                 structure_output_imports,
                 imports_graph_label,
             )
+            logger.info("visualization_saved path=%s", structure_output_imports)
             report_lines.append(f"IMPORTS structure visualization saved to: {structure_output_imports}")
 
         if in_file_selected:
+            _pv(84, f"Visualization: IN_FILE-only structure → {structure_output_in_file.name}")
             plot_structure_subgraph(
                 in_file_graph,
                 in_file_selected,
@@ -360,9 +383,11 @@ def generate_visual_summary(
                 structure_output_in_file,
                 in_file_graph_label,
             )
+            logger.info("visualization_saved path=%s", structure_output_in_file)
             report_lines.append(f"IN_FILE structure visualization saved to: {structure_output_in_file}")
 
         if tests_selected:
+            _pv(86, f"Visualization: TESTS-only structure → {structure_output_tests.name}")
             plot_structure_subgraph(
                 tests_graph,
                 tests_selected,
@@ -370,18 +395,22 @@ def generate_visual_summary(
                 structure_output_tests,
                 tests_graph_label,
             )
+            logger.info("visualization_saved path=%s", structure_output_tests)
             report_lines.append(f"TESTS structure visualization saved to: {structure_output_tests}")
 
     else:
         report_lines.append("Skipping structure visualization because skip_structure=True.")
 
+    _pv(87, f"Visualization: combined degree bar chart → {analysis_output.name}")
     plot_degree_bars(in_degree, out_degree, path_by_id, top_k, analysis_output, graph_label)
+    logger.info("visualization_saved path=%s", analysis_output)
     report_lines.append(f"Overall degree analysis saved to: {analysis_output}")
 
     imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
     in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
     tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
 
+    _pv(88, f"Visualization: IMPORTS degree bars → {analysis_output_imports.name}")
     plot_degree_bars(
         imports_in_degree,
         imports_out_degree,
@@ -390,8 +419,10 @@ def generate_visual_summary(
         analysis_output_imports,
         imports_graph_label,
     )
+    logger.info("visualization_saved path=%s", analysis_output_imports)
     report_lines.append(f"IMPORTS degree analysis saved to: {analysis_output_imports}")
 
+    _pv(90, f"Visualization: IN_FILE degree bars → {analysis_output_in_file.name}")
     plot_degree_bars(
         in_file_in_degree,
         in_file_out_degree,
@@ -400,8 +431,10 @@ def generate_visual_summary(
         analysis_output_in_file,
         in_file_graph_label,
     )
+    logger.info("visualization_saved path=%s", analysis_output_in_file)
     report_lines.append(f"IN_FILE degree analysis saved to: {analysis_output_in_file}")
 
+    _pv(91, f"Visualization: TESTS degree bars → {analysis_output_tests.name}")
     plot_degree_bars(
         tests_in_degree,
         tests_out_degree,
@@ -410,8 +443,10 @@ def generate_visual_summary(
         analysis_output_tests,
         tests_graph_label,
     )
+    logger.info("visualization_saved path=%s", analysis_output_tests)
     report_lines.append(f"TESTS degree analysis saved to: {analysis_output_tests}")
 
+    _pv(92, "Visualization: composing text summary (per edge-type degree leaders)…")
     summary_text = build_visual_summary(
         graph_path=graph_path,
         nodes=nodes,

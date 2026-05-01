@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Dict, List, Set
 
@@ -20,6 +22,8 @@ from src.graph.nodes.file_node import FileNode
 from src.graph.nodes.function_node import FunctionNode
 from src.graph.nodes.test_node import TestNode
 from .schema import graph_to_dict
+
+logger = logging.getLogger(__name__)
 
 
 class GraphBuilder:
@@ -41,21 +45,42 @@ class GraphBuilder:
         }
         self.file_module_aliases: Dict[str, Set[str]] = {}
 
-    def build(self) -> None:
-        """Populate ``nodes`` and ``edges`` by walking Python files under ``repo_path``."""
+    def build(
+        self,
+        *,
+        file_progress: Callable[[str, int, int, str], None] | None = None,
+    ) -> None:
+        """Populate ``nodes`` and ``edges`` by walking Python files under ``repo_path``.
+
+        Args:
+            file_progress: Optional ``(stage, index, total, relative_path)`` hook where
+                ``stage`` is ``"scan"`` (file list), ``"extract"`` (imports + AST symbols),
+                or ``"tests"`` (test discovery). ``index`` is 0-based within that stage.
+        """
         python_files = collect_python_files(self.repo_path, exclude_dirs={"venv", "node_modules", "__pycache__"})
+        n_py = len(python_files)
+        logger.info("graph_build_start python_files=%d", n_py)
         file_nodes: List[FileNode] = []
 
-        for file_path in python_files:
+        for i, file_path in enumerate(python_files):
             module_name = module_name_from_path(file_path, self.repo_path)
             file_id = str(file_path.relative_to(self.repo_path))
             file_node = FileNode(id=file_id, path=file_id, module=module_name, language="python")
             file_nodes.append(file_node)
             self.nodes[file_id] = file_node
             self.file_module_aliases[file_id] = module_aliases_from_path(file_path, self.repo_path)
+            if file_progress is not None:
+                file_progress("scan", i, n_py, file_id)
+            if n_py and (i % max(1, min(25, n_py // 8 or 1)) == 0 or i == n_py - 1):
+                logger.info("graph_build_scan %d/%d %s", i + 1, n_py, file_id)
 
-        for file_node in file_nodes:
+        n_files = len(file_nodes)
+        for i, file_node in enumerate(file_nodes):
             source_path = self.repo_path / file_node.path
+            if file_progress is not None:
+                file_progress("extract", i, n_files, file_node.path)
+            if n_files and (i % max(1, min(20, n_files // 10 or 1)) == 0 or i == n_files - 1):
+                logger.info("graph_build_extract %d/%d %s", i + 1, n_files, file_node.path)
             imports = extract_imports(source_path)
             self.edges.extend(self._build_import_edges(file_node.path, imports))
 
@@ -74,8 +99,12 @@ class GraphBuilder:
 
         test_nodes: List[TestNode] = []
         test_edges: List[TestsEdge] = []
-        for file_node in file_nodes:
+        for i, file_node in enumerate(file_nodes):
             source_path = self.repo_path / file_node.path
+            if file_progress is not None:
+                file_progress("tests", i, n_files, file_node.path)
+            if n_files and (i % max(1, min(20, n_files // 10 or 1)) == 0 or i == n_files - 1):
+                logger.info("graph_build_tests %d/%d %s", i + 1, n_files, file_node.path)
             extracted_tests, extracted_edges = extract_tests(source_path, self.repo_path, file_node.module)
             for test_node in extracted_tests:
                 self.nodes[test_node.id] = test_node

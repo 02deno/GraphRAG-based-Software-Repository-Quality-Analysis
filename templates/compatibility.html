@@ -375,7 +375,7 @@
             <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="analyze-progress-bar">
                 <div class="progress-bar-fill" id="analyze-progress-fill"></div>
             </div>
-            <p class="progress-steps-hint">Activity log: timed milestones while the server runs (the browser waits for one full response). Latest line is also shown above.</p>
+            <p class="progress-steps-hint">Activity log: with live streaming you see each pipeline step from the server; otherwise timed hints (with elapsed seconds) until the HTML response arrives.</p>
             <div class="progress-steps-wrap">
                 <ol id="analyze-progress-steps" class="progress-steps" aria-live="polite" aria-relevant="additions"></ol>
             </div>
@@ -545,6 +545,7 @@
     <script>
 (function () {
     var HEADER = 'X-GraphRAG-Progressive-UI';
+    var STREAM = 'X-GraphRAG-Analyze-Stream';
     var overlay = document.getElementById('analyze-progress');
     var labelEl = document.getElementById('analyze-progress-label');
     var pctEl = document.getElementById('analyze-progress-pct');
@@ -584,6 +585,7 @@
     }
 
     var fakeProgressTimer = null;
+    var waitStartMs = 0;
 
     function showOverlay() {
         if (!overlay) return;
@@ -591,26 +593,45 @@
         overlay.setAttribute('aria-hidden', 'false');
         lastProgressSig = '';
         if (stepsEl) stepsEl.innerHTML = '';
-        appendProgressStep(2, 'Waiting for server (pipeline runs on the server; this can take several minutes)…');
+        waitStartMs = Date.now();
+        appendProgressStep(2, 'Request sent — waiting for server (first byte may be delayed on small dev servers)…');
         if (fakeProgressTimer) clearInterval(fakeProgressTimer);
         var phase = 0;
         var milestones = [
-            [12, 'Still running — building / validating the graph…'],
-            [28, 'Still running — metrics and reports…'],
-            [48, 'Still running — charts may be rendering…'],
-            [68, 'Still running — almost there…'],
-            [82, 'Still running — finishing artifacts…']
+            [11, 'Milestone: graph scan / file list should be underway on the server.'],
+            [22, 'Milestone: AST extraction (imports, functions, classes) for each .py file.'],
+            [34, 'Milestone: test discovery and TESTS edge linking.'],
+            [46, 'Milestone: schema validation + writing graph.json.'],
+            [58, 'Milestone: degree metrics and analysis.txt.'],
+            [70, 'Milestone: matplotlib charts (structure + per–edge-type degree PNGs).'],
+            [80, 'Milestone: visual summary text + packaging results folder.']
         ];
+        var longHints = [
+            'Tip: watch the terminal or logs/graphrag.log for per-file INFO lines during graph build.',
+            'Large trees (e.g. bundled smolagents under data/) spend noticeable time in chart rendering.',
+            'Each IMPORTS / IN_FILE / TESTS subgraph is laid out separately before bar charts.',
+            'The server emits one HTML page at the end if streaming is buffered; lines above may be hints only.',
+            'If this message index keeps growing, the pipeline is still running — avoid closing the tab.',
+            'Degree reports use directed edges: source → target node ids in the JSON graph.',
+            'Web results include PNG gallery + pipeline.txt echoing these phases on disk.'
+        ];
+        var tick = 0;
         fakeProgressTimer = setInterval(function () {
+            var elapsedSec = Math.floor((Date.now() - waitStartMs) / 1000);
+            tick += 1;
             if (phase < milestones.length) {
                 var m = milestones[phase];
-                appendProgressStep(m[0], m[1]);
+                appendProgressStep(m[0], m[1] + ' [' + elapsedSec + 's]');
                 phase += 1;
             } else {
-                appendProgressStep(Math.min(90, 82 + (phase - milestones.length) * 2), 'Still running — please keep this tab open…');
-                phase += 1;
+                var hi = longHints[(tick - milestones.length - 1) % longHints.length];
+                var pct = Math.min(91, 72 + ((tick - milestones.length - 1) % 12));
+                appendProgressStep(
+                    pct,
+                    'Wait update #' + tick + ' (' + elapsedSec + 's elapsed) — ' + hi
+                );
             }
-        }, 8000);
+        }, 7000);
     }
 
     function stopFakeProgress() {
@@ -625,6 +646,89 @@
         if (!overlay) return;
         overlay.classList.add('hidden');
         overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function handleSsePayload(payload, btn) {
+        if (payload.type === 'progress') {
+            appendProgressStep(payload.percent, payload.message);
+            stopFakeProgress();
+            return false;
+        }
+        if (payload.type === 'error') {
+            hideOverlay();
+            if (btn) btn.disabled = false;
+            alert(payload.error || 'Analysis failed.');
+            return true;
+        }
+        if (payload.type === 'complete') {
+            if (payload.redirect) {
+                hideOverlay();
+                window.location.href = payload.redirect;
+            } else {
+                hideOverlay();
+                if (btn) btn.disabled = false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    function processSseTextBlock(block, btn) {
+        var lines = block.split(/\r?\n/);
+        for (var j = 0; j < lines.length; j++) {
+            var line = lines[j];
+            if (line.indexOf('data: ') !== 0) continue;
+            var payload;
+            try {
+                payload = JSON.parse(line.slice(6));
+            } catch (err) {
+                continue;
+            }
+            if (handleSsePayload(payload, btn)) return true;
+        }
+        return false;
+    }
+
+    function readAnalyzeEventStream(res, btn) {
+        if (!res.body || typeof res.body.getReader !== 'function') {
+            return Promise.reject(new Error('No readable stream body.'));
+        }
+        var reader = res.body.getReader();
+        var dec = new TextDecoder();
+        var buf = '';
+        function pump() {
+            return reader.read().then(function (result) {
+                if (result.value) {
+                    buf += dec.decode(result.value, { stream: !result.done });
+                }
+                if (result.done) {
+                    try {
+                        buf += dec.decode();
+                    } catch (e1) { /* ignore */ }
+                }
+                var parts = buf.split(/\n\n');
+                buf = parts.pop() || '';
+                for (var i = 0; i < parts.length; i++) {
+                    if (processSseTextBlock(parts[i], btn)) return;
+                }
+                if (result.done) {
+                    if (buf.trim() && processSseTextBlock(buf, btn)) return;
+                    hideOverlay();
+                    if (btn) btn.disabled = false;
+                    if (buf.trim()) {
+                        console.warn('analyze stream ended without complete; tail:', buf.slice(0, 500));
+                    }
+                    return;
+                }
+                return pump();
+            }, function (readErr) {
+                hideOverlay();
+                if (btn) btn.disabled = false;
+                alert('Progress stream was interrupted.');
+                console.error(readErr);
+            });
+        }
+        return pump();
     }
 
     document.querySelectorAll('.graph-analysis-form').forEach(function (form) {
@@ -645,6 +749,7 @@
 
             var headers = {};
             headers[HEADER] = '1';
+            headers[STREAM] = '1';
 
             fetch(form.action, {
                 method: 'POST',
@@ -653,6 +758,7 @@
                 redirect: 'follow',
                 credentials: 'same-origin'
             }).then(function (res) {
+                var ct = (res.headers.get('Content-Type') || '').toLowerCase();
                 if (res.status === 400 || res.status === 500) {
                     return res.json().then(function (data) {
                         hideOverlay();
@@ -662,6 +768,14 @@
                         hideOverlay();
                         if (btn) btn.disabled = false;
                         alert('Analysis failed (' + res.status + ').');
+                    });
+                }
+                if (res.ok && ct.indexOf('text/event-stream') !== -1) {
+                    return readAnalyzeEventStream(res, btn).catch(function (err3) {
+                        hideOverlay();
+                        if (btn) btn.disabled = false;
+                        alert('Could not read the analysis stream. Check logs or try again.');
+                        console.error(err3);
                     });
                 }
                 if (res.ok) {

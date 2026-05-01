@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -12,6 +14,8 @@ from src.graph.json_document import (
     map_node_id_to_path,
     graph_stem_display_name,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def top_k(counter: Counter, k: int) -> List[Tuple[str, int]]:
@@ -146,22 +150,45 @@ def format_analysis_report(
     return "\n".join(lines)
 
 
-def generate_analysis_text_report(graph_path: Path, top_k_value: int = 10) -> tuple[str, Path]:
+def generate_analysis_text_report(
+    graph_path: Path,
+    top_k_value: int = 10,
+    *,
+    progress_callback: Callable[[int, str], None] | None = None,
+) -> tuple[str, Path]:
     """Load a graph JSON file and produce a degree-based text report.
 
     Args:
         graph_path: Path to the serialized graph document.
         top_k_value: Number of top-ranked nodes to include per category.
+        progress_callback: Optional ``(percent, message)`` updates for web/SSE clients.
 
     Returns:
         Tuple of ``(report_text, default_report_path)`` where the default path is
         under ``results/reports/`` derived from the graph filename.
     """
+
+    def _notify(pct: int, message: str) -> None:
+        if progress_callback is None:
+            return
+        try:
+            progress_callback(max(0, min(100, int(pct))), message)
+        except Exception:
+            pass
+
     graph_path = graph_path.resolve()
+    _notify(53, f"Analysis: reading {graph_path.name} …")
     graph = load_graph_document(graph_path)
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
     path_by_id = map_node_id_to_path(nodes)
+    logger.info(
+        "analysis_report_loaded graph=%s nodes=%d edges=%d",
+        graph_path.name,
+        len(nodes),
+        len(edges),
+    )
+    _notify(57, f"Analysis: computing per-type degree rankings (top_k={top_k_value})…")
 
     degrees_by_type = compute_in_out_degrees_by_edge_type(edges)
     edge_type_counts = Counter(edge.get("type", "UNKNOWN") for edge in edges)
@@ -169,6 +196,7 @@ def generate_analysis_text_report(graph_path: Path, top_k_value: int = 10) -> tu
     in_file_in, in_file_out = degrees_by_type.get("IN_FILE", (Counter(), Counter()))
     tests_in, tests_out = degrees_by_type.get("TESTS", (Counter(), Counter()))
 
+    _notify(64, "Analysis: assembling plain-text sections (imports, IN_FILE, TESTS)…")
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
@@ -183,6 +211,7 @@ def generate_analysis_text_report(graph_path: Path, top_k_value: int = 10) -> tu
         path_by_id=path_by_id,
         top_k_value=top_k_value,
     )
+    _notify(71, "Analysis: text report body ready.")
 
     report_path = Path(f"results/reports/{graph_stem_display_name(graph_path)}_graph_analysis.txt").resolve()
     return report, report_path
