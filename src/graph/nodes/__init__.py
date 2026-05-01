@@ -4,7 +4,7 @@ from .class_node import ClassNode
 from .commit_node import CommitNode
 from .file_node import FileNode
 from .function_node import FunctionNode
-from .test_snode import TestNode
+from .tests_node import TestNode
 
 __all__ = [
     "ClassNode",
