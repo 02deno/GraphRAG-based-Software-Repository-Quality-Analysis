@@ -93,8 +93,10 @@ GraphRAG_Project/
 **Additional Checks (30% weight):**
 - **Package Structure** (10%): `__init__.py` files and organization
 - **Repository Size** (10%): Manageable size for analysis
-- **Requirements File** (5%): Dependency management
+- **Requirements File** (5%): `requirements.txt` / `setup.py` / `pyproject.toml` / `Pipfile` at repo root (Python packaging only)
 - **README File** (5%): Documentation presence
+
+**Not Python-primary:** The graph builder only analyzes `.py` files. If there are **no** `.py` files, **no** tracked source files (`.py`, `.java`, …), or Python’s share of those tracked files is **below 30%**, the **headline compatibility score is capped below 50%** (with an explanation in warnings) so a Java-only or Node-only repo cannot read as “good” for this Python pipeline.
 
 ### Score Interpretation
 - **🟢 70-100%**: Excellent compatibility - Automatic analysis

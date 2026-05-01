@@ -15,3 +15,4 @@ class CheckItem:
     passed: bool
     score: float  # 0..1 quality for this criterion (not multiplied by weight)
     explanation: str = ""
+    result_note: str = ""  # Per-repo outcome from the checker (why this score for this run)

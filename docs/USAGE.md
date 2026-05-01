@@ -23,11 +23,13 @@ python run_web_app.py
 - **ZIP**: Supported by the upload handler; the default UI hides the ZIP field until a later release (see ``templates/index.html``)
 
 #### 2. Compatibility Check
-The system analyzes compatibility in the same step as upload, then sends you to ``GET /compatibility``. There you get a short **step timeline**, a collapsible **how scoring works** note, and **per-check** ``<details>`` blocks with plain-language explanations.
+The system analyzes compatibility in the same step as upload, then sends you to ``GET /compatibility``. There you get a short **step timeline**, a collapsible **how scoring works** note, and **per-check** ``<details>`` blocks: static text for what the check measures, plus a **For this repository** line when the checker returned a concrete outcome (why the score is high or low for that row). Pipeline-level caps still appear in the top **Warnings** list.
 
 **Scoring Categories:**
 - **Core Checks (70%)**: Python language, src/tests folders, static imports
-- **Additional Checks (30%)**: Package structure, repo size, requirements, README
+- **Additional Checks (30%)**: Package structure, repo size, Python root dependency manifest, README
+
+**Python-only pipeline:** If there are no ``.py`` files, no tracked source files, or Python is under 30% of tracked sources, the **overall score is capped below 50%** regardless of other layout signals (see ``src/compatibility/repo_checker.py``).
 
 **Score Interpretation:**
 - : Excellent - Automatic analysis

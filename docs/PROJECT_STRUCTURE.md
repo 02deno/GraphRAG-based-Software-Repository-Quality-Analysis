@@ -47,11 +47,11 @@ GraphRAG_Project/
 
 ### Compatibility Checking Layer (`src/compatibility/`)
 **Purpose**: Repository analysis and confidence scoring system
-- **`check_item.py`**: Value object for one scored check
+- **`check_item.py`**: Value object for one scored check (includes ``result_note`` for per-repository outcome text in the UI)
 - **`repo_checker.py`**: Weighted compatibility checker using ``CheckItem`` results
 
 **Scoring Categories**:
-- **Core Checks (70%)**: Python language, src/tests folders, static imports
+- **Core Checks (70%)**: Python language, src/tests folders, static imports; headline score is **capped under 50%** when the repo is not Python-primary (see ``repo_checker``)
 - **Additional Checks (30%)**: Package structure, repo size, requirements, README
 
 ### Pipeline Layer (`src/pipeline/`)

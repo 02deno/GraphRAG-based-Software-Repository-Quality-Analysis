@@ -135,6 +135,19 @@
             margin: 0 8px 8px 8px;
             padding-top: 12px;
         }
+        .check-result-note {
+            margin-top: 14px;
+            padding: 10px 12px;
+            background: #fff8e6;
+            border: 1px solid #ffe0a3;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #5c4d00;
+            line-height: 1.45;
+        }
+        .check-result-note strong {
+            color: #3d3500;
+        }
         .warnings {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -304,7 +317,8 @@
                 (not “points earned” yet). The headline percentage is the
                 <strong>weighted mean</strong>:
                 <code style="background:#eee;padding:2px 6px;border-radius:4px;">Σ (weight × check score) / Σ weights</code>,
-                then scaled to 0–100%. Expand any row for what that check measures.
+                then scaled to 0–100%. Expand any row for what that check measures and
+                <strong>why this repository</strong> got the shown check score for that row.
             </div>
         </details>
 
@@ -321,7 +335,7 @@
         </div>
 
         <h3>📋 Detailed Check Results</h3>
-        <p style="color:#666;font-size:14px;margin-top:-8px;">Open a row for a plain-language explanation of that signal.</p>
+        <p style="color:#666;font-size:14px;margin-top:-8px;">Open a row for how the check works and the outcome for <strong>this</strong> repository (including low scores).</p>
 
         {% for check in details %}
         <details class="check-item {{ 'check-passed' if check.passed else 'check-failed' }}">
@@ -334,9 +348,14 @@
             </summary>
             <div class="check-explain-body">
                 {% if check.explanation %}
-                    {{ check.explanation }}
+                    <div class="check-static-explain">{{ check.explanation }}</div>
                 {% else %}
-                    No extended description for this check.
+                    <div class="check-static-explain">No extended description for this check.</div>
+                {% endif %}
+                {% if check.result_note %}
+                <div class="check-result-note">
+                    <strong>For this repository:</strong> {{ check.result_note }}
+                </div>
                 {% endif %}
             </div>
         </details>

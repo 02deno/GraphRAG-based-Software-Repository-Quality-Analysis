@@ -5,6 +5,28 @@ from typing import Any, Dict, List, Tuple
 
 from src.compatibility.check_item import CheckItem
 
+# Extensions used to estimate "primary language" (same set as ``_check_python_primary``).
+_TRACKED_SOURCE_GLOBS = ("*.py", "*.js", "*.ts", "*.java", "*.cpp", "*.c", "*.go", "*.rs")
+
+# Below this share of tracked files being ``.py``, the repo is treated as **not
+# Python-primary** for this pipeline: weighted checks still run, but the headline
+# score is capped under 50% so a Java/Node-only tree cannot read as "good" for
+# Python graph extraction.
+_MIN_PYTHON_RATIO_FOR_PIPELINE = 0.3
+
+
+def _language_source_counts(repo_path: Path) -> Tuple[int, int]:
+    """Count ``*.py`` files and all tracked source extensions (for language ratio).
+
+    Returns:
+        ``(python_file_count, total_tracked_source_count)``.
+    """
+    n_py = sum(1 for _ in repo_path.rglob("*.py"))
+    n_total = 0
+    for ext in _TRACKED_SOURCE_GLOBS:
+        n_total += sum(1 for _ in repo_path.rglob(ext))
+    return n_py, n_total
+
 
 class RepoCompatibilityChecker:
     """Weighted checklist scoring how well a repo fits the Python graph pipeline."""
@@ -62,7 +84,8 @@ class RepoCompatibilityChecker:
                 "explanation": (
                     "Samples up to 20 Python files and classifies ``import`` / ``from`` lines "
                     "versus dynamic patterns (``importlib``, ``__import__``, etc.). Static "
-                    "imports resolve more reliably into IMPORTS edges in the graph."
+                    "imports resolve more reliably into IMPORTS edges in the graph. "
+                    "Fails when there are no Python files to sample."
                 ),
             },
             {
@@ -73,7 +96,7 @@ class RepoCompatibilityChecker:
                 "explanation": (
                     "Uses ``__init__.py`` presence relative to all ``.py`` files as a proxy "
                     "for package layout. Flat script-only trees score lower; many packages "
-                    "with inits score higher (capped at 1.0)."
+                    "with inits score higher (capped at 1.0). Requires Python sources."
                 ),
             },
             {
@@ -94,8 +117,8 @@ class RepoCompatibilityChecker:
                 "check_fn": self._check_requirements,
                 "explanation": (
                     "Looks at the repo root for ``requirements.txt``, ``setup.py``, "
-                    "``pyproject.toml``, or ``Pipfile``. Dependency manifests help orient "
-                    "the project; this is a light signal with small weight."
+                    "``pyproject.toml``, or ``Pipfile``. This pipeline expects Python "
+                    "packaging hints, not e.g. ``package.json`` alone."
                 ),
             },
             {
@@ -145,17 +168,16 @@ class RepoCompatibilityChecker:
                     passed=passed,
                     score=score,
                     explanation=str(check.get("explanation", "")),
+                    result_note=str(warning or ""),
                 )
 
                 results.append(check_result)
                 total_weight += weight
                 total_score += score * weight
 
-                if warning:
-                    warnings.append(warning)
-
             except Exception as exc:
                 weight = float(check["weight"])
+                err_msg = f"Error checking {check['name']}: {exc!s}"
                 check_result = CheckItem(
                     name=check["name"],
                     description=check["description"],
@@ -166,16 +188,46 @@ class RepoCompatibilityChecker:
                         "This check failed with an internal error and is scored at 0. "
                         "See warnings above for the exception message."
                     ),
+                    result_note=err_msg,
                 )
                 results.append(check_result)
                 total_weight += weight
-                warnings.append(f"Error checking {check['name']}: {exc!s}")
+                warnings.append(err_msg)
 
         # Per-check ``score`` is in [0, 1]; aggregate as a weighted mean, then scale to %.
         final_score = (total_score / total_weight * 100) if total_weight > 0 else 0.0
 
+        n_py, n_tracked = _language_source_counts(resolved)
+        py_ratio = (n_py / n_tracked) if n_tracked > 0 else 0.0
+
+        if n_tracked == 0:
+            warnings.insert(
+                0,
+                "No tracked source files (``.py``, ``.java``, …) found; graph extraction "
+                "targets Python. Overall compatibility is capped below 50%.",
+            )
+            final_score = min(final_score, 49.0)
+        elif n_py == 0:
+            warnings.insert(
+                0,
+                "No ``.py`` files found in the repository. This pipeline builds graphs from "
+                "Python sources only. Overall compatibility is capped below 50%.",
+            )
+            final_score = min(final_score, 49.0)
+        elif py_ratio < _MIN_PYTHON_RATIO_FOR_PIPELINE:
+            warnings.insert(
+                0,
+                f"Python is not the primary language (``.py`` share {py_ratio:.0%} among "
+                f"tracked sources, below {_MIN_PYTHON_RATIO_FOR_PIPELINE:.0%}). "
+                "Overall compatibility is capped below 50% because graph analysis is "
+                "Python-focused.",
+            )
+            final_score = min(final_score, 49.0)
+
+        final_score = round(final_score, 1)
+
         return {
-            "score": round(final_score, 1),
+            "score": final_score,
             "passed": final_score >= 50,
             "details": results,
             "warnings": warnings,
@@ -191,16 +243,12 @@ class RepoCompatibilityChecker:
         Returns:
             ``(passed, contribution 0..1, warning_or_empty)`` for the weighted scorer.
         """
-        py_files = list(repo_path.rglob("*.py"))
-        total_files: List[Path] = []
+        py_files_count, total_count = _language_source_counts(repo_path)
 
-        for ext in ["*.py", "*.js", "*.ts", "*.java", "*.cpp", "*.c", "*.go", "*.rs"]:
-            total_files.extend(repo_path.rglob(ext))
-
-        if not total_files:
+        if not total_count:
             return False, 0.0, "No source files found"
 
-        py_ratio = len(py_files) / len(total_files)
+        py_ratio = py_files_count / total_count
 
         if py_ratio >= 0.7:
             return True, py_ratio, ""
@@ -260,7 +308,7 @@ class RepoCompatibilityChecker:
         py_files = list(repo_path.rglob("*.py"))[:20]
 
         if not py_files:
-            return False, 0.0, "No Python files found"
+            return False, 0.0, "No Python files found — cannot assess import style"
 
         static_imports = 0
         total_imports = 0
@@ -302,7 +350,7 @@ class RepoCompatibilityChecker:
         py_files = list(repo_path.rglob("*.py"))
 
         if not py_files:
-            return False, 0.0, "No Python files found"
+            return False, 0.0, "No Python files found — cannot assess package layout"
 
         if has_init_files:
             init_ratio = len(has_init_files) / len(py_files)
@@ -319,6 +367,9 @@ class RepoCompatibilityChecker:
             ``(passed, contribution, warning_or_empty)``.
         """
         py_files = list(repo_path.rglob("*.py"))
+
+        if len(py_files) == 0:
+            return False, 0.1, "No Python files — pipeline has nothing to traverse"
 
         if len(py_files) > 1000:
             return False, 0.3, "Large repository (>1000 Python files)"
@@ -343,7 +394,7 @@ class RepoCompatibilityChecker:
             if (repo_path / req_file).exists():
                 return True, 1.0, f"Found {req_file}"
 
-        return False, 0.0, "No dependency file found"
+        return False, 0.0, "No Python dependency file found at repository root"
 
     def _check_readme(self, repo_path: Path) -> Tuple[bool, float, str]:
         """Detect a README file at repo root with common filenames.
