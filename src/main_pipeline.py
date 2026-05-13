@@ -5,10 +5,17 @@ from pathlib import Path
 
 from src.logging_config import configure_standard_logging
 from src.pipeline.run_pipeline import resolve_default_cli_paths, run_repository_pipeline
+from src.web.config import get_project_root
 
 
 def main() -> None:
     """CLI entry: parse arguments and run the full repository pipeline."""
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(get_project_root() / ".env", override=False)
+    except ImportError:
+        pass
     configure_standard_logging()
     parser = argparse.ArgumentParser(
         description="Run the full repository pipeline: build graph, analyze graph, and generate visual summaries."

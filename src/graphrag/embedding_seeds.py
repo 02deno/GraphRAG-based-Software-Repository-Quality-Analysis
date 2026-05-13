@@ -32,7 +32,7 @@ def _fingerprint(graph_path: Path, model: str) -> Dict[str, Any]:
     return {"mtime_ns": st.st_mtime_ns, "model": model}
 
 
-def _call_embeddings_api(
+def embed_texts_openai_compatible(
     texts: Sequence[str],
     *,
     base_url: str,
@@ -170,7 +170,7 @@ def try_embedding_seed_ids(
                 len(texts),
                 model,
             )
-            vectors = _call_embeddings_api(texts, base_url=base, api_key=key, model=model)
+            vectors = embed_texts_openai_compatible(texts, base_url=base, api_key=key, model=model)
             emb = np.asarray(vectors, dtype=np.float32)
             np.savez_compressed(cache_path, ids=np.asarray(ids, dtype=object), emb=emb)
             meta_path.write_text(json.dumps({**fp, "node_count": len(ids)}, indent=2) + "\n", encoding="utf-8")
@@ -181,7 +181,7 @@ def try_embedding_seed_ids(
         return [], diag
 
     try:
-        qvec_list = _call_embeddings_api([query.strip()], base_url=base, api_key=key, model=model)
+        qvec_list = embed_texts_openai_compatible([query.strip()], base_url=base, api_key=key, model=model)
         q = np.asarray(qvec_list[0], dtype=np.float32)
     except Exception as exc:
         logger.warning("GraphRAG query embedding failed: %s", exc)

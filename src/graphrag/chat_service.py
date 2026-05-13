@@ -14,6 +14,7 @@ from src.graphrag.context_formatter import format_subgraph_for_llm
 from src.graphrag.embedding_seeds import try_embedding_seed_ids
 from src.graphrag.neo4j_subgraph import Neo4jSubgraphExpander
 from src.graphrag.query_index import rank_seed_node_ids
+from src.graphrag.source_context import retrieve_source_context_for_llm
 from src.graphrag.subgraph_retriever import (
     build_multidigraph,
     default_edge_types_for_query,
@@ -26,9 +27,11 @@ logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = (
     "You are an expert assistant for software quality, testing, and architecture. "
-    "You answer using ONLY the supplied graph subgraph and precomputed metrics. "
-    "If the evidence is insufficient, say so briefly. "
-    "When you mention entities, prefer human-readable labels from the context. "
+    "You answer using the supplied graph subgraph, precomputed metrics, and any "
+    "indexed source excerpts. If the evidence is insufficient, say so briefly. "
+    "When **Source code excerpts** appear, use them for implementation details and "
+    "cite file paths and line ranges when possible. "
+    "When you mention graph entities, prefer human-readable labels from the context. "
     "Respond in the same language as the user's question when possible."
 )
 
@@ -62,6 +65,7 @@ class GraphRagChatService:
         top_seeds: int = 14,
         max_subgraph_chars: int = 22_000,
         max_metrics_chars: int = 5_000,
+        max_source_chars: int = 14_000,
     ) -> Dict[str, Any]:
         """Retrieve a subgraph for *user_message* and return an LLM reply.
 
@@ -73,6 +77,7 @@ class GraphRagChatService:
             top_seeds: How many lexical seed nodes to take from :func:`rank_seed_node_ids`.
             max_subgraph_chars: Character budget for serialized subgraph text.
             max_metrics_chars: Character budget for ``analysis_view`` summary text.
+            max_source_chars: Character budget for indexed ``.py`` source excerpts.
 
         Returns:
             Dict with ``ok`` (bool), optional ``reply``, and diagnostics keys.
@@ -175,11 +180,18 @@ class GraphRagChatService:
             max_chars=max_subgraph_chars,
         )
         metrics_text = format_analysis_view_summary(analysis_view, max_chars=max_metrics_chars)
+        source_block, source_diag = retrieve_source_context_for_llm(
+            run_dir_path,
+            msg,
+            max_chars=max_source_chars,
+        )
         user_block = (
             f"### User question\n{msg}\n\n"
             f"### Precomputed metrics (may be partial)\n{metrics_text}\n\n"
             f"### Retrieved subgraph\n{subgraph_text}"
         )
+        if source_block.strip():
+            user_block += "\n\n### Source code excerpts (indexed repository)\n" + source_block
         messages: List[Mapping[str, str]] = [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_block},
@@ -204,4 +216,5 @@ class GraphRagChatService:
             "subgraph_edge_count": len(sub_edges),
             "max_depth": max_depth,
             "max_nodes": max_nodes,
+            "source_context_diagnostics": source_diag,
         }

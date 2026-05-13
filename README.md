@@ -9,6 +9,10 @@ This project provides a **full-stack web application** for analyzing Python repo
 # Install dependencies
 pip install -r requirements.txt
 
+# Optional: environment file at project root (see .env.example). The web app and
+# src/main_pipeline.py load ".env" with python-dotenv before reading GRAPHRAG_* /
+# FLASK_* variables; existing shell env values are not overwritten.
+
 # Optional: verbose UTC logs — stderr + rotating file logs/graphrag.log (5 MB × 5)
 # set GRAPHRAG_LOG_LEVEL=DEBUG
 # set GRAPHRAG_LOG_FILE=C:\path\to\my.log   # optional override
@@ -36,12 +40,13 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
 - **📊 Analysis progress**: Compatibility sends **SSE** (``X-GraphRAG-Analyze-Stream``) so the overlay can list **live** pipeline messages (per-file graph build, analysis phases, each chart PNG). If the response is plain **HTML** (buffered dev server), the same page shows **timed milestones** (unique lines with elapsed seconds). See ``docs/MIDTERM_PROJECT_REPORT.md`` for a narrative report (add screenshots under ``docs/assets/``).
-- **GraphRAG assistant** (after a successful run): ask natural-language questions on the results page; the server retrieves a **bounded subgraph** from ``graph.json``, attaches a short **analysis_view** summary, and calls an OpenAI-compatible chat API. Configure before ``python run_web_app.py``:
+- **GraphRAG assistant** (after a successful run): ask natural-language questions on the results page; the server retrieves a **bounded subgraph** from ``graph.json``, a short **analysis_view** summary, **lexically ranked `.py` source excerpts** from an on-disk chunk index (built at analyze time from the same repo root), and calls an OpenAI-compatible chat API. Configure before ``python run_web_app.py`` (or place keys in ``.env`` — see ``.env.example``):
   - ``GRAPHRAG_OPENAI_BASE_URL`` — e.g. ``https://api.openai.com/v1`` or ``http://127.0.0.1:11434/v1`` (Ollama)
   - ``GRAPHRAG_CHAT_MODEL`` — model id accepted by that server
   - ``GRAPHRAG_OPENAI_API_KEY`` — bearer token for hosted APIs (often empty for local Ollama)
   - ``GRAPHRAG_EMBEDDING_MODEL`` (optional) — when set with the same base URL, **dense embedding** seeds are merged with lexical/community seeds; vectors are cached per run as ``graphrag_embedding_cache.npz``
   - ``GRAPHRAG_NEO4J_URI``, ``GRAPHRAG_NEO4J_USER``, ``GRAPHRAG_NEO4J_PASSWORD`` (optional) — when set, subgraph **expansion** runs in Neo4j (Bolt) instead of in-process NetworkX; graphs are keyed by run folder name. Optional ``GRAPHRAG_NEO4J_DATABASE`` for multi-database setups
+  - Source index (optional tuning): ``GRAPHRAG_SOURCE_MAX_FILES``, ``GRAPHRAG_SOURCE_CHUNK_LINES``, ``GRAPHRAG_SOURCE_CHUNK_OVERLAP_LINES``, ``GRAPHRAG_SOURCE_MAX_BYTES_PER_FILE`` — size of ``graphrag_source_chunks.jsonl`` under each ``results/web_analysis_*`` run; if the original repo directory is removed later, chat still uses chunks already written beside ``graph.json``
 - **📥 Downloadable Results**: Export JSON, text reports, structured **analysis_view.json** (same metrics as the card UI), individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
 - **📜 Structured logging**: UTC ISO timestamps and levels via ``GRAPHRAG_LOG_LEVEL``; duplicate stream to a **rotating** ``logs/graphrag.log`` (override with ``GRAPHRAG_LOG_FILE``, or set ``GRAPHRAG_LOG_TO_FILE=0`` for console-only); HTTP lines under ``src.web.request``
 - **📱 Responsive Design**: Mobile-friendly interface
@@ -91,6 +96,7 @@ GraphRAG_Project/
 ├── 📁 results/                       # Analysis outputs
 ├── 📁 data/                          # Sample repositories
 ├── 📄 requirements.txt               # Python dependencies
+├── 📄 .env.example                   # Template for FLASK_* / GRAPHRAG_* (copy to .env)
 ├── 📄 run_web_app.py               # Web app launcher
 └── 📄 README.md                    # This file
 ```

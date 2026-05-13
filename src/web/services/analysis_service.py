@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from src.compatibility.repo_checker import RepoCompatibilityChecker
+from src.graphrag.source_context import build_source_chunk_index, write_run_meta
 from src.pipeline import run_repository_pipeline
 from src.pipeline.output_paths import new_web_session_results_dir
 from src.pipeline.result import PipelineRunResult
@@ -124,12 +125,23 @@ def build_pipeline_log_sections(text: str) -> list[dict[str, Any]]:
     return sections
 
 
-def package_web_results(results_dir: Path, result: PipelineRunResult) -> Dict[str, Any]:
+def package_web_results(
+    results_dir: Path,
+    result: PipelineRunResult,
+    *,
+    source_repo_path: str | None = None,
+) -> Dict[str, Any]:
     """Shape the dict passed to ``results_final.html`` after a pipeline run.
 
     Adds ``analysis_view`` (card UI payload, ``schema_version`` 1) alongside legacy
     ``analysis_text`` for downloads and the collapsible raw report, plus
     ``visual_summary_view`` and ``pipeline_sections`` for structured cards.
+
+    When ``source_repo_path`` is set, writes ``graphrag_run_meta.json`` and builds
+    ``graphrag_source_chunks.jsonl`` for GraphRAG source excerpts (best-effort).
+
+    Returns:
+        Payload dict including ``graphrag_run_meta`` (``schema_version``, ``source_repo_root``).
     """
     pipeline_text = "\n".join(result.log_lines)
     pipeline_path = results_dir / "pipeline.txt"
@@ -141,6 +153,25 @@ def package_web_results(results_dir: Path, result: PipelineRunResult) -> Dict[st
     visual_summary_text = ""
     if result.visual_summary_path is not None:
         visual_summary_text = Path(result.visual_summary_path).read_text(encoding="utf-8")
+
+    resolved_repo: str | None = None
+    if source_repo_path:
+        try:
+            resolved_repo = str(Path(source_repo_path).resolve())
+        except OSError:
+            resolved_repo = source_repo_path.strip() or None
+    write_run_meta(results_dir, resolved_repo)
+    if resolved_repo:
+        try:
+            n_chunks = build_source_chunk_index(
+                results_dir,
+                Path(resolved_repo),
+                list(result.graph_document.get("nodes") or []),
+            )
+            logger.info("GraphRAG source chunk index chunks=%d", n_chunks)
+        except Exception:
+            logger.exception("GraphRAG source chunk index failed (non-fatal)")
+
     return {
         "graph_data": dict(result.graph_document),
         "analysis_text": result.analysis_text,
@@ -155,6 +186,7 @@ def package_web_results(results_dir: Path, result: PipelineRunResult) -> Dict[st
         if result.visual_summary_path
         else None,
         "visual_gallery": collect_visual_gallery_entries(results_dir),
+        "graphrag_run_meta": {"schema_version": 1, "source_repo_root": resolved_repo},
     }
 
 
@@ -179,6 +211,15 @@ def load_results_from_run_directory(run_path: Path) -> Dict[str, Any]:
             logger.warning("Could not read analysis_view.json under %s: %s", run_path, exc)
             analysis_view = {}
     vsum_view_path = run_path / "visual_summary_view.json"
+    graphrag_meta: Dict[str, Any] = {}
+    meta_path = run_path / "graphrag_run_meta.json"
+    if meta_path.exists():
+        try:
+            gm = json.loads(meta_path.read_text(encoding="utf-8"))
+            if isinstance(gm, dict):
+                graphrag_meta = gm
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Could not read graphrag_run_meta.json under %s: %s", run_path, exc)
     visual_summary_view: Dict[str, Any] = {}
     if vsum_view_path.exists():
         try:
@@ -201,6 +242,7 @@ def load_results_from_run_directory(run_path: Path) -> Dict[str, Any]:
         "visual_summary_view": visual_summary_view,
         "visual_summary_path": str(vis_path) if vis_path.exists() else None,
         "visual_gallery": collect_visual_gallery_entries(run_path),
+        "graphrag_run_meta": graphrag_meta,
     }
 
 
@@ -246,7 +288,9 @@ class AnalysisService:
             metrics for the card UI), ``visual_summary_view`` (degree leaders by edge type),
             ``pipeline_sections`` (phase cards), ``pipeline_output``, ``results_dir``,
             ``results_run_dir``, ``visual_summary_text``, ``visual_summary_path``,
-            and ``visual_gallery`` (PNG list for the UI).
+            ``visual_gallery`` (PNG list for the UI), ``graphrag_run_meta`` (``schema_version``,
+            ``source_repo_root`` for source chunk indexing), and on-disk
+            ``graphrag_source_chunks.jsonl`` when indexing succeeds.
 
         Raises:
             OSError: If reading or writing pipeline artifacts fails.
@@ -273,7 +317,7 @@ class AnalysisService:
             progress_callback=progress_callback,
         )
 
-        payload = package_web_results(results_dir, result)
+        payload = package_web_results(results_dir, result, source_repo_path=repo_path)
         logger.info(
             "Finished analysis pipeline results_dir=%s nodes=%s edges=%s",
             results_dir.name,

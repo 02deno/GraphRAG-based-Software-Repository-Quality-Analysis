@@ -7,3 +7,4 @@ python-docx
 httpx
 neo4j
 numpy
+python-dotenv

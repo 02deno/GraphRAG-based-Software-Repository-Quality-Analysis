@@ -24,6 +24,7 @@ GraphRAG_Project/
 ├── results/                          # Output Directory
 ├── data/                             # Sample Repositories
 ├── requirements.txt                    # Dependencies
+├── .env.example                        # FLASK_* / GRAPHRAG_* template (copy to .env)
 ├── run_web_app.py                    # Web Application Launcher
 └── README.md                         # Main Documentation
 ```
@@ -41,7 +42,7 @@ GraphRAG_Project/
 - **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_results_chat`` (JSON ``POST`` GraphRAG assistant), ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis from the compatibility page also sends ``X-GraphRAG-Analyze-Stream`` for **SSE** (``run_repository_pipeline`` reports per-file build steps and per-chart visualization steps); **HTML** + ``document.write`` remains the fallback when streaming is buffered.
 - **`results_paths.py`**: Validates ``web_analysis_*`` run directory names and safe PNG filenames for chart URLs
 - **`report_docx.py`**: Builds a combined ``.docx`` export (text artifacts + embedded PNGs) for ``GET …/report.docx``
-- **`factory.py`**: Calls ``configure_standard_logging()`` and registers lightweight ``after_request`` access logging (``src.web.request``); wires ``graphrag_chat_service`` (LLM optional via ``GRAPHRAG_*`` env vars)
+- **`factory.py`**: ``create_app()`` loads optional project-root ``.env`` via ``python-dotenv`` (``override=False``), then ``configure_standard_logging()`` and registers lightweight ``after_request`` access logging (``src.web.request``); wires ``graphrag_chat_service`` (LLM optional via ``GRAPHRAG_*`` env vars)
 - **`service_protocols.py`**: ``typing.Protocol`` ports for services (``CompatibilityService``, ``AnalysisPipelineService``, ``ChatCompletionClient`` for GraphRAG)
 - **`config.py`**: Project root resolution and Flask configuration (e.g. ``FLASK_SECRET_KEY``)
 - **`handlers/`**: Upload and repository filesystem operations
@@ -75,15 +76,18 @@ GraphRAG_Project/
 - **`result.py`**: ``PipelineRunResult`` structured return type
 
 ### GraphRAG layer (`src/graphrag/`)
-**Purpose**: Graph-first retrieval (bounded BFS on a typed ``networkx.MultiDiGraph``) plus optional LLM answering for the web assistant.
-- **`query_index.py`**: Lexical seed ranking over node fields (substring + token overlap).
+**Purpose**: Graph-first retrieval (bounded BFS on a typed ``networkx.MultiDiGraph``), optional lexical **source chunk** retrieval from each web run’s ``graphrag_source_chunks.jsonl``, plus optional LLM answering for the web assistant.
+- **`query_index.py`**: Lexical seed ranking over node fields (substring + token overlap); shared scoring for source blobs.
 - **`subgraph_retriever.py`**: Multigraph build, undirected expansion, induced edge listing; query-aware default edge-type sets.
 - **`context_formatter.py`**: Serialize an induced subgraph to a capped plain-text block for the model.
 - **`analysis_context.py`**: Short text summary from persisted ``analysis_view.json`` (risk, centrality, communities).
 - **`community_seeds.py`**: Extra seeds from Louvain community rows when previews overlap the question (uses ``member_ids`` from ``analysis_view``).
+- **`source_context.py`**: Writes ``graphrag_run_meta.json`` (repo root at analyze time), builds ``graphrag_source_chunks.jsonl`` from ``File`` nodes, and ranks excerpts for chat.
 - **`neo4j_driver.py`**: Optional Bolt driver from ``GRAPHRAG_NEO4J_*`` environment variables.
 - **`neo4j_subgraph.py`**: ``Neo4jSubgraphExpander`` syncs ``graph.json`` into Neo4j and performs typed BFS expansion when a driver is configured.
 - **`embedding_seeds.py`**: OpenAI-compatible ``/v1/embeddings`` + per-run ``.npz`` cache; cosine-ranked seed ids merged in the chat service.
+- **`openai_compatible_client.py`**: Chat client from ``GRAPHRAG_OPENAI_*`` / ``GRAPHRAG_CHAT_MODEL``.
+- **`chat_service.py`**: Orchestrates seeds, subgraph expansion, source excerpts, and the LLM call.
 
 ### Graph Model & Construction Layer (`src/graph/`)
 **Purpose**: Core graph data model and construction logic
@@ -137,7 +141,7 @@ GraphRAG_Project/
 - **`build_graph.py`**: CLI wrapper for graph construction
 - **`analyze_graph.py`**: CLI wrapper for graph analysis
 - **`visualize_graph.py`**: CLI wrapper for visualization
-- **`main_pipeline.py`**: CLI entry that delegates to ``src.pipeline.run_repository_pipeline``
+- **`main_pipeline.py`**: CLI entry; loads optional project-root ``.env`` then delegates to ``src.pipeline.run_repository_pipeline``
 - **`repo_stats.py`**: CLI wrapper for repository statistics
 - **`schema_contract.py`**: Legacy schema contract reference
 

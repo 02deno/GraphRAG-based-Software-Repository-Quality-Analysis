@@ -28,6 +28,13 @@ def create_app() -> Flask:
     Returns:
         A fully wired :class:`flask.Flask` instance (same object ``app`` as in ``app.py``).
     """
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(get_project_root() / ".env", override=False)
+    except ImportError:
+        pass
+
     configure_standard_logging()
     get_logger(__name__).info("Flask application factory starting (project_root=%s)", get_project_root())
 
