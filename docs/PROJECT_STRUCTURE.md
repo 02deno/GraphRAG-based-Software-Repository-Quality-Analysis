@@ -103,9 +103,10 @@ GraphRAG_Project/
 
 ### Graph Analysis Layer (`src/analysis/`)
 **Purpose**: Graph analysis and metrics calculation
-- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality + community sections)
+- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality + community + risk sections)
 - **`centrality_measures.py`**: Pure helpers for betweenness centrality (sampled k=500 above 1000 nodes) and PageRank on typed subgraphs
 - **`community_detection.py`**: Louvain modularity (with label-propagation fallback) over the undirected projections of `IMPORTS` / `CALLS`; returns `CommunityDetectionResult` (size-sorted communities + modularity)
+- **`risk_score.py`**: Composite per-`File` risk record (`FileRiskScore`) combining z-normalised centrality (IMPORTS + CALLS aggregated to owning files), commit churn (`MODIFIED_BY` out-degree), test gap (uncovered-symbol fraction), and cross-community edge ratio
 - **`__init__.py`**: Analysis utilities and exports
 
 ### Visualization Layer (`src/visualization/`)

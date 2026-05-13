@@ -125,6 +125,7 @@ This document defines the complete graph schema for the GraphRAG Repository Anal
 - **Betweenness Centrality**: Bridge nodes on shortest paths in the `IMPORTS` and `CALLS` subgraphs (`src/analysis/centrality_measures.py`); uses sampled estimator (k=500) above 1000 nodes for tractability.
 - **PageRank**: Multi-hop influence in the `IMPORTS` and `CALLS` subgraphs; complements in-degree by accounting for *who* imports/calls you.
 - **Community Detection**: Louvain modularity on the undirected projections of `IMPORTS` and `CALLS` (`src/analysis/community_detection.py`), with label-propagation fallback. Reports cluster sizes + modularity score; unexpected boundaries flag leaks across package layers.
+- **Risk Score** (`src/analysis/risk_score.py`): per-`File` composite z-score combining centrality (IMPORTS + CALLS, aggregated from owning symbols), commit churn (`MODIFIED_BY` out-degree), test gap (fraction of in-file `Function` / `Class` symbols without an incoming `TESTS` edge), and cross-community ratio (share of `IMPORTS` + `CALLS` edges leaving the file's Louvain community). Default weights are equal (1.0 each); the total is relative within a repository, not an absolute threshold.
 - **Edge Distribution**: Analysis of relationship types
 - **Graph Statistics**: Overall repository structure metrics
 - **Compatibility Scoring**: Repository readiness assessment

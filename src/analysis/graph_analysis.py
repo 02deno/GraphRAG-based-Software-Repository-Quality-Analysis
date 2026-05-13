@@ -17,6 +17,7 @@ from src.analysis.community_detection import (
     CommunityDetectionResult,
     detect_communities,
 )
+from src.analysis.risk_score import FileRiskScore, compute_risk_scores
 from src.graph.json_document import (
     compute_in_out_degrees_by_edge_type,
     human_readable_graph_edge_label,
@@ -117,6 +118,7 @@ def format_analysis_report(
     modified_by_out: List[Tuple[str, int]],
     centrality_sections: Dict[str, Dict[str, object]],
     community_sections: Dict[str, CommunityDetectionResult],
+    risk_scores: List[FileRiskScore],
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
@@ -139,10 +141,17 @@ def format_analysis_report(
         modified_by_out: Top nodes by outgoing MODIFIED_BY edges (files with most commits).
         centrality_sections: Per-edge-type centrality results. Keyed by edge token
             (``"IMPORTS"`` / ``"CALLS"``) with values
-            ``{"betweenness": [(id, score), …], "betweenness_approximated": bool,
-            "pagerank": [(id, score), …]}``. Missing entries render as empty sections.
+            ``{"betweenness": Counter, "betweenness_top_k": [(id, score), …],
+            "betweenness_approximated": bool, "pagerank": Counter,
+            "pagerank_top_k": [(id, score), …]}``. ``*_top_k`` powers the report
+            table; the full ``Counter`` versions feed risk scoring (see
+            :mod:`src.analysis.risk_score`). Missing entries render as empty
+            sections.
         community_sections: Per-edge-type Louvain community results keyed by edge
             token. Empty results render as a "None" line.
+        risk_scores: Per-``File`` composite risk records sorted by total descending
+            (output of :func:`compute_risk_scores`). Empty list renders as
+            ``"- None"`` under the risk heading.
         path_by_id: Node id to path map for display.
         top_k_value: How many top entries to show per section.
 
@@ -242,9 +251,9 @@ def format_analysis_report(
 
     for edge_type in _CENTRALITY_EDGE_TYPES:
         section = centrality_sections.get(edge_type) or {}
-        betweenness = section.get("betweenness") or []
+        betweenness = section.get("betweenness_top_k") or []
         approximated = bool(section.get("betweenness_approximated"))
-        pagerank = section.get("pagerank") or []
+        pagerank = section.get("pagerank_top_k") or []
         lines.append("")
         approx_suffix = " (sampled estimator)" if approximated else ""
         lines.extend(
@@ -278,7 +287,60 @@ def format_analysis_report(
                 top_k_value=top_k_value,
             )
         )
+
+    lines.append("")
+    lines.extend(
+        format_risk_section(
+            f"Top {top_k_value} risk candidate files (composite z-score):",
+            risk_scores,
+            top_k_value=top_k_value,
+        )
+    )
     return "\n".join(lines)
+
+
+def format_risk_section(
+    title: str,
+    scores: List[FileRiskScore],
+    *,
+    top_k_value: int,
+) -> List[str]:
+    """Format the top-``top_k_value`` file risk records into report lines.
+
+    Args:
+        title: Heading line.
+        scores: Output of :func:`compute_risk_scores` (already sorted by total).
+        top_k_value: How many files to include.
+
+    Returns:
+        Plain-text lines describing each record and its per-dimension z-scores.
+    """
+    lines: List[str] = [title]
+    if not scores:
+        lines.append("- None")
+        return lines
+
+    lines.append(
+        "- weights are equal (1.0 each) across centrality, churn, test_gap, cross_community; "
+        "z-scores use sample std across all File nodes."
+    )
+    for index, record in enumerate(scores[:top_k_value], start=1):
+        coverage_summary = (
+            f"{record.tested_symbol_count}/{record.symbol_count} symbols tested"
+            if record.symbol_count
+            else "no symbols extracted"
+        )
+        lines.append(
+            f"- #{index} {record.file_path}: total={record.total:+.3f} "
+            f"(centrality={record.centrality_z:+.3f}, "
+            f"churn={record.churn_z:+.3f}, "
+            f"test_gap={record.test_gap_z:+.3f}, "
+            f"cross_community={record.cross_community_z:+.3f}) — "
+            f"raw_churn={int(record.raw_churn)} commits, "
+            f"raw_test_gap={record.raw_test_gap:.2f} ({coverage_summary}), "
+            f"raw_cross_community={record.raw_cross_community:.2f}"
+        )
+    return lines
 
 
 def format_community_section(
@@ -392,9 +454,11 @@ def _compute_centrality_sections(
         edge_count = sum(1 for edge in edges if edge.get("type") == edge_type)
         if edge_count == 0:
             sections[edge_type] = {
-                "betweenness": [],
+                "betweenness": Counter(),
+                "betweenness_top_k": [],
                 "betweenness_approximated": False,
-                "pagerank": [],
+                "pagerank": Counter(),
+                "pagerank_top_k": [],
             }
             continue
 
@@ -406,9 +470,11 @@ def _compute_centrality_sections(
         betweenness_scores, approximated = compute_betweenness_centrality(subgraph)
         pagerank_scores = compute_pagerank(subgraph)
         sections[edge_type] = {
-            "betweenness": top_k_scores(betweenness_scores, top_k_value),
+            "betweenness": betweenness_scores,
+            "betweenness_top_k": top_k_scores(betweenness_scores, top_k_value),
             "betweenness_approximated": approximated,
-            "pagerank": top_k_scores(pagerank_scores, top_k_value),
+            "pagerank": pagerank_scores,
+            "pagerank_top_k": top_k_scores(pagerank_scores, top_k_value),
         }
         logger.info(
             "centrality_done edge_type=%s nodes=%d edges=%d betweenness_approx=%s",
@@ -482,7 +548,15 @@ def generate_analysis_text_report(
         progress=_notify,
     )
 
-    _notify(76, "Analysis: assembling plain-text sections (degree + centrality + communities)…")
+    _notify(74, "Analysis: combining centrality + churn + tests + community for risk scoring…")
+    risk_scores = compute_risk_scores(
+        nodes=nodes,
+        edges=edges,
+        centrality_sections=centrality_sections,
+        community_sections=community_sections,
+    )
+
+    _notify(76, "Analysis: assembling plain-text sections (degree + centrality + communities + risk)…")
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
@@ -500,6 +574,7 @@ def generate_analysis_text_report(
         modified_by_out=top_k(modified_by_out, top_k_value),
         centrality_sections=centrality_sections,
         community_sections=community_sections,
+        risk_scores=risk_scores,
         path_by_id=path_by_id,
         top_k_value=top_k_value,
     )

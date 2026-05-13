@@ -269,11 +269,16 @@
             <h3>🔍 Quality Analysis Results</h3>
             <p class="schema-note" style="margin-top:0;">
                 Degree counts (per edge type) plus <strong>betweenness centrality</strong>, <strong>PageRank</strong>,
-                and <strong>Louvain community detection</strong> on the <code>IMPORTS</code> and <code>CALLS</code>
-                subgraphs. Betweenness highlights bridge modules whose removal would fragment the architecture;
-                PageRank ranks broadly relied-upon nodes via multi-hop influence; community detection groups densely
-                connected nodes and reports a modularity score. Betweenness uses a sampled estimator (k=500) on
-                graphs larger than 1000 nodes — those sections are labelled <em>(sampled estimator)</em>.
+                <strong>Louvain community detection</strong>, and a composite <strong>risk candidate list</strong>
+                on the <code>IMPORTS</code> and <code>CALLS</code> subgraphs. Betweenness highlights bridge modules
+                whose removal would fragment the architecture; PageRank ranks broadly relied-upon nodes via multi-hop
+                influence; community detection groups densely connected nodes and reports a modularity score. The
+                risk score combines (z-normalised) <em>centrality</em>, <em>commit churn</em> (<code>MODIFIED_BY</code>
+                out-degree), <em>test gap</em> (fraction of in-file symbols without <code>TESTS</code> edges), and
+                <em>cross-community ratio</em> (share of edges leaving the file's Louvain cluster). Higher
+                <code>total</code> = more architecturally risky in <em>this</em> repository (the score is relative).
+                Betweenness uses a sampled estimator (k=500) on graphs larger than 1000 nodes — those sections are
+                labelled <em>(sampled estimator)</em>.
             </p>
             <div class="analysis-text">{{ results.analysis_text }}</div>
         </div>

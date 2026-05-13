@@ -14,6 +14,7 @@ from .community_detection import (
     summarize_community_sizes,
 )
 from .graph_analysis import generate_analysis_text_report, main
+from .risk_score import DEFAULT_WEIGHTS, FileRiskScore, compute_risk_scores
 
 __all__ = [
     "main",
@@ -26,4 +27,7 @@ __all__ = [
     "CommunityDetectionResult",
     "detect_communities",
     "summarize_community_sizes",
+    "DEFAULT_WEIGHTS",
+    "FileRiskScore",
+    "compute_risk_scores",
 ]

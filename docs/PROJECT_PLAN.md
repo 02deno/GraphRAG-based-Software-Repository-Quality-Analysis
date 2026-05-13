@@ -41,6 +41,6 @@ Step 2 current progress:
 - Done: PageRank (on `IMPORTS` and `CALLS` subgraphs; complements in-degree with multi-hop influence)
 - Done: Community detection (Louvain modularity on undirected projections of `IMPORTS` and `CALLS`; label propagation fallback)
 - Done: Bar-chart visualizations for betweenness and PageRank on both subgraphs (PNG outputs per run)
-- Pending: Simple risk candidate list (combine centrality + community boundary + commit churn + test coverage gaps)
+- Done: Risk candidate list (`src/analysis/risk_score.py`) — per-`File` composite z-score combining centrality (IMPORTS + CALLS), commit churn (`MODIFIED_BY` out-degree), test gap (fraction of in-file symbols missing `TESTS`), and cross-community edge ratio. Reported as the final section of the analysis text.
 
-Note: We will move to the next step only after completing the current one.
+Note: Step 3 complete. Next step (Step 4) would be GraphRAG retrieval + LLM reasoning on the produced graph.
