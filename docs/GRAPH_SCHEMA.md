@@ -30,13 +30,11 @@ This document defines the complete graph schema for the GraphRAG Repository Anal
 - **Description**: Test functions with target hints for test coverage analysis
 - **Implementation**: ✅ Complete
 
-### Planned Node Types
-
 #### `Commit`
 - **Required fields**: `id`, `type`, `hash`, `author`, `date`, `message`
-- **Description**: Version control commits with metadata for change tracking
-- **Implementation**: 🚧 In Development
-- **Purpose**: Support for `MODIFIED_BY` edges and change frequency analysis
+- **Description**: Git commit metadata (id format `commit::<full-hash>`; subject only in `message`).
+- **Implementation**: ✅ Complete (via `src/extractors/commit_extractor.py`, capped to `GraphBuilder.DEFAULT_MAX_COMMITS = 200` most recent commits; skipped for non-git working trees or when `git` is unavailable).
+- **Purpose**: Anchor `MODIFIED_BY` edges for change-frequency / churn analysis.
 
 ## 🔗 Edge Types and Required Fields
 
@@ -60,36 +58,30 @@ This document defines the complete graph schema for the GraphRAG Repository Anal
 - **Description**: Test coverage relationships
 - **Implementation**: ✅ Complete
 
-### Planned Edge Types
-
 #### `CALLS`
 - **Required fields**: `source`, `target`, `type`
-- **Direction**: `Function -> Function`
-- **Description**: Function call relationships for dependency analysis
-- **Implementation**: 🚧 In Development
-- **Purpose**: Advanced dependency analysis and call graph construction
+- **Direction**: `Function -> Function` or `Function -> Class`
+- **Description**: Static call-sites inside function bodies, resolved against `Function` / `Class` nodes by simple name lookup.
+- **Implementation**: ✅ Complete
 
 #### `MODIFIED_BY`
 - **Required fields**: `source`, `target`, `type`
 - **Direction**: `File -> Commit`
-- **Description**: File modification history from version control
-- **Implementation**: 🚧 In Development
-- **Purpose**: Change frequency analysis and hot-spot identification
+- **Description**: File touched by a commit, read from `git log --no-merges --name-only`. Out-degree of a `File` approximates commit churn; in-degree of a `Commit` is the number of files it changed.
+- **Implementation**: ✅ Complete (only emitted when the repository has a `.git` directory and `git` is on `PATH`).
 
 ## 🎯 Current Implementation Status
 
 ### ✅ Completed Features
-- **Node Extraction**: File, Function, Class, Test nodes with full metadata
-- **Edge Construction**: IMPORTS, IN_FILE, TESTS relationships
+- **Node Extraction**: File, Function, Class, Test, Commit nodes with full metadata
+- **Edge Construction**: IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY relationships
 - **Schema Validation**: Complete validation against fixed dictionaries
 - **Web Integration**: Full compatibility with web application
 - **Analysis Pipeline**: Integration with centrality metrics and quality analysis
 
 ### 🚧 In Development
-- **Commit Nodes**: Git history integration for change tracking
-- **CALLS Edges**: Advanced function call analysis
-- **MODIFIED_BY Edges**: Version control integration
-- **Enhanced Validation**: Extended schema validation for new types
+- **Enhanced centrality**: Betweenness, community detection, hot-spot scoring
+- **Per-author / per-file churn windows**: Extending `MODIFIED_BY` with time-bucketed views
 
 ### 📋 GraphRAG Integration Plans
 - **Vector Embeddings**: Code semantic representation for retrieval

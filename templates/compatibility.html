@@ -490,14 +490,16 @@
                     <li><code>Function</code> — a function or method; linked to its file via <code>IN_FILE</code>.</li>
                     <li><code>Class</code> — a class definition; linked to its file via <code>IN_FILE</code>.</li>
                     <li><code>Test</code> — a test case/fixture extracted from test files; <code>TESTS</code> edges point to what it exercises.</li>
+                    <li><code>Commit</code> — a git commit (hash + author + ISO date + subject) read from <code>git log</code>; emitted only when the repository has a <code>.git</code> directory. Capped to the most recent commits to keep the graph manageable.</li>
                 </ul>
                 <h4>Edge types (implemented)</h4>
                 <p class="edge-def"><code>IMPORTS</code> — <strong>File → File</strong>. The source file’s import statements resolve to another module file in this repo.</p>
                 <p class="edge-def"><code>IN_FILE</code> — <strong>Function or Class → File</strong>. The symbol lives inside that file (nests code structure under files).</p>
                 <p class="edge-def"><code>CALLS</code> — <strong>Function → Function or Class</strong>. Static call-sites inside function bodies are linked to known symbols by name.</p>
                 <p class="edge-def"><code>TESTS</code> — <strong>Test → Function or Class</strong>. The test is inferred to cover or reference that symbol (static link, not runtime coverage).</p>
+                <p class="edge-def"><code>MODIFIED_BY</code> — <strong>File → Commit</strong>. The file was touched by that commit (out-degree of a file approximates its commit churn; in-degree of a commit is how many files it changed).</p>
                 <p style="margin:14px 0 0 0;font-size:13px;color:#666;">
-                    The JSON schema also reserves other kinds (e.g. <code>Commit</code>) for future work; they are not emitted by the current Python extractor.
+                    <code>Commit</code> + <code>MODIFIED_BY</code> are skipped automatically for non-git working trees (e.g. ZIP uploads).
                 </p>
             </div>
         </details>
@@ -534,9 +536,9 @@
                 The graph analysis will:
             </p>
             <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
-                <li>Extract File, Function, Class, and Test nodes</li>
-                <li>Build IMPORTS, IN_FILE, CALLS, and TESTS relationships</li>
-                <li>Generate degree centrality metrics</li>
+                <li>Extract File, Function, Class, Test, and Commit nodes (Commit only when <code>.git</code> exists)</li>
+                <li>Build IMPORTS, IN_FILE, CALLS, TESTS, and MODIFIED_BY relationships</li>
+                <li>Generate degree centrality metrics (in/out per edge type, including commit churn)</li>
                 <li>Identify potential quality risks and architectural insights</li>
                 <li>Provide visual summaries and detailed reports</li>
             </ul>

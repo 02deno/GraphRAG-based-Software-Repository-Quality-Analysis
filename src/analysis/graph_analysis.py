@@ -69,6 +69,8 @@ def format_analysis_report(
     calls_out: List[Tuple[str, int]],
     tests_in: List[Tuple[str, int]],
     tests_out: List[Tuple[str, int]],
+    modified_by_in: List[Tuple[str, int]],
+    modified_by_out: List[Tuple[str, int]],
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
@@ -87,6 +89,8 @@ def format_analysis_report(
         calls_out: Top nodes by outgoing CALLS edges.
         tests_in: Top nodes by incoming TESTS edges.
         tests_out: Top nodes by outgoing TESTS edges.
+        modified_by_in: Top nodes by incoming MODIFIED_BY edges (commits with most files).
+        modified_by_out: Top nodes by outgoing MODIFIED_BY edges (files with most commits).
         path_by_id: Node id to path map for display.
         top_k_value: How many top entries to show per section.
 
@@ -167,6 +171,22 @@ def format_analysis_report(
             path_by_id,
         )
     )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} commits by incoming MODIFIED_BY edges (files changed per commit):",
+            modified_by_in,
+            path_by_id,
+        )
+    )
+    lines.append("")
+    lines.extend(
+        format_top_nodes_section(
+            f"Top {top_k_value} files by outgoing MODIFIED_BY edges (commit churn):",
+            modified_by_out,
+            path_by_id,
+        )
+    )
     return "\n".join(lines)
 
 
@@ -216,8 +236,11 @@ def generate_analysis_text_report(
     in_file_in, in_file_out = degrees_by_type.get("IN_FILE", (Counter(), Counter()))
     calls_in, calls_out = degrees_by_type.get("CALLS", (Counter(), Counter()))
     tests_in, tests_out = degrees_by_type.get("TESTS", (Counter(), Counter()))
+    modified_by_in, modified_by_out = degrees_by_type.get(
+        "MODIFIED_BY", (Counter(), Counter())
+    )
 
-    _notify(64, "Analysis: assembling plain-text sections (imports, IN_FILE, CALLS, TESTS)…")
+    _notify(64, "Analysis: assembling plain-text sections (imports, IN_FILE, CALLS, TESTS, MODIFIED_BY)…")
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
@@ -231,6 +254,8 @@ def generate_analysis_text_report(
         calls_out=top_k(calls_out, top_k_value),
         tests_in=top_k(tests_in, top_k_value),
         tests_out=top_k(tests_out, top_k_value),
+        modified_by_in=top_k(modified_by_in, top_k_value),
+        modified_by_out=top_k(modified_by_out, top_k_value),
         path_by_id=path_by_id,
         top_k_value=top_k_value,
     )

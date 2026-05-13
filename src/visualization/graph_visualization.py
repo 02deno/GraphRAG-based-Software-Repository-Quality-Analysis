@@ -226,11 +226,13 @@ def generate_visual_summary(
     structure_output_in_file: Path | None = None,
     structure_output_calls: Path | None = None,
     structure_output_tests: Path | None = None,
+    structure_output_modified_by: Path | None = None,
     analysis_output: Path | None = None,
     analysis_output_imports: Path | None = None,
     analysis_output_in_file: Path | None = None,
     analysis_output_calls: Path | None = None,
     analysis_output_tests: Path | None = None,
+    analysis_output_modified_by: Path | None = None,
     summary_output: Path | None = None,
     progress_callback: Callable[[int, str], None] | None = None,
 ) -> tuple[List[str], Dict[str, object]]:
@@ -246,11 +248,13 @@ def generate_visual_summary(
         structure_output_in_file: Optional path for IN_FILE-only structure image.
         structure_output_calls: Optional path for CALLS-only structure image.
         structure_output_tests: Optional path for TESTS-only structure image.
+        structure_output_modified_by: Optional path for MODIFIED_BY-only structure image.
         analysis_output: Optional path for combined degree bar chart image.
         analysis_output_imports: Optional path for IMPORTS degree bar chart.
         analysis_output_in_file: Optional path for IN_FILE degree bar chart.
         analysis_output_calls: Optional path for CALLS degree bar chart.
         analysis_output_tests: Optional path for TESTS degree bar chart.
+        analysis_output_modified_by: Optional path for MODIFIED_BY degree bar chart.
         summary_output: Optional path for the textual summary file.
         progress_callback: Optional ``(percent, message)`` updates during matplotlib work.
 
@@ -283,6 +287,7 @@ def generate_visual_summary(
     in_file_edges = [edge for edge in edges if edge.get("type") == "IN_FILE"]
     calls_edges = [edge for edge in edges if edge.get("type") == "CALLS"]
     tests_edges = [edge for edge in edges if edge.get("type") == "TESTS"]
+    modified_by_edges = [edge for edge in edges if edge.get("type") == "MODIFIED_BY"]
 
     repo_name = graph_stem_display_name(graph_path)
     graph_label = f"{repo_name} — {human_readable_graph_edge_label(edges)}"
@@ -290,6 +295,7 @@ def generate_visual_summary(
     in_file_graph_label = f"{repo_name} — IN_FILE graph"
     calls_graph_label = f"{repo_name} — CALLS graph"
     tests_graph_label = f"{repo_name} — TESTS graph"
+    modified_by_graph_label = f"{repo_name} — MODIFIED_BY graph"
 
     structure_output = (
         structure_output
@@ -311,6 +317,10 @@ def generate_visual_summary(
         structure_output_tests
         or Path(f"results/visuals/{repo_name}_graph_structure_tests.png").resolve()
     )
+    structure_output_modified_by = (
+        structure_output_modified_by
+        or Path(f"results/visuals/{repo_name}_graph_structure_modified_by.png").resolve()
+    )
     analysis_output = (
         analysis_output
         or Path(f"results/visuals/{repo_name}_graph_degree_analysis.png").resolve()
@@ -330,6 +340,10 @@ def generate_visual_summary(
     analysis_output_tests = (
         analysis_output_tests
         or Path(f"results/visuals/{repo_name}_graph_degree_analysis_tests.png").resolve()
+    )
+    analysis_output_modified_by = (
+        analysis_output_modified_by
+        or Path(f"results/visuals/{repo_name}_graph_degree_analysis_modified_by.png").resolve()
     )
     summary_output = (
         summary_output
@@ -354,10 +368,12 @@ def generate_visual_summary(
         in_file_graph = compute_graph_for_edge_type(nodes, edges, "IN_FILE")
         calls_graph = compute_graph_for_edge_type(nodes, edges, "CALLS")
         tests_graph = compute_graph_for_edge_type(nodes, edges, "TESTS")
+        modified_by_graph = compute_graph_for_edge_type(nodes, edges, "MODIFIED_BY")
         imports_in_degree, imports_out_degree = compute_in_out_degrees(imports_edges)
         in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
         calls_in_degree, calls_out_degree = compute_in_out_degrees(calls_edges)
         tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
+        modified_by_in_degree, modified_by_out_degree = compute_in_out_degrees(modified_by_edges)
 
         imports_selected = select_structure_nodes(
             graph=imports_graph,
@@ -381,6 +397,12 @@ def generate_visual_summary(
             graph=tests_graph,
             in_degree=tests_in_degree,
             out_degree=tests_out_degree,
+            top_n=max(5, structure_nodes),
+        )
+        modified_by_selected = select_structure_nodes(
+            graph=modified_by_graph,
+            in_degree=modified_by_in_degree,
+            out_degree=modified_by_out_degree,
             top_n=max(5, structure_nodes),
         )
 
@@ -432,6 +454,20 @@ def generate_visual_summary(
             logger.info("visualization_saved path=%s", structure_output_tests)
             report_lines.append(f"TESTS structure visualization saved to: {structure_output_tests}")
 
+        if modified_by_selected:
+            _pv(86, f"Visualization: MODIFIED_BY-only structure → {structure_output_modified_by.name}")
+            plot_structure_subgraph(
+                modified_by_graph,
+                modified_by_selected,
+                path_by_id,
+                structure_output_modified_by,
+                modified_by_graph_label,
+            )
+            logger.info("visualization_saved path=%s", structure_output_modified_by)
+            report_lines.append(
+                f"MODIFIED_BY structure visualization saved to: {structure_output_modified_by}"
+            )
+
     else:
         report_lines.append("Skipping structure visualization because skip_structure=True.")
 
@@ -444,6 +480,7 @@ def generate_visual_summary(
     in_file_in_degree, in_file_out_degree = compute_in_out_degrees(in_file_edges)
     calls_in_degree, calls_out_degree = compute_in_out_degrees(calls_edges)
     tests_in_degree, tests_out_degree = compute_in_out_degrees(tests_edges)
+    modified_by_in_degree, modified_by_out_degree = compute_in_out_degrees(modified_by_edges)
 
     _pv(88, f"Visualization: IMPORTS degree bars → {analysis_output_imports.name}")
     plot_degree_bars(
@@ -493,7 +530,19 @@ def generate_visual_summary(
     logger.info("visualization_saved path=%s", analysis_output_tests)
     report_lines.append(f"TESTS degree analysis saved to: {analysis_output_tests}")
 
-    _pv(92, "Visualization: composing text summary (per edge-type degree leaders)…")
+    _pv(93, f"Visualization: MODIFIED_BY degree bars → {analysis_output_modified_by.name}")
+    plot_degree_bars(
+        modified_by_in_degree,
+        modified_by_out_degree,
+        path_by_id,
+        top_k,
+        analysis_output_modified_by,
+        modified_by_graph_label,
+    )
+    logger.info("visualization_saved path=%s", analysis_output_modified_by)
+    report_lines.append(f"MODIFIED_BY degree analysis saved to: {analysis_output_modified_by}")
+
+    _pv(93, "Visualization: composing text summary (per edge-type degree leaders)…")
     summary_text = build_visual_summary(
         graph_path=graph_path,
         nodes=nodes,
@@ -553,6 +602,11 @@ def main() -> None:
         help="Output image for TESTS structure graph",
     )
     parser.add_argument(
+        "--structure-output-modified-by",
+        default="results/visuals/graph_structure_modified_by.png",
+        help="Output image for MODIFIED_BY structure graph",
+    )
+    parser.add_argument(
         "--analysis-output",
         default="results/visuals/graph_degree_analysis.png",
         help="Output image for overall degree analysis",
@@ -576,6 +630,11 @@ def main() -> None:
         "--analysis-output-tests",
         default="results/visuals/graph_degree_analysis_tests.png",
         help="Output image for TESTS degree analysis",
+    )
+    parser.add_argument(
+        "--analysis-output-modified-by",
+        default="results/visuals/graph_degree_analysis_modified_by.png",
+        help="Output image for MODIFIED_BY degree analysis",
     )
     parser.add_argument(
         "--summary-output",
@@ -607,11 +666,13 @@ def main() -> None:
         structure_output_in_file=Path(args.structure_output_in_file).resolve(),
         structure_output_calls=Path(args.structure_output_calls).resolve(),
         structure_output_tests=Path(args.structure_output_tests).resolve(),
+        structure_output_modified_by=Path(args.structure_output_modified_by).resolve(),
         analysis_output=Path(args.analysis_output).resolve(),
         analysis_output_imports=Path(args.analysis_output_imports).resolve(),
         analysis_output_in_file=Path(args.analysis_output_in_file).resolve(),
         analysis_output_calls=Path(args.analysis_output_calls).resolve(),
         analysis_output_tests=Path(args.analysis_output_tests).resolve(),
+        analysis_output_modified_by=Path(args.analysis_output_modified_by).resolve(),
         summary_output=Path(args.summary_output).resolve(),
     )
     save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])

@@ -256,9 +256,10 @@
                 <p class="schema-edge-def"><code>IN_FILE</code> — <strong>Function or Class → File</strong>. The symbol is defined inside that file.</p>
                 <p class="schema-edge-def"><code>CALLS</code> — <strong>Function → Function or Class</strong>. A function body includes a statically extracted call-site targeting that symbol.</p>
                 <p class="schema-edge-def"><code>TESTS</code> — <strong>Test → Function or Class</strong>. The test is statically linked to the symbol it targets (not a runtime coverage metric).</p>
+                <p class="schema-edge-def"><code>MODIFIED_BY</code> — <strong>File → Commit</strong>. The file was changed by that commit (read from <code>git log</code>); only emitted when the working tree has a <code>.git</code> directory.</p>
                 <p class="schema-note" style="margin-bottom:0;">
                     Node meanings: <code>File</code> = one Python module path; <code>Function</code> / <code>Class</code> = definitions;
-                    <code>Test</code> = extracted test entity. Reserved schema types (e.g. <code>Commit</code>) are not listed above unless they appear in this graph.
+                    <code>Test</code> = extracted test entity; <code>Commit</code> = git commit (short hash + author + ISO date + subject).
                 </p>
             </div>
         </div>

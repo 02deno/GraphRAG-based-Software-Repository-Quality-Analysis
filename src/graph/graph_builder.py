@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Dict, List, Set
 
 from src.extractors import (
+    CommitExtractor,
+    build_modified_by_edges,
     build_tests_edges,
     collect_python_files,
     extract_functions_and_classes,
@@ -19,6 +21,7 @@ from src.graph.edges.imports_edge import ImportsEdge
 from src.graph.edges.in_file_edge import InFileEdge
 from src.graph.edges.calls_edge import CallsEdge
 from src.graph.edges.tests_edge import TestsEdge
+from src.graph.nodes.commit_node import CommitNode
 from src.graph.nodes.file_node import FileNode
 from src.graph.nodes.function_node import FunctionNode
 from src.graph.nodes.tests_node import TestNode
@@ -30,13 +33,19 @@ logger = logging.getLogger(__name__)
 class GraphBuilder:
     """Orchestrate scanning a Python repo and assembling typed nodes and edges."""
 
-    def __init__(self, repo_path: Path) -> None:
+    DEFAULT_MAX_COMMITS = 200
+
+    def __init__(self, repo_path: Path, *, max_commits: int = DEFAULT_MAX_COMMITS) -> None:
         """Prepare empty stores keyed by the resolved repository root.
 
         Args:
             repo_path: Absolute path to the repository root directory.
+            max_commits: Cap on how many recent commits the commit extractor reads
+                (0 disables commit extraction entirely). Defaults to
+                :data:`DEFAULT_MAX_COMMITS`.
         """
         self.repo_path = repo_path
+        self.max_commits = max(0, int(max_commits))
         self.nodes: Dict[str, object] = {}
         self.edges: List[object] = []
         self.nodes_by_type: Dict[str, Dict[str, str]] = {
@@ -56,7 +65,8 @@ class GraphBuilder:
         Args:
             file_progress: Optional ``(stage, index, total, relative_path)`` hook where
                 ``stage`` is ``"scan"`` (file list), ``"extract"`` (imports + AST symbols),
-                or ``"tests"`` (test discovery). ``index`` is 0-based within that stage.
+                ``"tests"`` (test discovery), or ``"commits"`` (git history). ``index`` is
+                0-based within that stage.
         """
         python_files = collect_python_files(self.repo_path, exclude_dirs={"venv", "node_modules", "__pycache__"})
         n_py = len(python_files)
@@ -130,6 +140,46 @@ class GraphBuilder:
 
         self.edges.extend(test_edges)
         self.edges.extend(build_tests_edges(test_nodes, self.nodes_by_type))
+
+        self._extract_commits_and_modifications(file_nodes, file_progress)
+
+    def _extract_commits_and_modifications(
+        self,
+        file_nodes: List[FileNode],
+        file_progress: Callable[[str, int, int, str], None] | None,
+    ) -> None:
+        """Add ``Commit`` nodes and ``MODIFIED_BY`` edges from git history.
+
+        No-op for non-git working trees, when ``git`` is unavailable, or when
+        ``max_commits`` is zero. ``MODIFIED_BY`` edges are emitted from each
+        affected ``File`` node to the corresponding ``Commit`` node.
+        """
+        if self.max_commits == 0:
+            return
+
+        if file_progress is not None:
+            file_progress("commits", 0, 1, "git log")
+
+        extractor = CommitExtractor(self.repo_path, max_commits=self.max_commits)
+        commits, modifications = extractor.extract()
+        if not commits:
+            if file_progress is not None:
+                file_progress("commits", 1, 1, "no commits")
+            return
+
+        for commit_node in commits:
+            self.nodes[commit_node.id] = commit_node
+
+        known_file_ids = [file_node.path for file_node in file_nodes]
+        edges = build_modified_by_edges(modifications, known_file_ids)
+        self.edges.extend(edges)
+        logger.info(
+            "graph_build_commits commits=%d modified_by_edges=%d",
+            len(commits),
+            len(edges),
+        )
+        if file_progress is not None:
+            file_progress("commits", 1, 1, f"{len(commits)} commits")
 
     def _build_import_edges(self, file_id: str, imports: Set[str]) -> List[ImportsEdge]:
         """Resolve ``imports`` against collected module aliases and emit IMPORTS edges."""

@@ -83,16 +83,21 @@ GraphRAG_Project/
   - `function_node.py`: Function node model
   - `class_node.py`: Class node model
   - `tests_node.py`: Test node model
+  - `commit_node.py`: Commit node model (hash, author, ISO date, subject)
 - **`edges/`**: Individual edge type implementations
   - `imports_edge.py`: Import relationship model
   - `in_file_edge.py`: File containment model
+  - `calls_edge.py`: Function-to-function/class call relationship model
   - `tests_edge.py`: Test coverage model
+  - `modified_by_edge.py`: File → Commit relationship model
 
 ### Data Extraction Layer (`src/extractors/`)
-**Purpose**: AST-based code extraction modules
+**Purpose**: AST + VCS extraction modules
 - **`symbol_extractor.py`**: Functions and classes extraction
 - **`import_extractor.py`**: Import relationship extraction
+- **`calls_extractor.py`**: Static call-site collection for `CALLS` edges
 - **`tests_extractor.py`**: Test discovery and mapping (``test_*.py``, parents named ``tests`` / ``test`` / ``specs``, etc.)
+- **`commit_extractor.py`**: `git log` reader producing `Commit` nodes + `MODIFIED_BY` pairs (capped via `GraphBuilder.DEFAULT_MAX_COMMITS`; no-op without `.git`)
 - **`python_file_collector.py`**: Recursive ``*.py`` discovery from the repo root (includes ``backend/``, ``src/``, etc.; excludes name-based dirs like ``node_modules``)
 - **`__init__.py`**: Extraction utilities and exports
 
@@ -103,7 +108,7 @@ GraphRAG_Project/
 
 ### Visualization Layer (`src/visualization/`)
 **Purpose**: Graph visualization and reporting
-- **`graph_visualization.py`**: Structure subgraphs and degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, plus combined)
+- **`graph_visualization.py`**: Structure subgraphs and degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY, plus combined)
 - **`__init__.py`**: Visualization utilities and exports
 
 ### Statistics Layer (`src/stats/`)

@@ -74,7 +74,7 @@ def run_repository_pipeline(
     log_lines.append(f"Building graph for repository: {repo_path}")
 
     def _graph_file_progress(stage: str, idx: int, total: int, rel_path: str) -> None:
-        """Map builder file stages into coarse percent band 7–27 for SSE / UIs.
+        """Map builder file stages into coarse percent band 7–28 for SSE / UIs.
 
         To keep the web popup readable, emit only phase start and phase end
         (instead of per-file updates).
@@ -87,12 +87,21 @@ def run_repository_pipeline(
         if stage == "scan":
             lo, hi = 7, 11
         elif stage == "extract":
-            lo, hi = 11, 24
+            lo, hi = 11, 22
+        elif stage == "tests":
+            lo, hi = 22, 25
+        elif stage == "commits":
+            lo, hi = 25, 28
         else:
-            lo, hi = 24, 27
+            lo, hi = 25, 28
         span = hi - lo
         pct = lo + int(span * current / max(1, total))
-        if current == 1:
+        if stage == "commits":
+            if current == 1:
+                message = "Graph build [commits] reading git log…"
+            else:
+                message = f"Graph build [commits] completed ({rel_path})."
+        elif current == 1:
             message = f"Graph build [{stage}] started ({total} files)…"
         else:
             message = f"Graph build [{stage}] completed ({total}/{total})."
@@ -169,11 +178,13 @@ def run_repository_pipeline(
             structure_output_in_file=vdir / f"{prefix}_structure_in_file.png",
             structure_output_calls=vdir / f"{prefix}_structure_calls.png",
             structure_output_tests=vdir / f"{prefix}_structure_tests.png",
+            structure_output_modified_by=vdir / f"{prefix}_structure_modified_by.png",
             analysis_output=vdir / f"{prefix}_degree_analysis.png",
             analysis_output_imports=vdir / f"{prefix}_degree_analysis_imports.png",
             analysis_output_in_file=vdir / f"{prefix}_degree_analysis_in_file.png",
             analysis_output_calls=vdir / f"{prefix}_degree_analysis_calls.png",
             analysis_output_tests=vdir / f"{prefix}_degree_analysis_tests.png",
+            analysis_output_modified_by=vdir / f"{prefix}_degree_analysis_modified_by.png",
             summary_output=visual_summary_output,
             progress_callback=progress_callback,
         )

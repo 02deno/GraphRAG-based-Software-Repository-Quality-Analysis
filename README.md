@@ -41,9 +41,9 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **📱 Responsive Design**: Mobile-friendly interface
 
 ### Core Analysis Features
-- **Graph Construction**: File, Function, Class, and Test nodes (all ``*.py`` under the repo root, including e.g. ``backend/`` — not limited to a top-level ``src/`` layout)
-- **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, and TESTS edges
-- **Quality Metrics**: Degree centrality and structural analysis
+- **Graph Construction**: File, Function, Class, Test, and Commit nodes (all ``*.py`` under the repo root, including e.g. ``backend/`` — not limited to a top-level ``src/`` layout). Commit nodes come from ``git log`` and are skipped automatically when the working tree has no ``.git`` directory.
+- **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, TESTS, and MODIFIED_BY (File → Commit) edges
+- **Quality Metrics**: Degree centrality and structural analysis (per edge type, including commit churn via MODIFIED_BY)
 - **Visualization Support**: Graph structure and analysis reports
 
 ## 🏗️ Architecture
@@ -153,16 +153,15 @@ python src/main_pipeline.py --repo "PATH_TO_REPO" --top-k 10
 ### ✅ Implemented Features
 - **Web Application**: Full Flask-based interface
 - **Compatibility Checking**: Smart scoring system
-- **Graph Construction**: File, Function, Class, Test nodes
-- **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, TESTS edges
-- **Analysis**: Degree centrality and basic metrics
-- **Visualization**: Graph structure and analysis reports
+- **Graph Construction**: File, Function, Class, Test, Commit nodes
+- **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY edges (commit churn from `git log`)
+- **Analysis**: Degree centrality (in/out per edge type, including commit churn) and basic metrics
+- **Visualization**: Per-edge-type structure and degree bar charts (including MODIFIED_BY)
 
 ### 🚧 In Development
 - **GraphRAG Pipeline**: AI-powered retrieval and analysis
 - **Advanced Metrics**: Betweenness centrality, community detection
-- **Call Graph**: Function-to-function relationships
-- **Commit History**: Version control integration
+- **Hot-spot scoring**: Combine `MODIFIED_BY` churn with structural centrality and missing tests
 
 ### 📋 Planned Features
 - **LLM Integration**: Natural language quality insights

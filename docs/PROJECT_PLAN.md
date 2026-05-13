@@ -30,14 +30,15 @@ Step 2 current progress:
 - Done: thin CLI wrappers created in `src/build_graph.py`, `src/analyze_graph.py`, `src/visualize_graph.py`, `src/repo_stats.py`
 - Done: `Test` node extraction and `TESTS` edge generation
 - Done: `IMPORTS` and `IN_FILE` edge generation
-- Pending:
-  - `Commit` nodes
-  - `CALLS`, `MODIFIED_BY` edges
+- Done: `CALLS` edge generation (function-to-function / function-to-class call-site resolution by name)
+- Done: `Commit` node extraction (`src/extractors/commit_extractor.py`, reads `git log`, capped to `GraphBuilder.DEFAULT_MAX_COMMITS = 200`)
+- Done: `MODIFIED_BY` edge generation (File → Commit; skipped when no `.git` directory or `git` is unavailable)
 
 ## Step 3 - Initial Analysis
 
-- Degree centrality
-- Betweenness centrality
-- Simple risk candidate list
+- Degree centrality (in/out per edge type, including `MODIFIED_BY` as commit churn proxy)
+- Betweenness centrality (pending)
+- Community detection (pending)
+- Simple risk candidate list (pending)
 
 Note: We will move to the next step only after completing the current one.

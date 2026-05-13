@@ -64,16 +64,50 @@ def compute_in_out_degrees_by_edge_type(
     return degrees_by_type
 
 
+_COMMIT_LABEL_MAX = 80
+
+
+def _commit_display_label(node: Dict[str, str]) -> str:
+    """Build a short human-readable label for a Commit node.
+
+    Args:
+        node: Commit node dict (expects ``hash`` / ``message``; falls back to id).
+
+    Returns:
+        Truncated ``<short-hash> — <subject>`` style label, or the id if metadata
+        is missing.
+    """
+    commit_hash = str(node.get("hash") or "")
+    message = str(node.get("message") or "").strip()
+    short = commit_hash[:8] if commit_hash else ""
+    if not short and not message:
+        return str(node.get("id", ""))
+    base = f"{short} — {message}" if short else message
+    if len(base) > _COMMIT_LABEL_MAX:
+        base = base[: _COMMIT_LABEL_MAX - 1] + "…"
+    return base
+
+
 def map_node_id_to_path(nodes: List[Dict[str, str]]) -> Dict[str, str]:
-    """Map each node id to a display path (falls back to id).
+    """Map each node id to a display label (path for files, hash+subject for commits).
 
     Args:
         nodes: Node dicts from a graph document.
 
     Returns:
-        Dict mapping node id to ``path`` field when present.
+        Dict mapping node id to a display string suitable for reports and charts.
+        Files use ``path``; commits use a short ``<hash> — <subject>`` summary; any
+        other node type falls back to its ``id``.
     """
-    return {node["id"]: node.get("path", node["id"]) for node in nodes}
+    labels: Dict[str, str] = {}
+    for node in nodes:
+        node_id = node["id"]
+        node_type = node.get("type", "")
+        if node_type == "Commit":
+            labels[node_id] = _commit_display_label(node)
+        else:
+            labels[node_id] = node.get("path", node_id)
+    return labels
 
 
 def graph_stem_display_name(graph_path: Path) -> str:
