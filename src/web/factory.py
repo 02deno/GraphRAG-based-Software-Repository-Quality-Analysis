@@ -7,6 +7,8 @@ import os
 from flask import Flask, request
 
 from src.logging_config import configure_standard_logging, get_logger
+from src.graphrag.chat_service import GraphRagChatService
+from src.graphrag.openai_compatible_client import load_chat_client_from_env
 from src.web.blueprints.web import web_bp
 from src.web.config import get_project_root, load_flask_config
 from src.web.handlers.repository_handler import RepositoryHandler
@@ -16,8 +18,9 @@ from src.web.services.analysis_service import AnalysisService
 def create_app() -> Flask:
     """Create and configure the Flask application with blueprints and shared services.
 
-    Services are stored on ``app.extensions`` under ``repo_handler`` and
-    ``analysis_service`` so routes stay free of module-level globals.
+    Services are stored on ``app.extensions`` under ``repo_handler``,
+    ``analysis_service``, and ``graphrag_chat_service`` so routes stay free of
+    module-level globals.
 
     Returns:
         A fully wired :class:`flask.Flask` instance (same object ``app`` as in ``app.py``).
@@ -32,6 +35,11 @@ def create_app() -> Flask:
 
     app.extensions["repo_handler"] = RepositoryHandler(app.config["UPLOAD_FOLDER"])
     app.extensions["analysis_service"] = AnalysisService()
+    try:
+        _llm = load_chat_client_from_env()
+    except ValueError:
+        _llm = None
+    app.extensions["graphrag_chat_service"] = GraphRagChatService(_llm)
     app.register_blueprint(web_bp)
 
     @app.after_request

@@ -43,4 +43,15 @@ Step 2 current progress:
 - Done: Bar-chart visualizations for betweenness and PageRank on both subgraphs (PNG outputs per run)
 - Done: Risk candidate list (`src/analysis/risk_score.py`) — per-`File` composite z-score combining centrality (IMPORTS + CALLS), commit churn (`MODIFIED_BY` out-degree), test gap (fraction of in-file symbols missing `TESTS`), and cross-community edge ratio. Reported as the final section of the analysis text.
 
-Note: Step 3 complete. Next step (Step 4) would be GraphRAG retrieval + LLM reasoning on the produced graph.
+Note: Step 3 complete.
+
+## Step 4 - GraphRAG (retrieval + LLM)
+
+- Done: Lexical seeding over node text (`src/graphrag/query_index.py`) with token-overlap scoring (lightweight hybrid without embeddings).
+- Done: Typed ``MultiDiGraph`` + bounded undirected BFS expansion (`src/graphrag/subgraph_retriever.py`).
+- Done: Subgraph + ``analysis_view`` text formatting for LLM context (`context_formatter.py`, `analysis_context.py`).
+- Done: OpenAI-compatible HTTP client (``httpx``) + env-based wiring for hosted APIs and Ollama (`openai_compatible_client.py`).
+- Done: Orchestrator `GraphRagChatService` (`chat_service.py`).
+- Done: Web ``POST /analysis-results/<run_dir>/chat`` + results page assistant panel (`templates/results_final.html`).
+- Done: Community-aware extra seeds via ``member_ids`` on Louvain preview rows (`community_seeds.py`, `analysis_web_payload.py`).
+

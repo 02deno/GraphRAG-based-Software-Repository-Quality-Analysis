@@ -256,6 +256,31 @@ def analysis_results_page(run_dir: str):
     return render_template("results_final.html", results=results)
 
 
+@web_bp.route("/analysis-results/<run_dir>/chat", methods=["POST"])
+def analysis_results_chat(run_dir: str):
+    """Answer a natural-language question using subgraph retrieval and an LLM.
+
+    Expects JSON ``{"message": "..."}``. Requires ``GRAPHRAG_OPENAI_BASE_URL`` and
+    ``GRAPHRAG_CHAT_MODEL`` (see README). Returns JSON with ``ok``, ``reply`` on
+    success, and diagnostic fields such as ``seed_nodes`` and ``subgraph_node_count``.
+    """
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        return jsonify({"ok": False, "error": "Analysis results folder was not found or is not valid."}), 404
+    svc = current_app.extensions.get("graphrag_chat_service")
+    if svc is None:
+        return jsonify({"ok": False, "error": "GraphRAG chat service is not registered."}), 503
+    payload = request.get_json(silent=True) or {}
+    message = str(payload.get("message", "")).strip()
+    logger.info("graphrag_chat run_dir=%s message_chars=%d", run_dir, len(message))
+    result = svc.answer(base, message)
+    if not result.get("ok"):
+        err = str(result.get("error", ""))
+        status = 503 if "not configured" in err.lower() else 400
+        return jsonify(result), status
+    return jsonify(result)
+
+
 @web_bp.route("/analysis-results/latest")
 def analysis_results_latest():
     """Load the most recent ``results/web_analysis_*`` run and render results."""

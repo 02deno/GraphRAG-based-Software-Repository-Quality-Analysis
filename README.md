@@ -36,6 +36,10 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
 - **📊 Analysis progress**: Compatibility sends **SSE** (``X-GraphRAG-Analyze-Stream``) so the overlay can list **live** pipeline messages (per-file graph build, analysis phases, each chart PNG). If the response is plain **HTML** (buffered dev server), the same page shows **timed milestones** (unique lines with elapsed seconds). See ``docs/MIDTERM_PROJECT_REPORT.md`` for a narrative report (add screenshots under ``docs/assets/``).
+- **GraphRAG assistant** (after a successful run): ask natural-language questions on the results page; the server retrieves a **bounded subgraph** from ``graph.json``, attaches a short **analysis_view** summary, and calls an OpenAI-compatible chat API. Configure before ``python run_web_app.py``:
+  - ``GRAPHRAG_OPENAI_BASE_URL`` — e.g. ``https://api.openai.com/v1`` or ``http://127.0.0.1:11434/v1`` (Ollama)
+  - ``GRAPHRAG_CHAT_MODEL`` — model id accepted by that server
+  - ``GRAPHRAG_OPENAI_API_KEY`` — bearer token for hosted APIs (often empty for local Ollama)
 - **📥 Downloadable Results**: Export JSON, text reports, structured **analysis_view.json** (same metrics as the card UI), individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
 - **📜 Structured logging**: UTC ISO timestamps and levels via ``GRAPHRAG_LOG_LEVEL``; duplicate stream to a **rotating** ``logs/graphrag.log`` (override with ``GRAPHRAG_LOG_FILE``, or set ``GRAPHRAG_LOG_TO_FILE=0`` for console-only); HTTP lines under ``src.web.request``
 - **📱 Responsive Design**: Mobile-friendly interface
@@ -59,7 +63,7 @@ GraphRAG_Project/
 │   ├── 📁 compatibility/             # Compatibility Checking
 │   │   ├── repo_checker.py           # Repository analysis & scoring
 │   │   └── __init__.py
-│   ├── 📁 graph/                    # Graph Model & Builder
+│   ├── 📁 graphrag/                 # GraphRAG: seeding, subgraph retrieval, LLM client, chat service
 │   │   ├── graph_builder.py          # Main graph construction
 │   │   ├── schema.py                # Node/edge schema definitions
 │   │   └── nodes/ & edges/         # Graph components

@@ -138,7 +138,7 @@ export FLASK_DEBUG=False
 ### Backend Components
 
 #### Flask Application (`src/web/app.py`)
-- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; compatibility sends ``X-GraphRAG-Progressive-UI`` + ``X-GraphRAG-Analyze-Stream`` for **SSE** with granular ``progress`` messages, then ``complete`` redirect; if the client receives **HTML** instead, it uses ``document.write``), ``GET /analysis-results/<run_dir>/visuals/<filename>`` (PNG charts), ``GET /analysis-results/<run_dir>/report.docx`` (single bundled Word export)
+- **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; compatibility sends ``X-GraphRAG-Progressive-UI`` + ``X-GraphRAG-Analyze-Stream`` for **SSE** with granular ``progress`` messages, then ``complete`` redirect; if the client receives **HTML** instead, it uses ``document.write``), ``GET /analysis-results/<run_dir>`` (results + **GraphRAG** assistant panel), ``POST /analysis-results/<run_dir>/chat`` (JSON assistant; subgraph retrieval + LLM), ``GET /analysis-results/<run_dir>/visuals/<filename>`` (PNG charts), ``GET /analysis-results/<run_dir>/report.docx`` (single bundled Word export)
 - **Logging**: ``GRAPHRAG_LOG_LEVEL`` (default ``INFO``); UTC lines on stderr **and** by default a rotating ``logs/graphrag.log``; ``GRAPHRAG_LOG_FILE`` / ``GRAPHRAG_LOG_TO_FILE``; each response as ``METHOD path -> status`` under ``src.web.request``
 - **Session Management**: Analysis state preservation
 - **Error Handling**: Comprehensive exception management

@@ -182,6 +182,7 @@ def build_analysis_web_view(
                         "size": size,
                         "preview": preview,
                         "remaining": max(0, size - preview_count),
+                        "member_ids": mlist[:preview_count],
                     }
                 )
         community_blocks.append(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Dict, Protocol
 
 
@@ -36,4 +36,18 @@ class AnalysisPipelineService(Protocol):
         ``pipeline_output``, ``results_dir``, ``visual_summary_text``, and
         ``visual_summary_path`` (path or ``None``).
         """
+        ...
+
+
+class ChatCompletionClient(Protocol):
+    """Minimal port for OpenAI-compatible chat completion HTTP APIs."""
+
+    def complete_chat(
+        self,
+        messages: Sequence[Mapping[str, str]],
+        *,
+        max_tokens: int | None = None,
+        temperature: float = 0.2,
+    ) -> str:
+        """Return assistant message text from a chat completion call."""
         ...

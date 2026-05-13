@@ -12,6 +12,7 @@ GraphRAG_Project/
 │   ├── utils/                         # Cross-layer filesystem helpers (e.g. repo slugs)
 │   ├── compatibility/                 # Compatibility Checking Layer
 │   ├── pipeline/                      # End-to-end pipeline orchestration (CLI + web)
+│   ├── graphrag/                      # GraphRAG: subgraph retrieval + LLM chat wiring
 │   ├── graph/                         # Graph Model & Construction Layer
 │   ├── extractors/                    # Data Extraction Layer
 │   ├── analysis/                      # Graph Analysis Layer
@@ -37,11 +38,11 @@ GraphRAG_Project/
 **Purpose**: Flask-based web interface for repository analysis
 - **`app.py`**: Exposes ``app = create_app()`` for ``run_web_app`` / WSGI servers
 - **`factory.py`**: ``create_app()`` wires config, extensions, and blueprints
-- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis from the compatibility page also sends ``X-GraphRAG-Analyze-Stream`` for **SSE** (``run_repository_pipeline`` reports per-file build steps and per-chart visualization steps); **HTML** + ``document.write`` remains the fallback when streaming is buffered.
+- **`blueprints/web.py`**: HTTP routes (blueprint name ``web`` → ``url_for('web.index')``, ``web.upload_repository``, ``web.compatibility_results``, ``web.analyze_repository``, ``web.analysis_results_page``, ``web.analysis_results_chat`` (JSON ``POST`` GraphRAG assistant), ``web.analysis_visual_asset``, …). Successful upload uses **redirect** to ``GET /compatibility`` so results reload cleanly; the landing page uses ``fetch`` with header ``X-GraphRAG-Progressive-UI`` for JSON validation errors and a step-style progress overlay while waiting. Graph analysis from the compatibility page also sends ``X-GraphRAG-Analyze-Stream`` for **SSE** (``run_repository_pipeline`` reports per-file build steps and per-chart visualization steps); **HTML** + ``document.write`` remains the fallback when streaming is buffered.
 - **`results_paths.py`**: Validates ``web_analysis_*`` run directory names and safe PNG filenames for chart URLs
 - **`report_docx.py`**: Builds a combined ``.docx`` export (text artifacts + embedded PNGs) for ``GET …/report.docx``
-- **`factory.py`**: Calls ``configure_standard_logging()`` and registers lightweight ``after_request`` access logging (``src.web.request``)
-- **`service_protocols.py`**: ``typing.Protocol`` ports for services (dependency inversion)
+- **`factory.py`**: Calls ``configure_standard_logging()`` and registers lightweight ``after_request`` access logging (``src.web.request``); wires ``graphrag_chat_service`` (LLM optional via ``GRAPHRAG_*`` env vars)
+- **`service_protocols.py`**: ``typing.Protocol`` ports for services (``CompatibilityService``, ``AnalysisPipelineService``, ``ChatCompletionClient`` for GraphRAG)
 - **`config.py`**: Project root resolution and Flask configuration (e.g. ``FLASK_SECRET_KEY``)
 - **`handlers/`**: Upload and repository filesystem operations
 - **`services/`**: Compatibility and pipeline orchestration for the UI
@@ -72,6 +73,16 @@ GraphRAG_Project/
 - **`run_pipeline.py`**: ``run_repository_pipeline`` orchestration
 - **`output_paths.py`**: Default output directories for CLI and web sessions (web uses ``new_web_session_results_dir(repo_slug)`` so folders include the repository label from upload/clone)
 - **`result.py`**: ``PipelineRunResult`` structured return type
+
+### GraphRAG layer (`src/graphrag/`)
+**Purpose**: Graph-first retrieval (bounded BFS on a typed ``networkx.MultiDiGraph``) plus optional LLM answering for the web assistant.
+- **`query_index.py`**: Lexical seed ranking over node fields (substring + token overlap).
+- **`subgraph_retriever.py`**: Multigraph build, undirected expansion, induced edge listing; query-aware default edge-type sets.
+- **`context_formatter.py`**: Serialize an induced subgraph to a capped plain-text block for the model.
+- **`analysis_context.py`**: Short text summary from persisted ``analysis_view.json`` (risk, centrality, communities).
+- **`community_seeds.py`**: Extra seeds from Louvain community rows when previews overlap the question (uses ``member_ids`` from ``analysis_view``).
+- **`openai_compatible_client.py`**: ``httpx``-based ``POST /chat/completions`` client (OpenAI + Ollama-compatible bases).
+- **`chat_service.py`**: ``GraphRagChatService`` orchestrates load → seeds → expand → format → LLM.
 
 ### Graph Model & Construction Layer (`src/graph/`)
 **Purpose**: Core graph data model and construction logic

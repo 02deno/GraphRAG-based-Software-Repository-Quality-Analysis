@@ -200,13 +200,13 @@ Any small single-package repo (e.g. a course homework folder with a handful of m
 | Area | Implemented | Missing / future |
 |------|-------------|------------------|
 | Languages | Python `.py` under repo root | Other languages; notebooks |
-| Nodes | File, Function, Class, Test | `Commit` nodes |
-| Edges | IMPORTS, IN_FILE, TESTS, CALLS | `MODIFIED_BY` |
-| Analysis | Static degree / ranking text | PageRank, communities, temporal graphs |
+| Nodes | File, Function, Class, Test, Commit | — |
+| Edges | IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY | Finer-grained call disambiguation |
+| Analysis | Degree, betweenness, PageRank, Louvain communities, risk scores | Temporal / dynamic graphs |
 | Viz | Matplotlib + NetworkX PNGs | Interactive webGL graph explorer |
-| Web | Upload URL/path, compatibility, analyze, results, DOCX | ZIP upload in main UI (handler exists) |
+| Web | Upload URL/path, compatibility, analyze, results, DOCX, GraphRAG chat panel | ZIP upload in main UI (handler exists) |
 | Streaming | SSE progress + HTML fallback | Guaranteed flush on Flask dev server (WSGI-dependent) |
-| RAG / LLM | Not in scope for this graph milestone | Retrieval over graph + LLM Q&A |
+| RAG / LLM | Graph-first retrieval (BFS subgraph) + ``analysis_view`` grounding + ``POST …/chat`` (OpenAI-compatible / Ollama via env) | Dense embedding index for seeding |
 
 ---
 
@@ -229,7 +229,7 @@ Any small single-package repo (e.g. a course homework folder with a handful of m
 1. Improve **`CALLS`** precision (disambiguation across modules/classes beyond simple name/attribute heuristic).  
 2. **Interactive graph** (subset) in the browser with zoom/filter by edge type.  
 3. **ZIP** upload exposed in `index.html` with the same compatibility gate.  
-4. Optional **embedding** step: chunk symbols/files → vector index → “ask the repo” (true GraphRAG).
+4. Optional **dense embedding** index to improve lexical seeding on paraphrased questions (vector channel only; primary context remains graph traversal).
 
 ---
 

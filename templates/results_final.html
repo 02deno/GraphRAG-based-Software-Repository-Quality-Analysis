@@ -400,6 +400,48 @@
         }
         .qv-raw-details .analysis-text { margin-top: 10px; max-height: 480px; }
         .qv-empty { color: #868e96; font-style: italic; margin: 0; font-size: 13px; }
+        .graphrag-panel {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 24px;
+        }
+        .graphrag-panel h3 {
+            margin-top: 0;
+            color: #166534;
+            border-bottom: 1px solid #bbf7d0;
+            padding-bottom: 10px;
+        }
+        .graphrag-panel textarea {
+            width: 100%;
+            min-height: 72px;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .graphrag-meta {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .graphrag-reply {
+            margin-top: 14px;
+            padding: 14px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            max-height: 420px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -748,6 +790,66 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
+
+        {% if results.results_run_dir and results.graph_data %}
+        <div class="results-section graphrag-panel">
+            <h3>GraphRAG assistant</h3>
+            <p class="qv-side-section-note">
+                Ask about structure, tests, commits, or risk. Answers use <strong>subgraph retrieval</strong>
+                from this run&rsquo;s <code>graph.json</code> and summaries from <code>analysis_view.json</code>.
+                Set <code>GRAPHRAG_OPENAI_BASE_URL</code> and <code>GRAPHRAG_CHAT_MODEL</code> before starting the app;
+                use <code>GRAPHRAG_OPENAI_API_KEY</code> for hosted APIs. For Ollama, use base URL
+                <code>http://127.0.0.1:11434/v1</code>.
+            </p>
+            <label for="graphrag-input" class="qv-side-section-note"><strong>Your question</strong></label>
+            <textarea id="graphrag-input" placeholder="e.g. What calls into module X? Which areas lack tests?" aria-label="GraphRAG question"></textarea>
+            <div style="margin-top:10px;">
+                <button type="button" class="btn btn-success" id="graphrag-send">Ask</button>
+            </div>
+            <div id="graphrag-meta" class="graphrag-meta" aria-live="polite"></div>
+            <div id="graphrag-reply" class="graphrag-reply" style="display:none;" aria-live="polite"></div>
+        </div>
+        <script>
+        (function () {
+            var sendBtn = document.getElementById('graphrag-send');
+            var inputEl = document.getElementById('graphrag-input');
+            var metaEl = document.getElementById('graphrag-meta');
+            var replyEl = document.getElementById('graphrag-reply');
+            if (!sendBtn || !inputEl || !metaEl || !replyEl) return;
+            sendBtn.addEventListener('click', function () {
+                var msg = (inputEl.value || '').trim();
+                if (!msg) {
+                    metaEl.textContent = 'Enter a question first.';
+                    return;
+                }
+                metaEl.textContent = 'Retrieving subgraph and calling the model…';
+                replyEl.style.display = 'none';
+                replyEl.textContent = '';
+                var url = {{ url_for('web.analysis_results_chat', run_dir=results.results_run_dir)|tojson }};
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; }); })
+                .then(function (res) {
+                    var data = res.data || {};
+                    if (!data.ok) {
+                        metaEl.textContent = (data.error || 'Request failed') + (res.status ? ' (HTTP ' + res.status + ')' : '');
+                        return;
+                    }
+                    metaEl.textContent = 'Seeds: ' + (data.seed_nodes || []).slice(0, 8).join(', ')
+                        + (data.seed_nodes && data.seed_nodes.length > 8 ? '…' : '')
+                        + ' | subgraph nodes=' + (data.subgraph_node_count || 0)
+                        + ', edges=' + (data.subgraph_edge_count || 0);
+                    replyEl.textContent = data.reply || '';
+                    replyEl.style.display = 'block';
+                }).catch(function (err) {
+                    metaEl.textContent = 'Network error: ' + err;
+                });
+            });
+        })();
+        </script>
         {% endif %}
 
         <!-- Pipeline Output -->
