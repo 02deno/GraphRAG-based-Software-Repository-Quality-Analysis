@@ -155,7 +155,7 @@ python src/main_pipeline.py --repo "PATH_TO_REPO" --top-k 10
 - **Compatibility Checking**: Smart scoring system
 - **Graph Construction**: File, Function, Class, Test, Commit nodes
 - **Relationship Mapping**: IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY edges (commit churn from `git log`)
-- **Analysis**: Degree centrality (in/out per edge type, including commit churn) and basic metrics
+- **Analysis**: Degree centrality (in/out per edge type, including commit churn), **betweenness centrality**, and **PageRank** on the `IMPORTS` and `CALLS` subgraphs
 - **Visualization**: Per-edge-type structure and degree bar charts (including MODIFIED_BY)
 
 ### 🚧 In Development

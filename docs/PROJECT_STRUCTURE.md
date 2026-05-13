@@ -103,7 +103,8 @@ GraphRAG_Project/
 
 ### Graph Analysis Layer (`src/analysis/`)
 **Purpose**: Graph analysis and metrics calculation
-- **`graph_analysis.py`**: Degree centrality and basic metrics
+- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality sections)
+- **`centrality_measures.py`**: Pure helpers for betweenness centrality (sampled k=500 above 1000 nodes) and PageRank on typed subgraphs
 - **`__init__.py`**: Analysis utilities and exports
 
 ### Visualization Layer (`src/visualization/`)

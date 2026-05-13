@@ -36,9 +36,10 @@ Step 2 current progress:
 
 ## Step 3 - Initial Analysis
 
-- Degree centrality (in/out per edge type, including `MODIFIED_BY` as commit churn proxy)
-- Betweenness centrality (pending)
-- Community detection (pending)
-- Simple risk candidate list (pending)
+- Done: Degree centrality (in/out per edge type, including `MODIFIED_BY` as commit churn proxy)
+- Done: Betweenness centrality (on `IMPORTS` and `CALLS` subgraphs; sampled estimator k=500 above 1000 nodes for tractability)
+- Done: PageRank (on `IMPORTS` and `CALLS` subgraphs; complements in-degree with multi-hop influence)
+- Pending: Community detection (Louvain modularity on `IMPORTS` + `CALLS`)
+- Pending: Simple risk candidate list (combine centrality + commit churn + test coverage gaps)
 
 Note: We will move to the next step only after completing the current one.

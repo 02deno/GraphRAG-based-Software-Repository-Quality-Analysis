@@ -7,6 +7,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from src.analysis.centrality_measures import (
+    build_typed_subgraph,
+    compute_betweenness_centrality,
+    compute_pagerank,
+    top_k_scores,
+)
 from src.graph.json_document import (
     compute_in_out_degrees_by_edge_type,
     human_readable_graph_edge_label,
@@ -16,6 +22,8 @@ from src.graph.json_document import (
 )
 
 logger = logging.getLogger(__name__)
+
+_CENTRALITY_EDGE_TYPES: Tuple[str, ...] = ("IMPORTS", "CALLS")
 
 
 def top_k(counter: Counter, k: int) -> List[Tuple[str, int]]:
@@ -56,6 +64,36 @@ def format_top_nodes_section(
     return lines
 
 
+def format_top_scores_section(
+    title: str,
+    items: List[Tuple[str, float]],
+    path_by_id: Dict[str, str],
+    *,
+    precision: int = 4,
+) -> List[str]:
+    """Format a top-K section for **float** scores (betweenness, PageRank, …).
+
+    Args:
+        title: Section heading line.
+        items: Ranked ``(node_id, score)`` pairs where ``score`` is a float.
+        path_by_id: Mapping from node id to display label.
+        precision: Decimal places to show.
+
+    Returns:
+        Lines of plain text for the report section.
+    """
+    lines: List[str] = []
+    lines.append(title)
+    if items:
+        for node_id, score in items:
+            lines.append(
+                f"- {path_by_id.get(node_id, node_id)}: {score:.{precision}f}"
+            )
+    else:
+        lines.append("- None")
+    return lines
+
+
 def format_analysis_report(
     graph_path: Path,
     nodes: List[Dict[str, str]],
@@ -71,6 +109,7 @@ def format_analysis_report(
     tests_out: List[Tuple[str, int]],
     modified_by_in: List[Tuple[str, int]],
     modified_by_out: List[Tuple[str, int]],
+    centrality_sections: Dict[str, Dict[str, object]],
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
@@ -91,6 +130,10 @@ def format_analysis_report(
         tests_out: Top nodes by outgoing TESTS edges.
         modified_by_in: Top nodes by incoming MODIFIED_BY edges (commits with most files).
         modified_by_out: Top nodes by outgoing MODIFIED_BY edges (files with most commits).
+        centrality_sections: Per-edge-type centrality results. Keyed by edge token
+            (``"IMPORTS"`` / ``"CALLS"``) with values
+            ``{"betweenness": [(id, score), …], "betweenness_approximated": bool,
+            "pagerank": [(id, score), …]}``. Missing entries render as empty sections.
         path_by_id: Node id to path map for display.
         top_k_value: How many top entries to show per section.
 
@@ -187,7 +230,86 @@ def format_analysis_report(
             path_by_id,
         )
     )
+
+    for edge_type in _CENTRALITY_EDGE_TYPES:
+        section = centrality_sections.get(edge_type) or {}
+        betweenness = section.get("betweenness") or []
+        approximated = bool(section.get("betweenness_approximated"))
+        pagerank = section.get("pagerank") or []
+        lines.append("")
+        approx_suffix = " (sampled estimator)" if approximated else ""
+        lines.extend(
+            format_top_scores_section(
+                f"Top {top_k_value} nodes by betweenness centrality on {edge_type} graph{approx_suffix}:",
+                list(betweenness),
+                path_by_id,
+            )
+        )
+        lines.append("")
+        lines.extend(
+            format_top_scores_section(
+                f"Top {top_k_value} nodes by PageRank on {edge_type} graph:",
+                list(pagerank),
+                path_by_id,
+            )
+        )
     return "\n".join(lines)
+
+
+def _compute_centrality_sections(
+    *,
+    nodes: List[Dict[str, str]],
+    edges: List[Dict[str, str]],
+    top_k_value: int,
+    progress: Callable[[int, str], None],
+) -> Dict[str, Dict[str, object]]:
+    """Compute betweenness + PageRank for each centrality-eligible edge type.
+
+    Args:
+        nodes: Graph nodes.
+        edges: Graph edges.
+        top_k_value: Number of top entries kept per metric.
+        progress: ``(percent, message)`` callback (already bounded internally).
+
+    Returns:
+        Mapping ``edge_type -> {"betweenness": [(id, score), …],
+        "betweenness_approximated": bool, "pagerank": [(id, score), …]}`` for
+        every type in :data:`_CENTRALITY_EDGE_TYPES`. Edge types with no edges in
+        the graph still appear with empty lists so the report layout is stable.
+    """
+    sections: Dict[str, Dict[str, object]] = {}
+    base_pct = 66
+    span = 4
+    for index, edge_type in enumerate(_CENTRALITY_EDGE_TYPES):
+        edge_count = sum(1 for edge in edges if edge.get("type") == edge_type)
+        if edge_count == 0:
+            sections[edge_type] = {
+                "betweenness": [],
+                "betweenness_approximated": False,
+                "pagerank": [],
+            }
+            continue
+
+        progress(
+            base_pct + index * span,
+            f"Analysis: centrality on {edge_type} graph (nodes={len(nodes)}, edges={edge_count})…",
+        )
+        subgraph = build_typed_subgraph(nodes, edges, edge_type)
+        betweenness_scores, approximated = compute_betweenness_centrality(subgraph)
+        pagerank_scores = compute_pagerank(subgraph)
+        sections[edge_type] = {
+            "betweenness": top_k_scores(betweenness_scores, top_k_value),
+            "betweenness_approximated": approximated,
+            "pagerank": top_k_scores(pagerank_scores, top_k_value),
+        }
+        logger.info(
+            "centrality_done edge_type=%s nodes=%d edges=%d betweenness_approx=%s",
+            edge_type,
+            len(subgraph),
+            edge_count,
+            approximated,
+        )
+    return sections
 
 
 def generate_analysis_text_report(
@@ -240,7 +362,14 @@ def generate_analysis_text_report(
         "MODIFIED_BY", (Counter(), Counter())
     )
 
-    _notify(64, "Analysis: assembling plain-text sections (imports, IN_FILE, CALLS, TESTS, MODIFIED_BY)…")
+    centrality_sections = _compute_centrality_sections(
+        nodes=nodes,
+        edges=edges,
+        top_k_value=top_k_value,
+        progress=_notify,
+    )
+
+    _notify(70, "Analysis: assembling plain-text sections (degree + centrality)…")
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
@@ -256,6 +385,7 @@ def generate_analysis_text_report(
         tests_out=top_k(tests_out, top_k_value),
         modified_by_in=top_k(modified_by_in, top_k_value),
         modified_by_out=top_k(modified_by_out, top_k_value),
+        centrality_sections=centrality_sections,
         path_by_id=path_by_id,
         top_k_value=top_k_value,
     )
