@@ -43,14 +43,94 @@ def _png_display_title(filename: str) -> str:
 
 def collect_visual_gallery_entries(results_dir: Path) -> list[dict[str, str]]:
     """List PNG artifacts under ``results_dir/visuals`` for the results UI."""
+    from src.web.results_paths import is_safe_visual_png_filename
+
     visuals = results_dir / "visuals"
     if not visuals.is_dir():
         return []
-    return [{"name": p.name, "title": _png_display_title(p.name)} for p in sorted(visuals.glob("*.png"))]
+    entries: list[dict[str, str]] = []
+    for p in sorted(visuals.glob("*.png")):
+        if is_safe_visual_png_filename(p.name):
+            entries.append({"name": p.name, "title": _png_display_title(p.name)})
+        else:
+            logger.warning("Skipping unsafe or non-PNG gallery name: %s", p.name)
+    return entries
+
+
+def _is_pipeline_section_start(line: str) -> bool:
+    """Return True when *line* begins a new logical block in the pipeline log."""
+    s = line.strip()
+    if not s:
+        return False
+    prefixes = (
+        "Building graph for repository:",
+        "Graph saved to:",
+        "Total nodes:",
+        "Running analysis",
+        "Analysis saved to:",
+        "Analysis view JSON saved",
+        "Generating visualization",
+        "Skipping visualization",
+        "Skipping structure",
+        "Overall structure visualization",
+        "IMPORTS structure visualization",
+        "IN_FILE structure visualization",
+        "CALLS structure visualization",
+        "TESTS structure visualization",
+        "MODIFIED_BY structure visualization",
+        "Visualization:",
+        "Overall degree analysis saved",
+        "IMPORTS degree analysis saved",
+        "IN_FILE degree analysis saved",
+        "CALLS degree analysis saved",
+        "TESTS degree analysis saved",
+        "MODIFIED_BY degree analysis saved",
+        "Visual summary saved",
+        "Visual summary view JSON",
+        "Pipeline finished",
+    )
+    if any(s.startswith(p) for p in prefixes):
+        return True
+    if "betweenness analysis saved to:" in s or "PageRank analysis saved to:" in s:
+        return True
+    return False
+
+
+def build_pipeline_log_sections(text: str) -> list[dict[str, Any]]:
+    """Split flat pipeline log text into titled blocks for the results UI."""
+    lines = text.splitlines()
+    groups: list[list[str]] = []
+    current: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if current:
+                groups.append(current)
+                current = []
+            continue
+        if _is_pipeline_section_start(line) and current:
+            groups.append(current)
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        groups.append(current)
+    sections: list[dict[str, Any]] = []
+    for block in groups:
+        title = block[0].strip()
+        if len(title) > 88:
+            title = title[:85] + "…"
+        sections.append({"title": title, "lines": block})
+    return sections
 
 
 def package_web_results(results_dir: Path, result: PipelineRunResult) -> Dict[str, Any]:
-    """Shape the dict passed to ``results_final.html`` after a pipeline run."""
+    """Shape the dict passed to ``results_final.html`` after a pipeline run.
+
+    Adds ``analysis_view`` (card UI payload, ``schema_version`` 1) alongside legacy
+    ``analysis_text`` for downloads and the collapsible raw report, plus
+    ``visual_summary_view`` and ``pipeline_sections`` for structured cards.
+    """
     pipeline_text = "\n".join(result.log_lines)
     pipeline_path = results_dir / "pipeline.txt"
     try:
@@ -64,10 +144,13 @@ def package_web_results(results_dir: Path, result: PipelineRunResult) -> Dict[st
     return {
         "graph_data": dict(result.graph_document),
         "analysis_text": result.analysis_text,
+        "analysis_view": dict(result.analysis_view),
         "pipeline_output": pipeline_text,
+        "pipeline_sections": build_pipeline_log_sections(pipeline_text),
         "results_dir": str(results_dir.resolve()),
         "results_run_dir": results_dir.name,
         "visual_summary_text": visual_summary_text,
+        "visual_summary_view": dict(result.visual_summary_view),
         "visual_summary_path": str(result.visual_summary_path)
         if result.visual_summary_path
         else None,
@@ -85,13 +168,37 @@ def load_results_from_run_directory(run_path: Path) -> Dict[str, Any]:
     visual_summary_text = vis_path.read_text(encoding="utf-8") if vis_path.exists() else ""
     pl_path = run_path / "pipeline.txt"
     pipeline_output = pl_path.read_text(encoding="utf-8") if pl_path.exists() else ""
+    view_path = run_path / "analysis_view.json"
+    analysis_view: Dict[str, Any] = {}
+    if view_path.exists():
+        try:
+            loaded = json.loads(view_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                analysis_view = loaded
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Could not read analysis_view.json under %s: %s", run_path, exc)
+            analysis_view = {}
+    vsum_view_path = run_path / "visual_summary_view.json"
+    visual_summary_view: Dict[str, Any] = {}
+    if vsum_view_path.exists():
+        try:
+            loaded_vs = json.loads(vsum_view_path.read_text(encoding="utf-8"))
+            if isinstance(loaded_vs, dict):
+                visual_summary_view = loaded_vs
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Could not read visual_summary_view.json under %s: %s", run_path, exc)
+            visual_summary_view = {}
+    pipeline_sections = build_pipeline_log_sections(pipeline_output)
     return {
         "graph_data": graph,
         "analysis_text": analysis_text,
+        "analysis_view": analysis_view,
         "pipeline_output": pipeline_output,
+        "pipeline_sections": pipeline_sections,
         "results_dir": str(run_path.resolve()),
         "results_run_dir": run_path.name,
         "visual_summary_text": visual_summary_text,
+        "visual_summary_view": visual_summary_view,
         "visual_summary_path": str(vis_path) if vis_path.exists() else None,
         "visual_gallery": collect_visual_gallery_entries(run_path),
     }
@@ -135,9 +242,11 @@ class AnalysisService:
             progress_callback: Optional ``(percent, message)`` hook for streaming UIs.
 
         Returns:
-            Keys include ``graph_data``, ``analysis_text``, ``pipeline_output``,
-            ``results_dir``, ``results_run_dir``, ``visual_summary_text``,
-            ``visual_summary_path``, and ``visual_gallery`` (PNG list for the UI).
+            Keys include ``graph_data``, ``analysis_text``, ``analysis_view`` (structured
+            metrics for the card UI), ``visual_summary_view`` (degree leaders by edge type),
+            ``pipeline_sections`` (phase cards), ``pipeline_output``, ``results_dir``,
+            ``results_run_dir``, ``visual_summary_text``, ``visual_summary_path``,
+            and ``visual_gallery`` (PNG list for the UI).
 
         Raises:
             OSError: If reading or writing pipeline artifacts fails.

@@ -36,7 +36,7 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
 - **🔍 Smart Compatibility Checking**: Automated repository analysis with confidence scoring
 - **⚠️ Risk Assessment**: Repositories with <50% compatibility require user confirmation
 - **📊 Analysis progress**: Compatibility sends **SSE** (``X-GraphRAG-Analyze-Stream``) so the overlay can list **live** pipeline messages (per-file graph build, analysis phases, each chart PNG). If the response is plain **HTML** (buffered dev server), the same page shows **timed milestones** (unique lines with elapsed seconds). See ``docs/MIDTERM_PROJECT_REPORT.md`` for a narrative report (add screenshots under ``docs/assets/``).
-- **📥 Downloadable Results**: Export JSON, text reports, individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
+- **📥 Downloadable Results**: Export JSON, text reports, structured **analysis_view.json** (same metrics as the card UI), individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
 - **📜 Structured logging**: UTC ISO timestamps and levels via ``GRAPHRAG_LOG_LEVEL``; duplicate stream to a **rotating** ``logs/graphrag.log`` (override with ``GRAPHRAG_LOG_FILE``, or set ``GRAPHRAG_LOG_TO_FILE=0`` for console-only); HTTP lines under ``src.web.request``
 - **📱 Responsive Design**: Mobile-friendly interface
 

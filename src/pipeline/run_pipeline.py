@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from src.analysis.graph_analysis import generate_analysis_text_report, save_analysis_report
 from src.graph.graph_builder import GraphBuilder, save_graph
@@ -55,7 +57,9 @@ def run_repository_pipeline(
         progress_callback: Optional ``(percent, message)`` updates for long-running UIs.
 
     Returns:
-        Structured result including the graph document and human-readable analysis text.
+        Structured result including the graph document, human-readable analysis text,
+        and ``analysis_view`` (structured metrics dict for the web UI, also written as
+        ``analysis_view.json`` next to ``analysis.txt`` when the pipeline saves reports).
 
     Raises:
         ValueError: If the graph fails schema validation.
@@ -138,13 +142,22 @@ def run_repository_pipeline(
     log_lines.append("")
     log_lines.append("Running analysis...")
     _notify_progress(progress_callback, 52, f"Loading graph JSON for analysis: {graph_output.name}")
-    report, default_report_path = generate_analysis_text_report(
+    report, default_report_path, analysis_view = generate_analysis_text_report(
         graph_output,
         top_k_value=top_k,
         progress_callback=progress_callback,
     )
     final_analysis_path = analysis_output if analysis_output is not None else default_report_path
     save_analysis_report(report, final_analysis_path)
+    analysis_view_path = final_analysis_path.parent / "analysis_view.json"
+    try:
+        analysis_view_path.write_text(
+            json.dumps(analysis_view, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        log_lines.append(f"Analysis view JSON saved to: {analysis_view_path}")
+    except OSError as exc:
+        logger.warning("Could not write analysis_view.json: %s", exc)
     log_lines.append(f"Analysis saved to: {final_analysis_path}")
     _notify_progress(progress_callback, 72, "Analysis report saved.")
     logger.info("analysis_text_report_saved path=%s", final_analysis_path)
@@ -161,6 +174,8 @@ def run_repository_pipeline(
             analysis_path=final_analysis_path,
             visual_summary_path=None,
             log_lines=tuple(log_lines),
+            analysis_view=dict(analysis_view),
+            visual_summary_view={},
         )
 
     log_lines.append("")
@@ -201,6 +216,19 @@ def run_repository_pipeline(
         )
     save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])
     visual_path = Path(str(summary_data["summary_output"]))
+    summary_view_raw = summary_data.get("summary_view") or {}
+    visual_summary_view: dict[str, Any] = dict(summary_view_raw) if isinstance(summary_view_raw, dict) else {}
+    vsum_parent = visual_path.parent
+    if visual_summary_view:
+        vsum_json = vsum_parent / "visual_summary_view.json"
+        try:
+            vsum_json.write_text(
+                json.dumps(visual_summary_view, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            log_lines.append(f"Visual summary view JSON saved to: {vsum_json}")
+        except OSError as exc:
+            logger.warning("Could not write visual_summary_view.json: %s", exc)
     log_lines.extend(report_lines)
     log_lines.append(f"Visual summary saved to: {summary_data['summary_output']}")
     _notify_progress(progress_callback, 94, "Saving visual summary text…")
@@ -217,6 +245,8 @@ def run_repository_pipeline(
         analysis_path=final_analysis_path,
         visual_summary_path=visual_path,
         log_lines=tuple(log_lines),
+        analysis_view=dict(analysis_view),
+        visual_summary_view=visual_summary_view,
     )
 
 

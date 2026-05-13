@@ -30,7 +30,11 @@ from flask import (
 from src.compatibility.check_item import CheckItem
 from src.web.handlers.repository_handler import RepositoryHandler
 from src.web.report_docx import build_analysis_docx_bytes
-from src.web.results_paths import is_safe_visual_png_filename, safe_resolve_results_run_dir
+from src.web.results_paths import (
+    is_safe_visual_png_filename,
+    resolve_visual_png_file,
+    safe_resolve_results_run_dir,
+)
 from src.web.services.analysis_service import AnalysisService, load_results_from_run_directory
 from src.web.utils.helpers import cleanup_temp_directory, handle_repository_upload
 
@@ -278,6 +282,7 @@ def analysis_results_latest():
 def analysis_visual_asset(run_dir: str, filename: str):
     """Serve one PNG from ``results/<run_dir>/visuals/``."""
     if not is_safe_visual_png_filename(filename):
+        logger.warning("visual_asset_rejected_filename run_dir=%s filename=%r", run_dir, filename)
         return ("Not found", 404)
     base = safe_resolve_results_run_dir(run_dir)
     if base is None:
@@ -285,14 +290,20 @@ def analysis_visual_asset(run_dir: str, filename: str):
     visuals_dir = base / "visuals"
     if not visuals_dir.is_dir():
         return ("Not found", 404)
-    target = (visuals_dir / filename).resolve()
-    try:
-        target.relative_to(visuals_dir.resolve())
-    except ValueError:
+    target = resolve_visual_png_file(visuals_dir, filename)
+    if target is None:
+        logger.warning(
+            "visual_asset_missing run_dir=%s filename=%r visuals_dir=%s",
+            run_dir,
+            filename,
+            visuals_dir,
+        )
         return ("Not found", 404)
-    if not target.is_file():
-        return ("Not found", 404)
-    return send_from_directory(str(visuals_dir.resolve()), filename, mimetype="image/png")
+    return send_from_directory(
+        str(visuals_dir.resolve()),
+        target.name,
+        mimetype="image/png",
+    )
 
 
 @web_bp.route("/analysis-results/<run_dir>/report.docx")

@@ -103,7 +103,8 @@ GraphRAG_Project/
 
 ### Graph Analysis Layer (`src/analysis/`)
 **Purpose**: Graph analysis and metrics calculation
-- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality + community + risk sections)
+- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality + community + risk sections) and the structured web payload (see `analysis_web_payload.py`)
+- **`analysis_web_payload.py`**: Builds `analysis_view` (JSON-serializable dict) for `results_final.html` cards; persisted beside `analysis.txt` as `analysis_view.json` in each `results/web_analysis_*` run
 - **`centrality_measures.py`**: Pure helpers for betweenness centrality (sampled k=500 above 1000 nodes) and PageRank on typed subgraphs
 - **`community_detection.py`**: Louvain modularity (with label-propagation fallback) over the undirected projections of `IMPORTS` / `CALLS`; returns `CommunityDetectionResult` (size-sorted communities + modularity)
 - **`risk_score.py`**: Composite per-`File` risk record (`FileRiskScore`) combining z-normalised centrality (IMPORTS + CALLS aggregated to owning files), commit churn (`MODIFIED_BY` out-degree), test gap (uncovered-symbol fraction), and cross-community edge ratio
@@ -111,7 +112,7 @@ GraphRAG_Project/
 
 ### Visualization Layer (`src/visualization/`)
 **Purpose**: Graph visualization and reporting
-- **`graph_visualization.py`**: Structure subgraphs, degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY, plus combined), and centrality bar charts (betweenness + PageRank for IMPORTS and CALLS)
+- **`graph_visualization.py`**: Structure subgraphs, degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY, plus combined), centrality bar charts (betweenness + PageRank for IMPORTS and CALLS), plain-text visual summary and a parallel **`visual_summary_view`** dict (schema v1) saved as ``visual_summary_view.json`` next to ``visual_summary.txt`` on web pipeline runs
 - **`__init__.py`**: Visualization utilities and exports
 
 ### Statistics Layer (`src/stats/`)

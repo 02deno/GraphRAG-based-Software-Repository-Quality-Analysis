@@ -5,7 +5,7 @@ import logging
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from src.analysis.centrality_measures import (
     build_typed_subgraph,
@@ -17,6 +17,7 @@ from src.analysis.community_detection import (
     CommunityDetectionResult,
     detect_communities,
 )
+from src.analysis.analysis_web_payload import build_analysis_web_view
 from src.analysis.risk_score import FileRiskScore, compute_risk_scores
 from src.graph.json_document import (
     compute_in_out_degrees_by_edge_type,
@@ -491,7 +492,7 @@ def generate_analysis_text_report(
     top_k_value: int = 10,
     *,
     progress_callback: Callable[[int, str], None] | None = None,
-) -> tuple[str, Path]:
+) -> tuple[str, Path, Dict[str, Any]]:
     """Load a graph JSON file and produce a degree-based text report.
 
     Args:
@@ -500,8 +501,11 @@ def generate_analysis_text_report(
         progress_callback: Optional ``(percent, message)`` updates for web/SSE clients.
 
     Returns:
-        Tuple of ``(report_text, default_report_path)`` where the default path is
-        under ``results/reports/`` derived from the graph filename.
+        Tuple of ``(report_text, default_report_path, analysis_view)`` where the
+        default path is under ``results/reports/`` derived from the graph
+        filename. ``analysis_view`` is a JSON-serializable dict for the web UI
+        (also persisted as ``analysis_view.json`` next to ``analysis.txt`` in
+        pipeline runs).
     """
 
     def _notify(pct: int, message: str) -> None:
@@ -557,21 +561,53 @@ def generate_analysis_text_report(
     )
 
     _notify(76, "Analysis: assembling plain-text sections (degree + centrality + communities + risk)…")
+    imports_in_k = top_k(imports_in, top_k_value)
+    imports_out_k = top_k(imports_out, top_k_value)
+    in_file_in_k = top_k(in_file_in, top_k_value)
+    in_file_out_k = top_k(in_file_out, top_k_value)
+    calls_in_k = top_k(calls_in, top_k_value)
+    calls_out_k = top_k(calls_out, top_k_value)
+    tests_in_k = top_k(tests_in, top_k_value)
+    tests_out_k = top_k(tests_out, top_k_value)
+    modified_by_in_k = top_k(modified_by_in, top_k_value)
+    modified_by_out_k = top_k(modified_by_out, top_k_value)
+
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
         edges=edges,
         edge_type_counts=edge_type_counts,
-        imports_in=top_k(imports_in, top_k_value),
-        imports_out=top_k(imports_out, top_k_value),
-        in_file_in=top_k(in_file_in, top_k_value),
-        in_file_out=top_k(in_file_out, top_k_value),
-        calls_in=top_k(calls_in, top_k_value),
-        calls_out=top_k(calls_out, top_k_value),
-        tests_in=top_k(tests_in, top_k_value),
-        tests_out=top_k(tests_out, top_k_value),
-        modified_by_in=top_k(modified_by_in, top_k_value),
-        modified_by_out=top_k(modified_by_out, top_k_value),
+        imports_in=imports_in_k,
+        imports_out=imports_out_k,
+        in_file_in=in_file_in_k,
+        in_file_out=in_file_out_k,
+        calls_in=calls_in_k,
+        calls_out=calls_out_k,
+        tests_in=tests_in_k,
+        tests_out=tests_out_k,
+        modified_by_in=modified_by_in_k,
+        modified_by_out=modified_by_out_k,
+        centrality_sections=centrality_sections,
+        community_sections=community_sections,
+        risk_scores=risk_scores,
+        path_by_id=path_by_id,
+        top_k_value=top_k_value,
+    )
+    analysis_view = build_analysis_web_view(
+        graph_path=graph_path,
+        nodes=nodes,
+        edges=edges,
+        edge_type_counts=edge_type_counts,
+        imports_in=imports_in_k,
+        imports_out=imports_out_k,
+        in_file_in=in_file_in_k,
+        in_file_out=in_file_out_k,
+        calls_in=calls_in_k,
+        calls_out=calls_out_k,
+        tests_in=tests_in_k,
+        tests_out=tests_out_k,
+        modified_by_in=modified_by_in_k,
+        modified_by_out=modified_by_out_k,
         centrality_sections=centrality_sections,
         community_sections=community_sections,
         risk_scores=risk_scores,
@@ -581,7 +617,7 @@ def generate_analysis_text_report(
     _notify(77, "Analysis: text report body ready.")
 
     report_path = Path(f"results/reports/{graph_stem_display_name(graph_path)}_graph_analysis.txt").resolve()
-    return report, report_path
+    return report, report_path, analysis_view
 
 
 def save_analysis_report(report: str, report_path: Path) -> None:
@@ -611,7 +647,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    report, report_path = generate_analysis_text_report(Path(args.graph), top_k_value=args.top_k)
+    report, report_path, _analysis_view = generate_analysis_text_report(
+        Path(args.graph), top_k_value=args.top_k
+    )
     actual_report_path = Path(args.save_report).resolve() if args.save_report else report_path
     save_analysis_report(report, actual_report_path)
 

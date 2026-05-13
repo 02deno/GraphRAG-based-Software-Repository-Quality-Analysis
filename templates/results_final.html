@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -169,6 +169,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 18px;
+            align-items: start;
         }
         .visual-card {
             background: #f8f9fa;
@@ -186,8 +187,219 @@
             width: 100%;
             height: auto;
             border-radius: 4px;
-            background: #fff;
+            background: #f0f2f5;
+            min-height: 140px;
+            object-fit: contain;
         }
+        .visual-img-fallback {
+            display: none;
+            padding: 16px;
+            font-size: 13px;
+            color: #842029;
+            background: #f8d7da;
+            border: 1px solid #f5c2c7;
+            border-radius: 4px;
+            line-height: 1.45;
+        }
+        .qv-side-section-note { font-size: 13px; color: #666; margin: 0 0 14px 0; }
+        .qv-pipeline-card {
+            background: #fafbfc;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            min-width: 0;
+        }
+        .qv-pipeline-card h5 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #2c5282;
+            word-break: break-word;
+        }
+        .qv-pipeline-lines {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 12px;
+            color: #444;
+            max-height: 240px;
+            overflow-y: auto;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .qv-vsum-overview { margin-bottom: 18px; }
+        .qv-vsum-edge { margin-bottom: 20px; }
+        .qv-vsum-edge h5 { margin: 0 0 10px 0; font-size: 14px; color: #333; }
+        .qv-overview {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f4fc 100%);
+            border: 1px solid #dee7f5;
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 22px;
+        }
+        .qv-overview h4 { margin: 0 0 10px 0; color: #1a3a52; font-size: 1.05rem; }
+        .qv-overview-meta { font-size: 13px; color: #495057; margin: 0 0 12px 0; line-height: 1.45; }
+        .qv-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .qv-chip {
+            background: #fff;
+            border: 1px solid #ced8e6;
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            color: #333;
+        }
+        .qv-chip strong { color: #007bff; }
+        .qv-subsection-title {
+            font-size: 1rem;
+            color: #333;
+            margin: 26px 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .qv-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 8px;
+            align-items: start;
+        }
+        .qv-card {
+            background: #fafbfc;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            min-width: 0;
+        }
+        .qv-card h5 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #2c5282;
+            font-weight: 600;
+        }
+        .qv-table-wrap { overflow-x: auto; max-height: 260px; overflow-y: auto; margin: 0 -4px; }
+        .qv-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .qv-table th, .qv-table td {
+            text-align: left;
+            padding: 6px 8px;
+            border-bottom: 1px solid #eceff3;
+        }
+        .qv-table th { color: #6c757d; font-weight: 600; position: sticky; top: 0; background: #fafbfc; }
+        .qv-table .num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; }
+        .qv-table .mono { font-family: ui-monospace, 'Courier New', monospace; font-size: 11px; word-break: break-all; }
+        .qv-muted { color: #868e96; font-size: 12px; margin: 8px 0 0 0; }
+        .qv-centrality-block {
+            border-left: 4px solid #007bff;
+            padding-left: 12px;
+            margin-top: 14px;
+        }
+        .qv-centrality-block:first-child { margin-top: 0; }
+        .qv-community-summary {
+            font-size: 13px;
+            color: #444;
+            margin: 0 0 12px 0;
+            line-height: 1.5;
+        }
+        .qv-community-list { list-style: none; padding: 0; margin: 0; }
+        .qv-community-list li {
+            font-size: 12px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            color: #444;
+            min-width: 0;
+            overflow: hidden;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .qv-community-item-head { margin-bottom: 6px; line-height: 1.4; }
+        .qv-more { color: #868e96; font-weight: normal; }
+        .qv-member-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 4px;
+            padding-top: 6px;
+            border-top: 1px solid #f1f3f5;
+        }
+        .qv-member-chip {
+            font-size: 11px;
+            line-height: 1.35;
+            padding: 4px 8px;
+            background: #e7f1ff;
+            border: 1px solid #b8d4f0;
+            border-radius: 4px;
+            max-width: 100%;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .qv-risk-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .qv-risk-card header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 10px 16px;
+            margin-bottom: 12px;
+        }
+        .qv-risk-rank {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #dc3545;
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qv-risk-path { font-weight: 600; color: #212529; font-size: 14px; word-break: break-all; flex: 1; min-width: 200px; }
+        .qv-risk-total {
+            font-size: 15px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #c82333;
+        }
+        .qv-zgrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .qv-z {
+            background: #f1f3f5;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 11px;
+        }
+        .qv-z span { display: block; color: #868e96; margin-bottom: 2px; }
+        .qv-z strong { font-size: 13px; font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; }
+        .qv-raw-details { margin-top: 18px; }
+        .qv-raw-details summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #495057;
+            padding: 10px 12px;
+            background: #e9ecef;
+            border-radius: 6px;
+        }
+        .qv-raw-details .analysis-text { margin-top: 10px; max-height: 480px; }
+        .qv-empty { color: #868e96; font-style: italic; margin: 0; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -270,23 +482,252 @@
             <p class="schema-note" style="margin-top:0;">
                 Degree counts (per edge type) plus <strong>betweenness centrality</strong>, <strong>PageRank</strong>,
                 <strong>Louvain community detection</strong>, and a composite <strong>risk candidate list</strong>
-                on the <code>IMPORTS</code> and <code>CALLS</code> subgraphs. Betweenness highlights bridge modules
-                whose removal would fragment the architecture; PageRank ranks broadly relied-upon nodes via multi-hop
-                influence; community detection groups densely connected nodes and reports a modularity score. The
-                risk score combines (z-normalised) <em>centrality</em>, <em>commit churn</em> (<code>MODIFIED_BY</code>
-                out-degree), <em>test gap</em> (fraction of in-file symbols without <code>TESTS</code> edges), and
-                <em>cross-community ratio</em> (share of edges leaving the file's Louvain cluster). Higher
-                <code>total</code> = more architecturally risky in <em>this</em> repository (the score is relative).
-                Betweenness uses a sampled estimator (k=500) on graphs larger than 1000 nodes — those sections are
-                labelled <em>(sampled estimator)</em>.
+                on the <code>IMPORTS</code> and <code>CALLS</code> subgraphs. Below, metrics are shown as cards and
+                tables; use <em>Raw text report</em> for the classic export format. Betweenness uses a sampled
+                estimator (k=500) on graphs larger than 1000 nodes — look for <em>(sampled)</em> in card titles.
             </p>
-            <div class="analysis-text">{{ results.analysis_text }}</div>
+
+            {% if results.analysis_view and results.analysis_view.schema_version == 1 %}
+            {% set av = results.analysis_view %}
+            <div class="qv-overview">
+                <h4>Overview</h4>
+                <p class="qv-overview-meta"><strong>Graph:</strong> {{ av.graph_label }} · <strong>Source file:</strong> {{ av.graph_path }}</p>
+                <p class="qv-overview-meta"><strong>Top-K used:</strong> {{ av.top_k }} ranking entries per table (where applicable).</p>
+                <div class="qv-chip-row" aria-label="Totals">
+                    <span class="qv-chip"><strong>{{ av.totals.nodes }}</strong> nodes</span>
+                    <span class="qv-chip"><strong>{{ av.totals.edges }}</strong> edges</span>
+                </div>
+                <p class="qv-subsection-title" style="margin-top:16px;margin-bottom:10px;">Edges by type</p>
+                <div class="qv-chip-row">
+                    {% for ec in av.edge_counts %}
+                    <span class="qv-chip"><strong>{{ ec.type }}</strong>: {{ ec.count }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <h4 class="qv-subsection-title">Degree rankings</h4>
+            <div class="qv-card-grid">
+                {% for sec in av.degree_sections %}
+                <div class="qv-card">
+                    <h5>{{ sec.title }}</h5>
+                    {% if sec.empty %}
+                    <p class="qv-empty">No data</p>
+                    {% else %}
+                    <div class="qv-table-wrap">
+                        <table class="qv-table">
+                            <thead><tr><th>#</th><th>Node / label</th><th class="num">Score</th></tr></thead>
+                            <tbody>
+                                {% for row in sec.rows %}
+                                <tr>
+                                    <td class="num">{{ row.rank }}</td>
+                                    <td class="mono" title="{{ row.node_id }}">{{ row.label }}</td>
+                                    <td class="num">{{ row.score }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <h4 class="qv-subsection-title">Centrality (IMPORTS &amp; CALLS)</h4>
+            <div class="qv-card-grid">
+                {% for cblock in av.centrality_sections %}
+                <div class="qv-card">
+                    <h5>Subgraph: {{ cblock.edge_type }}</h5>
+                    <div class="qv-centrality-block">
+                        <h5 style="margin-top:0;color:#495057;">{{ cblock.betweenness_title }}</h5>
+                        {% if cblock.betweenness_empty %}
+                        <p class="qv-empty">No data</p>
+                        {% else %}
+                        <div class="qv-table-wrap">
+                            <table class="qv-table">
+                                <thead><tr><th>#</th><th>Label</th><th class="num">Betweenness</th></tr></thead>
+                                <tbody>
+                                    {% for row in cblock.betweenness_rows %}
+                                    <tr>
+                                        <td class="num">{{ row.rank }}</td>
+                                        <td class="mono" title="{{ row.node_id }}">{{ row.label }}</td>
+                                        <td class="num">{{ row.score }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="qv-centrality-block">
+                        <h5 style="margin-top:0;color:#495057;">{{ cblock.pagerank_title }}</h5>
+                        {% if cblock.pagerank_empty %}
+                        <p class="qv-empty">No data</p>
+                        {% else %}
+                        <div class="qv-table-wrap">
+                            <table class="qv-table">
+                                <thead><tr><th>#</th><th>Label</th><th class="num">PageRank</th></tr></thead>
+                                <tbody>
+                                    {% for row in cblock.pagerank_rows %}
+                                    <tr>
+                                        <td class="num">{{ row.rank }}</td>
+                                        <td class="mono" title="{{ row.node_id }}">{{ row.label }}</td>
+                                        <td class="num">{{ row.score }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <h4 class="qv-subsection-title">Community detection (Louvain)</h4>
+            <div class="qv-card-grid">
+                {% for cob in av.community_sections %}
+                <div class="qv-card">
+                    <h5>Subgraph: {{ cob.edge_type }}</h5>
+                    {% if cob.empty %}
+                    <p class="qv-empty">No communities (empty graph or no modular structure).</p>
+                    {% else %}
+                    <p class="qv-community-summary">
+                        Algorithm <strong>{{ cob.summary.algorithm }}</strong> ·
+                        {{ cob.summary.node_count }} nodes, {{ cob.summary.edge_count }} edges ·
+                        {{ cob.summary.community_count }} communities ·
+                        modularity <strong>{{ cob.summary.modularity }}</strong>
+                    </p>
+                    <ul class="qv-community-list">
+                        {% for comm in cob.communities %}
+                        <li>
+                            <div class="qv-community-item-head">
+                                <strong>#{{ comm.rank }}</strong> — size {{ comm.size }}
+                                {% if comm.remaining > 0 %}
+                                <span class="qv-more">· +{{ comm.remaining }} more members not shown</span>
+                                {% endif %}
+                            </div>
+                            <div class="qv-member-chips">
+                                {% for label in comm.preview %}
+                                <span class="qv-member-chip" title="{{ label }}">{{ label }}</span>
+                                {% endfor %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <h4 class="qv-subsection-title">Risk candidates (composite z-score)</h4>
+            <p class="schema-note" style="margin-bottom:12px;">{{ av.risk.weights_note }}</p>
+            {% if av.risk.empty %}
+            <p class="qv-empty">No file-level risk scores (no File nodes).</p>
+            {% else %}
+            {% for rc in av.risk.candidates %}
+            <article class="qv-risk-card">
+                <header>
+                    <span class="qv-risk-rank">{{ rc.rank }}</span>
+                    <span class="qv-risk-path">{{ rc.file_path }}</span>
+                    <span class="qv-risk-total" title="Weighted sum of z-scores">Σ = {{ rc.total }}</span>
+                </header>
+                <div class="qv-zgrid">
+                    <div class="qv-z"><span>Centrality <em>z</em></span><strong>{{ rc.centrality_z }}</strong></div>
+                    <div class="qv-z"><span>Churn <em>z</em></span><strong>{{ rc.churn_z }}</strong></div>
+                    <div class="qv-z"><span>Test gap <em>z</em></span><strong>{{ rc.test_gap_z }}</strong></div>
+                    <div class="qv-z"><span>Cross-community <em>z</em></span><strong>{{ rc.cross_community_z }}</strong></div>
+                </div>
+                <p class="qv-muted">
+                    Raw: {{ rc.raw_churn }} commits touching file · test gap {{ rc.raw_test_gap }} ({{ rc.tested_symbol_count }}/{{ rc.symbol_count }} symbols with tests) · cross-community ratio {{ rc.raw_cross_community }}
+                </p>
+            </article>
+            {% endfor %}
+            {% endif %}
+
+            {% else %}
+            <p class="schema-note">Structured metrics are not available for this run — open the report below or re-run analysis.</p>
+            <details class="qv-raw-details" open>
+                <summary>Analysis report (plain text)</summary>
+                <div class="analysis-text">{{ results.analysis_text }}</div>
+            </details>
+            {% endif %}
+
+            {% if results.analysis_view and results.analysis_view.schema_version == 1 %}
+            <details class="qv-raw-details">
+                <summary>Raw text report (same as <code>analysis.txt</code> download)</summary>
+                <div class="analysis-text">{{ results.analysis_text }}</div>
+            </details>
+            {% endif %}
         </div>
 
         {% if results.visual_summary_text %}
         <div class="results-section">
             <h3>📈 Visual summary</h3>
+            <p class="qv-side-section-note">Per-edge-type degree leaders from the same data as the PNG charts. Raw text matches <code>visual_summary.txt</code>.</p>
+
+            {% if results.visual_summary_view and results.visual_summary_view.schema_version == 1 %}
+            {% set vv = results.visual_summary_view %}
+            <div class="qv-overview qv-vsum-overview">
+                <h4>Graph snapshot</h4>
+                <p class="qv-overview-meta"><strong>Repository:</strong> {{ vv.repo_name }}</p>
+                <p class="qv-overview-meta"><strong>Label:</strong> {{ vv.graph_label }}</p>
+                <p class="qv-overview-meta"><strong>Graph file:</strong> {{ vv.graph_file }}</p>
+                <div class="qv-chip-row">
+                    <span class="qv-chip"><strong>{{ vv.totals.nodes }}</strong> nodes</span>
+                    <span class="qv-chip"><strong>{{ vv.totals.edges }}</strong> edges</span>
+                    <span class="qv-chip">Top <strong>{{ vv.top_k }}</strong> per list</span>
+                </div>
+            </div>
+
+            {% for es in vv.edge_sections %}
+            <div class="qv-vsum-edge qv-card">
+                <h5>Edge type <code>{{ es.edge_type }}</code> · {{ es.total_edges }} edges</h5>
+                <div class="qv-card-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+                    <div>
+                        <h5 style="color:#495057;">Incoming (in-degree)</h5>
+                        <div class="qv-table-wrap">
+                            <table class="qv-table">
+                                <thead><tr><th>#</th><th>Label</th><th class="num">Count</th></tr></thead>
+                                <tbody>
+                                    {% for row in es.incoming %}
+                                    <tr>
+                                        <td class="num">{{ row.rank }}</td>
+                                        <td class="mono" title="{{ row.label }}">{{ row.label }}</td>
+                                        <td class="num">{{ row.score }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 style="color:#495057;">Outgoing (out-degree)</h5>
+                        <div class="qv-table-wrap">
+                            <table class="qv-table">
+                                <thead><tr><th>#</th><th>Label</th><th class="num">Count</th></tr></thead>
+                                <tbody>
+                                    {% for row in es.outgoing %}
+                                    <tr>
+                                        <td class="num">{{ row.rank }}</td>
+                                        <td class="mono" title="{{ row.label }}">{{ row.label }}</td>
+                                        <td class="num">{{ row.score }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <details class="qv-raw-details">
+                <summary>Raw visual summary text</summary>
+                <div class="analysis-text">{{ results.visual_summary_text }}</div>
+            </details>
+            {% else %}
             <div class="analysis-text">{{ results.visual_summary_text }}</div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -298,7 +739,8 @@
                 {% for item in results.visual_gallery %}
                 <div class="visual-card">
                     <h4>{{ item.title }}</h4>
-                    <img src="{{ url_for('web.analysis_visual_asset', run_dir=results.results_run_dir, filename=item.name) }}" alt="{{ item.title }}" loading="lazy">
+                    <img src="{{ url_for('web.analysis_visual_asset', run_dir=results.results_run_dir, filename=item.name) }}" alt="{{ item.title }}" loading="lazy" onerror="this.classList.add('img-broken'); this.setAttribute('aria-hidden','true'); var fb=this.nextElementSibling; if(fb) fb.style.display='block';">
+                    <div class="visual-img-fallback" role="alert">Chart failed to load (404 or network). Try <strong>Download PNG</strong> or open the file under <code>results/{{ results.results_run_dir }}/visuals/{{ item.name }}</code>.</div>
                     <p style="margin:10px 0 0 0;">
                         <a class="btn btn-success" style="padding:8px 14px;font-size:14px;" download="{{ item.name }}" href="{{ url_for('web.analysis_visual_asset', run_dir=results.results_run_dir, filename=item.name) }}">⬇ Download PNG</a>
                     </p>
@@ -311,8 +753,26 @@
         <!-- Pipeline Output -->
         {% if results.pipeline_output %}
         <div class="results-section">
-            <h3>📋 Pipeline Output</h3>
+            <h3>📋 Pipeline log</h3>
+            <p class="qv-side-section-note">Phases detected from the same log as <code>pipeline.txt</code>.</p>
+            {% if results.pipeline_sections %}
+            {% for block in results.pipeline_sections %}
+            <div class="qv-pipeline-card">
+                <h5>{{ block.title }}</h5>
+                <ul class="qv-pipeline-lines">
+                    {% for ln in block.lines %}
+                    <li>{{ ln }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+            {% else %}
             <div class="analysis-text">{{ results.pipeline_output }}</div>
+            {% endif %}
+            <details class="qv-raw-details">
+                <summary>Full pipeline log (plain text)</summary>
+                <div class="analysis-text">{{ results.pipeline_output }}</div>
+            </details>
         </div>
         {% endif %}
 
@@ -335,9 +795,21 @@
                 📝 Download Analysis Report (.txt)
             </button>
 
+            {% if results.analysis_view and results.analysis_view.schema_version == 1 %}
+            <button type="button" onclick="downloadAnalysisView()" class="btn btn-success">
+                📐 Download metrics bundle (analysis_view.json)
+            </button>
+            {% endif %}
+
             {% if results.visual_summary_text %}
             <button type="button" onclick="downloadVisualSummary()" class="btn btn-success">
-                📊 Download Visual Summary (text)
+                📊 Download visual summary (.txt)
+            </button>
+            {% endif %}
+
+            {% if results.visual_summary_view and results.visual_summary_view.schema_version == 1 %}
+            <button type="button" onclick="downloadVisualSummaryView()" class="btn btn-success">
+                📐 Download visual summary (JSON)
             </button>
             {% endif %}
 
@@ -353,7 +825,7 @@
         </div>
 
         <script id="results-bootstrap" type="application/json">
-{{ {"graph": results.graph_data, "analysis": results.analysis_text, "visual": results.visual_summary_text or "", "pipeline": results.pipeline_output or ""}|tojson }}
+{{ {"graph": results.graph_data, "analysis": results.analysis_text, "analysis_view": results.analysis_view or {}, "visual_summary_view": results.visual_summary_view or {}, "visual": results.visual_summary_text or "", "pipeline": results.pipeline_output or ""}|tojson }}
         </script>
         <script>
 (function () {
@@ -366,6 +838,8 @@
             }
             var graphData = payload.graph;
             var analysisText = payload.analysis;
+            var analysisView = payload.analysis_view || {};
+            var visualSummaryView = payload.visual_summary_view || {};
             var visualSummaryText = payload.visual;
             var pipelineText = payload.pipeline;
 
@@ -401,6 +875,22 @@
                 window.URL.revokeObjectURL(url);
             }
 
+            function downloadVisualSummaryView() {
+                if (!visualSummaryView || visualSummaryView.schema_version !== 1) {
+                    alert('Visual summary JSON is not available for this run.');
+                    return;
+                }
+                var blob = new Blob([JSON.stringify(visualSummaryView, null, 2)], {type: 'application/json;charset=utf-8'});
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'visual_summary_view.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
             function downloadVisualSummary() {
                 if (!visualSummaryText) {
                     alert('Visual summary is not available to download.');
@@ -411,6 +901,22 @@
                 var a = document.createElement('a');
                 a.href = url;
                 a.download = 'visual_summary.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
+            function downloadAnalysisView() {
+                if (!analysisView || analysisView.schema_version !== 1) {
+                    alert('Structured metrics JSON is not available for this run.');
+                    return;
+                }
+                var blob = new Blob([JSON.stringify(analysisView, null, 2)], {type: 'application/json;charset=utf-8'});
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'analysis_view.json';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -435,7 +941,9 @@
 
             window.downloadJSON = downloadJSON;
             window.downloadAnalysis = downloadAnalysis;
+            window.downloadAnalysisView = downloadAnalysisView;
             window.downloadVisualSummary = downloadVisualSummary;
+            window.downloadVisualSummaryView = downloadVisualSummaryView;
             window.downloadPipeline = downloadPipeline;
 })();
         </script>

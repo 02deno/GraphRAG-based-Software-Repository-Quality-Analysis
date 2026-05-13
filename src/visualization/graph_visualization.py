@@ -5,7 +5,7 @@ import logging
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import matplotlib
 
@@ -234,35 +234,66 @@ def build_visual_summary(
     degrees_by_type: Dict[str, Tuple[Counter, Counter]],
     path_by_id: Dict[str, str],
     top_k: int,
-) -> str:
-    """Build a short plain-text summary describing graph size and per-type degree leaders.
+) -> Tuple[str, Dict[str, Any]]:
+    """Build a plain-text summary and a JSON-ready view model for the web UI.
 
     Args:
         graph_path: Source graph path (for headers).
         nodes: Graph node list.
-        edges: Graph edge list (used for type labels).
+        edges: Graph edges (used for type labels).
         degrees_by_type: In/out counters keyed by edge type string.
         path_by_id: Node id to display path.
         top_k: How many ranked nodes to print per section.
 
     Returns:
-        Newline-terminated summary string.
+        ``(summary_text, summary_view)`` where *summary_view* matches
+        ``schema_version`` 1 consumed by ``results_final.html``.
     """
     repo_name = graph_stem_display_name(graph_path)
     graph_label = f"{repo_name} — {human_readable_graph_edge_label(edges)}"
+    graph_type_label = human_readable_graph_edge_label(edges)
+    edge_sections: List[Dict[str, Any]] = []
     lines: List[str] = []
     lines.append(f"Repository: {repo_name}")
     lines.append(f"Graph label: {graph_label}")
     lines.append(f"Graph file: {graph_path}")
-    lines.append(f"Graph type: {human_readable_graph_edge_label(edges)}")
+    lines.append(f"Graph type: {graph_type_label}")
     lines.append(f"Total nodes: {len(nodes)}")
     lines.append(f"Total edges: {len(edges)}")
     lines.append("")
 
     for edge_type in sorted(degrees_by_type.keys()):
         in_degree, out_degree = degrees_by_type[edge_type]
+        total_edge_count = int(sum(out_degree.values()))
+        inc_rows: List[Dict[str, Any]] = []
+        for rank, (node_id, score) in enumerate(in_degree.most_common(top_k), start=1):
+            inc_rows.append(
+                {
+                    "rank": rank,
+                    "label": path_by_id.get(node_id, node_id),
+                    "score": int(score),
+                }
+            )
+        out_rows: List[Dict[str, Any]] = []
+        for rank, (node_id, score) in enumerate(out_degree.most_common(top_k), start=1):
+            out_rows.append(
+                {
+                    "rank": rank,
+                    "label": path_by_id.get(node_id, node_id),
+                    "score": int(score),
+                }
+            )
+        edge_sections.append(
+            {
+                "edge_type": edge_type,
+                "total_edges": total_edge_count,
+                "incoming": inc_rows,
+                "outgoing": out_rows,
+            }
+        )
+
         lines.append(f"Edges of type: {edge_type}")
-        lines.append(f"- Total edges: {sum(out_degree.values())}")
+        lines.append(f"- Total edges: {total_edge_count}")
         lines.append(f"Top {top_k} nodes by incoming {edge_type} edges:")
         for node_id, score in in_degree.most_common(top_k):
             lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
@@ -271,7 +302,17 @@ def build_visual_summary(
             lines.append(f"- {path_by_id.get(node_id, node_id)}: {score}")
         lines.append("")
 
-    return "\n".join(lines) + "\n"
+    summary_view: Dict[str, Any] = {
+        "schema_version": 1,
+        "repo_name": repo_name,
+        "graph_label": graph_label,
+        "graph_file": str(graph_path),
+        "graph_type": graph_type_label,
+        "totals": {"nodes": len(nodes), "edges": len(edges)},
+        "top_k": top_k,
+        "edge_sections": edge_sections,
+    }
+    return "\n".join(lines) + "\n", summary_view
 
 
 def generate_visual_summary(
@@ -325,7 +366,7 @@ def generate_visual_summary(
         progress_callback: Optional ``(percent, message)`` updates during matplotlib work.
 
     Returns:
-        ``(report_lines, {"summary_text": str, "summary_output": Path})`` for callers to log or save.
+        ``(report_lines, {"summary_text": str, "summary_output": Path, "summary_view": dict})`` for callers to log or save.
     """
 
     def _pv(pct: int, message: str) -> None:
@@ -660,7 +701,7 @@ def generate_visual_summary(
         report_lines.append(f"{edge_type} PageRank analysis saved to: {pagerank_out}")
 
     _pv(95, "Visualization: composing text summary (per edge-type degree leaders)…")
-    summary_text = build_visual_summary(
+    summary_text, summary_view = build_visual_summary(
         graph_path=graph_path,
         nodes=nodes,
         edges=edges,
@@ -671,6 +712,7 @@ def generate_visual_summary(
     return report_lines, {
         "summary_text": summary_text,
         "summary_output": summary_output,
+        "summary_view": summary_view,
     }
 
 

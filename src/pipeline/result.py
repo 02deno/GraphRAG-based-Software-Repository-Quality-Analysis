@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -17,3 +17,5 @@ class PipelineRunResult:
     analysis_path: Path
     visual_summary_path: Path | None
     log_lines: tuple[str, ...]
+    analysis_view: Mapping[str, Any] = field(default_factory=dict)
+    visual_summary_view: Mapping[str, Any] = field(default_factory=dict)
