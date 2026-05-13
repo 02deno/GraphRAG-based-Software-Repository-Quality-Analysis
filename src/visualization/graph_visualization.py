@@ -14,6 +14,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import networkx as nx
 
+from src.analysis.centrality_measures import (
+    build_typed_subgraph,
+    compute_betweenness_centrality,
+    compute_pagerank,
+    top_k_scores,
+)
 from src.graph.json_document import (
     compute_in_out_degrees,
     compute_in_out_degrees_by_edge_type,
@@ -154,6 +160,58 @@ def plot_degree_bars(
     plt.close(fig)
 
 
+def plot_centrality_bars(
+    scores: Counter,
+    path_by_id: Dict[str, str],
+    top_k: int,
+    output_path: Path,
+    title: str,
+    score_label: str,
+) -> None:
+    """Plot a single horizontal bar chart of top-``top_k`` nodes by score.
+
+    Used for float-valued centrality metrics (betweenness, PageRank) where the
+    in/out split that :func:`plot_degree_bars` shows does not apply.
+
+    Args:
+        scores: Counter mapping node id to a float score (higher is more central).
+        path_by_id: Display label lookup.
+        top_k: Number of top entries to show.
+        output_path: Destination PNG path (parents are created).
+        title: Chart title (e.g. ``"Top 10 by betweenness on CALLS — repo"``).
+        score_label: X-axis label (e.g. ``"Betweenness"``, ``"PageRank"``).
+    """
+    top_items = scores.most_common(top_k)
+    if not top_items:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fig, ax = plt.subplots(figsize=(10, 3))
+        ax.axis("off")
+        ax.text(
+            0.5,
+            0.5,
+            f"No data for {title}",
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#888",
+        )
+        fig.savefig(output_path, dpi=220)
+        plt.close(fig)
+        return
+
+    labels = [Path(path_by_id.get(node_id, node_id)).name for node_id, _ in top_items]
+    values = [score for _, score in top_items]
+
+    fig, ax = plt.subplots(figsize=(14, 6), constrained_layout=True)
+    ax.barh(labels[::-1], values[::-1])
+    ax.set_title(title)
+    ax.set_xlabel(score_label)
+    ax.tick_params(axis="y", labelsize=8)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=220)
+    plt.close(fig)
+
+
 def compute_graph_for_edge_type(
     nodes: List[Dict[str, str]],
     edges: List[Dict[str, str]],
@@ -233,6 +291,10 @@ def generate_visual_summary(
     analysis_output_calls: Path | None = None,
     analysis_output_tests: Path | None = None,
     analysis_output_modified_by: Path | None = None,
+    betweenness_output_imports: Path | None = None,
+    betweenness_output_calls: Path | None = None,
+    pagerank_output_imports: Path | None = None,
+    pagerank_output_calls: Path | None = None,
     summary_output: Path | None = None,
     progress_callback: Callable[[int, str], None] | None = None,
 ) -> tuple[List[str], Dict[str, object]]:
@@ -255,6 +317,10 @@ def generate_visual_summary(
         analysis_output_calls: Optional path for CALLS degree bar chart.
         analysis_output_tests: Optional path for TESTS degree bar chart.
         analysis_output_modified_by: Optional path for MODIFIED_BY degree bar chart.
+        betweenness_output_imports: Optional path for IMPORTS betweenness bar chart.
+        betweenness_output_calls: Optional path for CALLS betweenness bar chart.
+        pagerank_output_imports: Optional path for IMPORTS PageRank bar chart.
+        pagerank_output_calls: Optional path for CALLS PageRank bar chart.
         summary_output: Optional path for the textual summary file.
         progress_callback: Optional ``(percent, message)`` updates during matplotlib work.
 
@@ -344,6 +410,22 @@ def generate_visual_summary(
     analysis_output_modified_by = (
         analysis_output_modified_by
         or Path(f"results/visuals/{repo_name}_graph_degree_analysis_modified_by.png").resolve()
+    )
+    betweenness_output_imports = (
+        betweenness_output_imports
+        or Path(f"results/visuals/{repo_name}_graph_betweenness_imports.png").resolve()
+    )
+    betweenness_output_calls = (
+        betweenness_output_calls
+        or Path(f"results/visuals/{repo_name}_graph_betweenness_calls.png").resolve()
+    )
+    pagerank_output_imports = (
+        pagerank_output_imports
+        or Path(f"results/visuals/{repo_name}_graph_pagerank_imports.png").resolve()
+    )
+    pagerank_output_calls = (
+        pagerank_output_calls
+        or Path(f"results/visuals/{repo_name}_graph_pagerank_calls.png").resolve()
     )
     summary_output = (
         summary_output
@@ -542,7 +624,42 @@ def generate_visual_summary(
     logger.info("visualization_saved path=%s", analysis_output_modified_by)
     report_lines.append(f"MODIFIED_BY degree analysis saved to: {analysis_output_modified_by}")
 
-    _pv(93, "Visualization: composing text summary (per edge-type degree leaders)…")
+    centrality_targets = (
+        ("IMPORTS", imports_edges, betweenness_output_imports, pagerank_output_imports, imports_graph_label),
+        ("CALLS", calls_edges, betweenness_output_calls, pagerank_output_calls, calls_graph_label),
+    )
+    for edge_type, subset_edges, betweenness_out, pagerank_out, edge_label in centrality_targets:
+        if not subset_edges:
+            continue
+        _pv(94, f"Visualization: {edge_type} centrality (betweenness + PageRank)…")
+        subgraph = build_typed_subgraph(nodes, edges, edge_type)
+        betweenness_scores, betweenness_approx = compute_betweenness_centrality(subgraph)
+        pagerank_scores = compute_pagerank(subgraph)
+        approx_suffix = " (sampled estimator)" if betweenness_approx else ""
+
+        plot_centrality_bars(
+            betweenness_scores,
+            path_by_id,
+            top_k,
+            betweenness_out,
+            title=f"Top {top_k} nodes by betweenness — {edge_label}{approx_suffix}",
+            score_label="Betweenness centrality",
+        )
+        logger.info("visualization_saved path=%s", betweenness_out)
+        report_lines.append(f"{edge_type} betweenness analysis saved to: {betweenness_out}")
+
+        plot_centrality_bars(
+            pagerank_scores,
+            path_by_id,
+            top_k,
+            pagerank_out,
+            title=f"Top {top_k} nodes by PageRank — {edge_label}",
+            score_label="PageRank score",
+        )
+        logger.info("visualization_saved path=%s", pagerank_out)
+        report_lines.append(f"{edge_type} PageRank analysis saved to: {pagerank_out}")
+
+    _pv(95, "Visualization: composing text summary (per edge-type degree leaders)…")
     summary_text = build_visual_summary(
         graph_path=graph_path,
         nodes=nodes,
@@ -637,6 +754,26 @@ def main() -> None:
         help="Output image for MODIFIED_BY degree analysis",
     )
     parser.add_argument(
+        "--betweenness-output-imports",
+        default="results/visuals/graph_betweenness_imports.png",
+        help="Output image for IMPORTS betweenness centrality bar chart",
+    )
+    parser.add_argument(
+        "--betweenness-output-calls",
+        default="results/visuals/graph_betweenness_calls.png",
+        help="Output image for CALLS betweenness centrality bar chart",
+    )
+    parser.add_argument(
+        "--pagerank-output-imports",
+        default="results/visuals/graph_pagerank_imports.png",
+        help="Output image for IMPORTS PageRank bar chart",
+    )
+    parser.add_argument(
+        "--pagerank-output-calls",
+        default="results/visuals/graph_pagerank_calls.png",
+        help="Output image for CALLS PageRank bar chart",
+    )
+    parser.add_argument(
         "--summary-output",
         default="results/reports/visual_summary.txt",
         help="Output text summary for visuals",
@@ -673,6 +810,10 @@ def main() -> None:
         analysis_output_calls=Path(args.analysis_output_calls).resolve(),
         analysis_output_tests=Path(args.analysis_output_tests).resolve(),
         analysis_output_modified_by=Path(args.analysis_output_modified_by).resolve(),
+        betweenness_output_imports=Path(args.betweenness_output_imports).resolve(),
+        betweenness_output_calls=Path(args.betweenness_output_calls).resolve(),
+        pagerank_output_imports=Path(args.pagerank_output_imports).resolve(),
+        pagerank_output_calls=Path(args.pagerank_output_calls).resolve(),
         summary_output=Path(args.summary_output).resolve(),
     )
     save_visual_summary(summary_data["summary_text"], summary_data["summary_output"])

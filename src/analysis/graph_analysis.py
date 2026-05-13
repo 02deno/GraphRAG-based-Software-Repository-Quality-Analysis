@@ -13,6 +13,10 @@ from src.analysis.centrality_measures import (
     compute_pagerank,
     top_k_scores,
 )
+from src.analysis.community_detection import (
+    CommunityDetectionResult,
+    detect_communities,
+)
 from src.graph.json_document import (
     compute_in_out_degrees_by_edge_type,
     human_readable_graph_edge_label,
@@ -24,6 +28,8 @@ from src.graph.json_document import (
 logger = logging.getLogger(__name__)
 
 _CENTRALITY_EDGE_TYPES: Tuple[str, ...] = ("IMPORTS", "CALLS")
+_COMMUNITY_EDGE_TYPES: Tuple[str, ...] = ("IMPORTS", "CALLS")
+_COMMUNITY_MAX_MEMBERS_LISTED = 8
 
 
 def top_k(counter: Counter, k: int) -> List[Tuple[str, int]]:
@@ -110,6 +116,7 @@ def format_analysis_report(
     modified_by_in: List[Tuple[str, int]],
     modified_by_out: List[Tuple[str, int]],
     centrality_sections: Dict[str, Dict[str, object]],
+    community_sections: Dict[str, CommunityDetectionResult],
     path_by_id: Dict[str, str],
     top_k_value: int,
 ) -> str:
@@ -134,6 +141,8 @@ def format_analysis_report(
             (``"IMPORTS"`` / ``"CALLS"``) with values
             ``{"betweenness": [(id, score), …], "betweenness_approximated": bool,
             "pagerank": [(id, score), …]}``. Missing entries render as empty sections.
+        community_sections: Per-edge-type Louvain community results keyed by edge
+            token. Empty results render as a "None" line.
         path_by_id: Node id to path map for display.
         top_k_value: How many top entries to show per section.
 
@@ -253,7 +262,106 @@ def format_analysis_report(
                 path_by_id,
             )
         )
+
+    for edge_type in _COMMUNITY_EDGE_TYPES:
+        community_result = community_sections.get(edge_type)
+        lines.append("")
+        if community_result is None:
+            lines.append(f"Top {top_k_value} Louvain communities on {edge_type} graph:")
+            lines.append("- None")
+            continue
+        lines.extend(
+            format_community_section(
+                f"Top {top_k_value} Louvain communities on {edge_type} graph:",
+                community_result,
+                path_by_id,
+                top_k_value=top_k_value,
+            )
+        )
     return "\n".join(lines)
+
+
+def format_community_section(
+    title: str,
+    result: CommunityDetectionResult,
+    path_by_id: Dict[str, str],
+    *,
+    top_k_value: int,
+    max_members: int = _COMMUNITY_MAX_MEMBERS_LISTED,
+) -> List[str]:
+    """Format one community-detection section into report lines.
+
+    Args:
+        title: Heading line.
+        result: Output of :func:`detect_communities`.
+        path_by_id: Display label lookup for each node id.
+        top_k_value: Maximum number of communities to list.
+        max_members: How many members to show inline per community.
+
+    Returns:
+        Lines of plain text ready to be joined into the report body.
+    """
+    lines: List[str] = [title]
+    if result.modularity_score is None or not result.communities:
+        lines.append("- None")
+        return lines
+
+    lines.append(
+        f"- algorithm={result.algorithm}, nodes={result.node_count}, "
+        f"edges={result.edge_count}, communities={len(result.communities)}, "
+        f"modularity={result.modularity_score:.4f}"
+    )
+    for index, members in enumerate(result.communities[:top_k_value], start=1):
+        size = len(members)
+        preview_count = min(max_members, size)
+        member_labels = ", ".join(
+            path_by_id.get(node_id, node_id) for node_id in members[:preview_count]
+        )
+        ellipsis = "" if size <= preview_count else f", … (+{size - preview_count} more)"
+        lines.append(f"- #{index} (size={size}): {member_labels}{ellipsis}")
+    return lines
+
+
+def _compute_community_sections(
+    *,
+    nodes: List[Dict[str, str]],
+    edges: List[Dict[str, str]],
+    progress: Callable[[int, str], None],
+) -> Dict[str, CommunityDetectionResult]:
+    """Run Louvain (with label-propagation fallback) for each eligible edge type.
+
+    Args:
+        nodes: Graph nodes.
+        edges: Graph edges.
+        progress: ``(percent, message)`` callback (already bounded internally).
+
+    Returns:
+        Mapping from edge type to a :class:`CommunityDetectionResult`. Edge
+        types with no edges in the graph map to an empty result so the report
+        layout is stable.
+    """
+    sections: Dict[str, CommunityDetectionResult] = {}
+    base_pct = 71
+    span = 2
+    for index, edge_type in enumerate(_COMMUNITY_EDGE_TYPES):
+        edge_count = sum(1 for edge in edges if edge.get("type") == edge_type)
+        if edge_count == 0:
+            sections[edge_type] = CommunityDetectionResult(
+                communities=(),
+                modularity_score=None,
+                algorithm="louvain",
+                node_count=0,
+                edge_count=0,
+            )
+            continue
+
+        progress(
+            base_pct + index * span,
+            f"Analysis: community detection on {edge_type} graph (edges={edge_count})…",
+        )
+        subgraph = build_typed_subgraph(nodes, edges, edge_type)
+        sections[edge_type] = detect_communities(subgraph)
+    return sections
 
 
 def _compute_centrality_sections(
@@ -279,7 +387,7 @@ def _compute_centrality_sections(
     """
     sections: Dict[str, Dict[str, object]] = {}
     base_pct = 66
-    span = 4
+    span = 2
     for index, edge_type in enumerate(_CENTRALITY_EDGE_TYPES):
         edge_count = sum(1 for edge in edges if edge.get("type") == edge_type)
         if edge_count == 0:
@@ -368,8 +476,13 @@ def generate_analysis_text_report(
         top_k_value=top_k_value,
         progress=_notify,
     )
+    community_sections = _compute_community_sections(
+        nodes=nodes,
+        edges=edges,
+        progress=_notify,
+    )
 
-    _notify(70, "Analysis: assembling plain-text sections (degree + centrality)…")
+    _notify(76, "Analysis: assembling plain-text sections (degree + centrality + communities)…")
     report = format_analysis_report(
         graph_path=graph_path,
         nodes=nodes,
@@ -386,10 +499,11 @@ def generate_analysis_text_report(
         modified_by_in=top_k(modified_by_in, top_k_value),
         modified_by_out=top_k(modified_by_out, top_k_value),
         centrality_sections=centrality_sections,
+        community_sections=community_sections,
         path_by_id=path_by_id,
         top_k_value=top_k_value,
     )
-    _notify(71, "Analysis: text report body ready.")
+    _notify(77, "Analysis: text report body ready.")
 
     report_path = Path(f"results/reports/{graph_stem_display_name(graph_path)}_graph_analysis.txt").resolve()
     return report, report_path

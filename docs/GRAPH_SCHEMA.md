@@ -124,6 +124,7 @@ This document defines the complete graph schema for the GraphRAG Repository Anal
 - **Degree Centrality**: Node importance based on connections (in/out per edge type, including `MODIFIED_BY` churn)
 - **Betweenness Centrality**: Bridge nodes on shortest paths in the `IMPORTS` and `CALLS` subgraphs (`src/analysis/centrality_measures.py`); uses sampled estimator (k=500) above 1000 nodes for tractability.
 - **PageRank**: Multi-hop influence in the `IMPORTS` and `CALLS` subgraphs; complements in-degree by accounting for *who* imports/calls you.
+- **Community Detection**: Louvain modularity on the undirected projections of `IMPORTS` and `CALLS` (`src/analysis/community_detection.py`), with label-propagation fallback. Reports cluster sizes + modularity score; unexpected boundaries flag leaks across package layers.
 - **Edge Distribution**: Analysis of relationship types
 - **Graph Statistics**: Overall repository structure metrics
 - **Compatibility Scoring**: Repository readiness assessment

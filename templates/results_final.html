@@ -268,11 +268,12 @@
         <div class="results-section">
             <h3>🔍 Quality Analysis Results</h3>
             <p class="schema-note" style="margin-top:0;">
-                Degree counts (per edge type) plus <strong>betweenness centrality</strong> and <strong>PageRank</strong>
-                on the <code>IMPORTS</code> and <code>CALLS</code> subgraphs. Betweenness highlights bridge modules
-                whose removal would fragment the architecture; PageRank ranks broadly relied-upon nodes via multi-hop
-                influence. Betweenness uses a sampled estimator (k=500) on graphs larger than 1000 nodes — those
-                sections are labelled <em>(sampled estimator)</em>.
+                Degree counts (per edge type) plus <strong>betweenness centrality</strong>, <strong>PageRank</strong>,
+                and <strong>Louvain community detection</strong> on the <code>IMPORTS</code> and <code>CALLS</code>
+                subgraphs. Betweenness highlights bridge modules whose removal would fragment the architecture;
+                PageRank ranks broadly relied-upon nodes via multi-hop influence; community detection groups densely
+                connected nodes and reports a modularity score. Betweenness uses a sampled estimator (k=500) on
+                graphs larger than 1000 nodes — those sections are labelled <em>(sampled estimator)</em>.
             </p>
             <div class="analysis-text">{{ results.analysis_text }}</div>
         </div>

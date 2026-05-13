@@ -8,6 +8,11 @@ from .centrality_measures import (
     compute_pagerank,
     top_k_scores,
 )
+from .community_detection import (
+    CommunityDetectionResult,
+    detect_communities,
+    summarize_community_sizes,
+)
 from .graph_analysis import generate_analysis_text_report, main
 
 __all__ = [
@@ -18,4 +23,7 @@ __all__ = [
     "compute_betweenness_centrality",
     "compute_pagerank",
     "top_k_scores",
+    "CommunityDetectionResult",
+    "detect_communities",
+    "summarize_community_sizes",
 ]

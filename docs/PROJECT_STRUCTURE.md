@@ -103,13 +103,14 @@ GraphRAG_Project/
 
 ### Graph Analysis Layer (`src/analysis/`)
 **Purpose**: Graph analysis and metrics calculation
-- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality sections)
+- **`graph_analysis.py`**: Orchestrates the text report (degree + centrality + community sections)
 - **`centrality_measures.py`**: Pure helpers for betweenness centrality (sampled k=500 above 1000 nodes) and PageRank on typed subgraphs
+- **`community_detection.py`**: Louvain modularity (with label-propagation fallback) over the undirected projections of `IMPORTS` / `CALLS`; returns `CommunityDetectionResult` (size-sorted communities + modularity)
 - **`__init__.py`**: Analysis utilities and exports
 
 ### Visualization Layer (`src/visualization/`)
 **Purpose**: Graph visualization and reporting
-- **`graph_visualization.py`**: Structure subgraphs and degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY, plus combined)
+- **`graph_visualization.py`**: Structure subgraphs, degree bar charts per edge kind (IMPORTS, IN_FILE, CALLS, TESTS, MODIFIED_BY, plus combined), and centrality bar charts (betweenness + PageRank for IMPORTS and CALLS)
 - **`__init__.py`**: Visualization utilities and exports
 
 ### Statistics Layer (`src/stats/`)

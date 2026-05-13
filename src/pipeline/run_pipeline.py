@@ -185,6 +185,10 @@ def run_repository_pipeline(
             analysis_output_calls=vdir / f"{prefix}_degree_analysis_calls.png",
             analysis_output_tests=vdir / f"{prefix}_degree_analysis_tests.png",
             analysis_output_modified_by=vdir / f"{prefix}_degree_analysis_modified_by.png",
+            betweenness_output_imports=vdir / f"{prefix}_betweenness_imports.png",
+            betweenness_output_calls=vdir / f"{prefix}_betweenness_calls.png",
+            pagerank_output_imports=vdir / f"{prefix}_pagerank_imports.png",
+            pagerank_output_calls=vdir / f"{prefix}_pagerank_calls.png",
             summary_output=visual_summary_output,
             progress_callback=progress_callback,
         )
