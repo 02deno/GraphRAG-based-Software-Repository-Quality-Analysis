@@ -28,6 +28,7 @@ from flask import (
 )
 
 from src.compatibility.check_item import CheckItem
+from src.graphrag.neo4j_property_graph_export import export_graphrag_run_for_visualization
 from src.web.handlers.repository_handler import RepositoryHandler
 from src.web.report_docx import build_analysis_docx_bytes
 from src.web.results_paths import (
@@ -40,6 +41,14 @@ from src.web.utils.helpers import cleanup_temp_directory, handle_repository_uplo
 
 web_bp = Blueprint("web", __name__)
 logger = logging.getLogger(__name__)
+
+
+def _results_final_template_kwargs(results: Dict[str, Any]) -> Dict[str, Any]:
+    """Shared context for ``results_final.html`` (GraphRAG + Neo4j UI flags)."""
+    return {
+        "results": results,
+        "neo4j_property_graph_available": current_app.extensions.get("neo4j_driver") is not None,
+    }
 
 _PROGRESS_UI_HEADER = "X-GraphRAG-Progressive-UI"
 _ANALYZE_STREAM_HEADER = "X-GraphRAG-Analyze-Stream"
@@ -235,7 +244,7 @@ def analyze_repository():
             return jsonify(
                 {"ok": True, "redirect": url_for("web.analysis_results_page", run_dir=run_dir)}
             )
-        return render_template("results_final.html", results=results)
+        return render_template("results_final.html", **_results_final_template_kwargs(results))
     except Exception as exc:
         logger.exception("analyze_repository failed")
         cleanup_temp_directory(repo_path, cleanup_temp)
@@ -253,7 +262,7 @@ def analysis_results_page(run_dir: str):
         flash("Analysis results folder was not found or is not valid.")
         return redirect(url_for("web.index"))
     results = load_results_from_run_directory(base)
-    return render_template("results_final.html", results=results)
+    return render_template("results_final.html", **_results_final_template_kwargs(results))
 
 
 @web_bp.route("/analysis-results/<run_dir>/chat", methods=["POST"])
@@ -281,6 +290,36 @@ def analysis_results_chat(run_dir: str):
     return jsonify(result)
 
 
+@web_bp.route("/analysis-results/<run_dir>/neo4j-property-graph.json")
+def analysis_results_neo4j_property_graph(run_dir: str):
+    """Return a bounded Neo4j property-graph snapshot for the GraphRAG run (JSON for vis).
+
+    Query params: ``max_edges`` (50–2000, default 500), ``max_nodes`` (20–800, default 400).
+    Requires a configured Bolt driver on the app (same as chat Neo4j expansion).
+    """
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        return jsonify({"ok": False, "error": "Analysis results folder was not found or is not valid."}), 404
+    driver = current_app.extensions.get("neo4j_driver")
+    if driver is None:
+        return jsonify({"ok": False, "error": "Neo4j is not configured on this server."}), 503
+    max_edges = request.args.get("max_edges", default=500, type=int) or 500
+    max_nodes = request.args.get("max_nodes", default=400, type=int) or 400
+    max_edges = max(50, min(max_edges, 2000))
+    max_nodes = max(20, min(max_nodes, 800))
+    try:
+        payload = export_graphrag_run_for_visualization(
+            driver,
+            run_dir,
+            max_edges=max_edges,
+            max_nodes=max_nodes,
+        )
+    except Exception as exc:
+        logger.exception("neo4j_property_graph export failed run_dir=%s", run_dir)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    return jsonify({"ok": True, **payload})
+
+
 @web_bp.route("/analysis-results/latest")
 def analysis_results_latest():
     """Load the most recent ``results/web_analysis_*`` run and render results."""
@@ -300,7 +339,7 @@ def analysis_results_latest():
 
     latest = max(candidates, key=lambda p: p.stat().st_mtime)
     results = load_results_from_run_directory(latest)
-    return render_template("results_final.html", results=results)
+    return render_template("results_final.html", **_results_final_template_kwargs(results))
 
 
 @web_bp.route("/analysis-results/<run_dir>/visuals/<filename>")
