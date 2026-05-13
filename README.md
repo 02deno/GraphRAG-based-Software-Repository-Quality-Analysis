@@ -40,6 +40,8 @@ python src/analyze_graph.py --graph "results/graphs/<repo_name>_graph.json" --to
   - ``GRAPHRAG_OPENAI_BASE_URL`` — e.g. ``https://api.openai.com/v1`` or ``http://127.0.0.1:11434/v1`` (Ollama)
   - ``GRAPHRAG_CHAT_MODEL`` — model id accepted by that server
   - ``GRAPHRAG_OPENAI_API_KEY`` — bearer token for hosted APIs (often empty for local Ollama)
+  - ``GRAPHRAG_EMBEDDING_MODEL`` (optional) — when set with the same base URL, **dense embedding** seeds are merged with lexical/community seeds; vectors are cached per run as ``graphrag_embedding_cache.npz``
+  - ``GRAPHRAG_NEO4J_URI``, ``GRAPHRAG_NEO4J_USER``, ``GRAPHRAG_NEO4J_PASSWORD`` (optional) — when set, subgraph **expansion** runs in Neo4j (Bolt) instead of in-process NetworkX; graphs are keyed by run folder name. Optional ``GRAPHRAG_NEO4J_DATABASE`` for multi-database setups
 - **📥 Downloadable Results**: Export JSON, text reports, structured **analysis_view.json** (same metrics as the card UI), individual PNGs, pipeline log, or a **single Word (.docx)** bundling overview text, ``pipeline.txt``, ``analysis.txt``, ``visual_summary.txt``, and embedded chart images
 - **📜 Structured logging**: UTC ISO timestamps and levels via ``GRAPHRAG_LOG_LEVEL``; duplicate stream to a **rotating** ``logs/graphrag.log`` (override with ``GRAPHRAG_LOG_FILE``, or set ``GRAPHRAG_LOG_TO_FILE=0`` for console-only); HTTP lines under ``src.web.request``
 - **📱 Responsive Design**: Mobile-friendly interface

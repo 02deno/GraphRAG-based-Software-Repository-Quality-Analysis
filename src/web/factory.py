@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import os
 
+import atexit
+
 from flask import Flask, request
 
 from src.logging_config import configure_standard_logging, get_logger
 from src.graphrag.chat_service import GraphRagChatService
+from src.graphrag.neo4j_driver import create_neo4j_driver_from_env
 from src.graphrag.openai_compatible_client import load_chat_client_from_env
 from src.web.blueprints.web import web_bp
 from src.web.config import get_project_root, load_flask_config
@@ -19,8 +22,8 @@ def create_app() -> Flask:
     """Create and configure the Flask application with blueprints and shared services.
 
     Services are stored on ``app.extensions`` under ``repo_handler``,
-    ``analysis_service``, and ``graphrag_chat_service`` so routes stay free of
-    module-level globals.
+    ``analysis_service``, ``graphrag_chat_service``, and optional ``neo4j_driver``
+    so routes stay free of module-level globals.
 
     Returns:
         A fully wired :class:`flask.Flask` instance (same object ``app`` as in ``app.py``).
@@ -39,7 +42,19 @@ def create_app() -> Flask:
         _llm = load_chat_client_from_env()
     except ValueError:
         _llm = None
-    app.extensions["graphrag_chat_service"] = GraphRagChatService(_llm)
+    _neo = create_neo4j_driver_from_env()
+    app.extensions["neo4j_driver"] = _neo
+    if _neo is not None:
+
+        def _close_neo4j() -> None:
+            try:
+                _neo.close()
+            except Exception:
+                get_logger(__name__).debug("Neo4j driver close ignored", exc_info=True)
+
+        atexit.register(_close_neo4j)
+
+    app.extensions["graphrag_chat_service"] = GraphRagChatService(_llm, neo4j_driver=_neo)
     app.register_blueprint(web_bp)
 
     @app.after_request

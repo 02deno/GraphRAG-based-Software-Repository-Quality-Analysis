@@ -81,8 +81,9 @@ GraphRAG_Project/
 - **`context_formatter.py`**: Serialize an induced subgraph to a capped plain-text block for the model.
 - **`analysis_context.py`**: Short text summary from persisted ``analysis_view.json`` (risk, centrality, communities).
 - **`community_seeds.py`**: Extra seeds from Louvain community rows when previews overlap the question (uses ``member_ids`` from ``analysis_view``).
-- **`openai_compatible_client.py`**: ``httpx``-based ``POST /chat/completions`` client (OpenAI + Ollama-compatible bases).
-- **`chat_service.py`**: ``GraphRagChatService`` orchestrates load → seeds → expand → format → LLM.
+- **`neo4j_driver.py`**: Optional Bolt driver from ``GRAPHRAG_NEO4J_*`` environment variables.
+- **`neo4j_subgraph.py`**: ``Neo4jSubgraphExpander`` syncs ``graph.json`` into Neo4j and performs typed BFS expansion when a driver is configured.
+- **`embedding_seeds.py`**: OpenAI-compatible ``/v1/embeddings`` + per-run ``.npz`` cache; cosine-ranked seed ids merged in the chat service.
 
 ### Graph Model & Construction Layer (`src/graph/`)
 **Purpose**: Core graph data model and construction logic

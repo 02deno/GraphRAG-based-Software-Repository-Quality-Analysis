@@ -140,6 +140,7 @@ export FLASK_DEBUG=False
 #### Flask Application (`src/web/app.py`)
 - **Routes**: `/` (upload form), `POST /upload` (clone/ZIP + compatibility, then redirect), `GET /compatibility` (session-backed results + per-check explanations), `POST /analyze` (pipeline; compatibility sends ``X-GraphRAG-Progressive-UI`` + ``X-GraphRAG-Analyze-Stream`` for **SSE** with granular ``progress`` messages, then ``complete`` redirect; if the client receives **HTML** instead, it uses ``document.write``), ``GET /analysis-results/<run_dir>`` (results + **GraphRAG** assistant panel), ``POST /analysis-results/<run_dir>/chat`` (JSON assistant; subgraph retrieval + LLM), ``GET /analysis-results/<run_dir>/visuals/<filename>`` (PNG charts), ``GET /analysis-results/<run_dir>/report.docx`` (single bundled Word export)
 - **Logging**: ``GRAPHRAG_LOG_LEVEL`` (default ``INFO``); UTC lines on stderr **and** by default a rotating ``logs/graphrag.log``; ``GRAPHRAG_LOG_FILE`` / ``GRAPHRAG_LOG_TO_FILE``; each response as ``METHOD path -> status`` under ``src.web.request``
+- **GraphRAG env (optional beyond chat)**: ``GRAPHRAG_EMBEDDING_MODEL`` + same OpenAI-compatible base URL for vector seeds (per-run ``graphrag_embedding_cache.npz``); ``GRAPHRAG_NEO4J_URI`` / ``GRAPHRAG_NEO4J_USER`` / ``GRAPHRAG_NEO4J_PASSWORD`` (and optional ``GRAPHRAG_NEO4J_DATABASE``) to run subgraph **expansion** in Neo4j instead of NetworkX
 - **Session Management**: Analysis state preservation
 - **Error Handling**: Comprehensive exception management
 - **File Management**: Temporary upload handling

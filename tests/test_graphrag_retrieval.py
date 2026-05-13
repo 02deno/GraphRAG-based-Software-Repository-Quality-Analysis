@@ -62,6 +62,19 @@ def test_induced_edges_respects_types() -> None:
     assert len(rows) == 2
 
 
+def test_rank_node_ids_by_cosine_orders_by_similarity() -> None:
+    import numpy as np
+
+    from src.graphrag.embedding_seeds import rank_node_ids_by_cosine
+
+    emb = np.array([[1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
+    q = np.array([1.0, 0.0], dtype=np.float32)
+    ids = ["a", "b", "c"]
+    out = rank_node_ids_by_cosine(emb, q, ids, top_k=2)
+    assert out[0] == "a"
+    assert len(out) == 2
+
+
 def test_community_seeds_use_member_ids() -> None:
     view = {
         "community_sections": [

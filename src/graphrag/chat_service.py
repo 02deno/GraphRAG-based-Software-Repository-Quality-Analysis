@@ -11,6 +11,8 @@ from src.graph.json_document import load_graph_document
 from src.graphrag.analysis_context import format_analysis_view_summary
 from src.graphrag.community_seeds import community_member_seeds_from_view
 from src.graphrag.context_formatter import format_subgraph_for_llm
+from src.graphrag.embedding_seeds import try_embedding_seed_ids
+from src.graphrag.neo4j_subgraph import Neo4jSubgraphExpander
 from src.graphrag.query_index import rank_seed_node_ids
 from src.graphrag.subgraph_retriever import (
     build_multidigraph,
@@ -32,11 +34,23 @@ _SYSTEM_PROMPT = (
 
 
 class GraphRagChatService:
-    """Run lexical + community seeding, graph expansion, and one LLM completion."""
+    """Run lexical + community + optional embedding seeds, then expand and call the LLM."""
 
-    def __init__(self, llm: ChatCompletionClient | None) -> None:
-        """Attach an optional LLM client (``None`` disables chat until configured)."""
+    def __init__(
+        self,
+        llm: ChatCompletionClient | None,
+        *,
+        neo4j_driver: object | None = None,
+    ) -> None:
+        """Attach an optional LLM client and optional Neo4j driver for expansion.
+
+        Args:
+            llm: Chat completion client; ``None`` disables chat until configured.
+            neo4j_driver: Neo4j ``Driver`` from :func:`create_neo4j_driver_from_env`, or
+                ``None`` to expand in-process with NetworkX (default).
+        """
         self._llm = llm
+        self._neo4j = neo4j_driver
 
     def answer(
         self,
@@ -97,9 +111,15 @@ class GraphRagChatService:
         ranked = rank_seed_node_ids(nodes, msg, top_k=top_seeds)
         lexical_seeds = [nid for nid, _s in ranked]
         comm_seeds = community_member_seeds_from_view(msg, analysis_view)
+        embed_seeds, embed_diag = try_embedding_seed_ids(
+            run_dir_path,
+            nodes,
+            msg,
+            top_k=min(12, top_seeds),
+        )
         seed_order: List[str] = []
         seen_seed: set[str] = set()
-        for nid in lexical_seeds + comm_seeds:
+        for nid in lexical_seeds + comm_seeds + embed_seeds:
             if nid and nid not in seen_seed:
                 seen_seed.add(nid)
                 seed_order.append(nid)
@@ -110,13 +130,43 @@ class GraphRagChatService:
         if not seeds_in_graph:
             return {"ok": False, "error": "No seed nodes could be mapped onto the graph."}
 
-        subgraph_ids = expand_seeds_undirected_bfs(
-            g,
-            seeds_in_graph,
-            allowed_edge_types=allowed,
-            max_depth=max_depth,
-            max_nodes=max_nodes,
-        )
+        retrieval_backend = "networkx"
+        subgraph_ids: set[str]
+        if self._neo4j is not None:
+            expander = Neo4jSubgraphExpander(self._neo4j)
+            synced = expander.ensure_synced(
+                run_dir_path.name,
+                nodes,
+                edges,
+                graph_path=graph_path,
+            )
+            if synced:
+                subgraph_ids = expander.expand(
+                    run_dir_path.name,
+                    seeds_in_graph,
+                    allowed,
+                    max_depth=max_depth,
+                    max_nodes=max_nodes,
+                )
+                retrieval_backend = "neo4j"
+            else:
+                logger.warning("Neo4j sync failed; falling back to NetworkX expansion.")
+                subgraph_ids = expand_seeds_undirected_bfs(
+                    g,
+                    seeds_in_graph,
+                    allowed_edge_types=allowed,
+                    max_depth=max_depth,
+                    max_nodes=max_nodes,
+                )
+        else:
+            subgraph_ids = expand_seeds_undirected_bfs(
+                g,
+                seeds_in_graph,
+                allowed_edge_types=allowed,
+                max_depth=max_depth,
+                max_nodes=max_nodes,
+            )
+
         sub_edges = induced_subgraph_edges(g, subgraph_ids, allowed)
         node_subset = [n for n in nodes if str(n.get("id", "")) in subgraph_ids]
         subgraph_text = format_subgraph_for_llm(
@@ -146,6 +196,9 @@ class GraphRagChatService:
             "seed_nodes": seeds_in_graph[:top_seeds],
             "lexical_seeds": lexical_seeds,
             "community_seeds": comm_seeds,
+            "embedding_seeds": embed_seeds,
+            "embedding_diagnostics": embed_diag,
+            "retrieval_backend": retrieval_backend,
             "allowed_edge_types": sorted(allowed),
             "subgraph_node_count": len(subgraph_ids),
             "subgraph_edge_count": len(sub_edges),

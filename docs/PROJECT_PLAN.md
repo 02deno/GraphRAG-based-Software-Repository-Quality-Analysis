@@ -47,11 +47,12 @@ Note: Step 3 complete.
 
 ## Step 4 - GraphRAG (retrieval + LLM)
 
-- Done: Lexical seeding over node text (`src/graphrag/query_index.py`) with token-overlap scoring (lightweight hybrid without embeddings).
+- Done: Lexical seeding over node text (`src/graphrag/query_index.py`) with token-overlap scoring; optional dense **embedding** seeds when ``GRAPHRAG_EMBEDDING_MODEL`` is set.
 - Done: Typed ``MultiDiGraph`` + bounded undirected BFS expansion (`src/graphrag/subgraph_retriever.py`).
 - Done: Subgraph + ``analysis_view`` text formatting for LLM context (`context_formatter.py`, `analysis_context.py`).
 - Done: OpenAI-compatible HTTP client (``httpx``) + env-based wiring for hosted APIs and Ollama (`openai_compatible_client.py`).
 - Done: Orchestrator `GraphRagChatService` (`chat_service.py`).
 - Done: Web ``POST /analysis-results/<run_dir>/chat`` + results page assistant panel (`templates/results_final.html`).
-- Done: Community-aware extra seeds via ``member_ids`` on Louvain preview rows (`community_seeds.py`, `analysis_web_payload.py`).
+- Done: Optional **Neo4j** backend for subgraph expansion when ``GRAPHRAG_NEO4J_*`` is set (sync keyed by run folder; falls back to NetworkX on failure).
+- Done: Optional **embedding** seeds via OpenAI-compatible ``/v1/embeddings`` + ``graphrag_embedding_cache.npz`` per run when ``GRAPHRAG_EMBEDDING_MODEL`` is set.
 

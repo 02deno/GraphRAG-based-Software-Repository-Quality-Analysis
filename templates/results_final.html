@@ -801,6 +801,8 @@
                 Set <code>GRAPHRAG_OPENAI_BASE_URL</code> and <code>GRAPHRAG_CHAT_MODEL</code> before starting the app;
                 use <code>GRAPHRAG_OPENAI_API_KEY</code> for hosted APIs. For Ollama, use base URL
                 <code>http://127.0.0.1:11434/v1</code>.
+                Optional: <code>GRAPHRAG_EMBEDDING_MODEL</code> (same API, caches vectors under the run folder) and
+                Neo4j expansion via <code>GRAPHRAG_NEO4J_URI</code>, <code>GRAPHRAG_NEO4J_USER</code>, <code>GRAPHRAG_NEO4J_PASSWORD</code>.
             </p>
             <label for="graphrag-input" class="qv-side-section-note"><strong>Your question</strong></label>
             <textarea id="graphrag-input" placeholder="e.g. What calls into module X? Which areas lack tests?" aria-label="GraphRAG question"></textarea>
@@ -838,10 +840,14 @@
                         metaEl.textContent = (data.error || 'Request failed') + (res.status ? ' (HTTP ' + res.status + ')' : '');
                         return;
                     }
+                    var extra = [];
+                    if (data.retrieval_backend) extra.push('expand=' + data.retrieval_backend);
+                    if (data.embedding_seeds && data.embedding_seeds.length) extra.push('vec_seeds=' + data.embedding_seeds.length);
                     metaEl.textContent = 'Seeds: ' + (data.seed_nodes || []).slice(0, 8).join(', ')
                         + (data.seed_nodes && data.seed_nodes.length > 8 ? '…' : '')
                         + ' | subgraph nodes=' + (data.subgraph_node_count || 0)
-                        + ', edges=' + (data.subgraph_edge_count || 0);
+                        + ', edges=' + (data.subgraph_edge_count || 0)
+                        + (extra.length ? ' | ' + extra.join(' | ') : '');
                     replyEl.textContent = data.reply || '';
                     replyEl.style.display = 'block';
                 }).catch(function (err) {
