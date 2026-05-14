@@ -224,6 +224,7 @@ werkzeug            # WSGI utilities
 
 - **`docs/USAGE.md`**: Detailed usage examples
 - **`docs/PROJECT_STRUCTURE.md`**: Architecture details
+- **`docs/PROJECT_DELIVERY_REPORT.md`**: English course / submission report template with figure placeholders under `docs/assets/`
 - **`docs/GRAPHRAG_CHAT_ROADMAP.md`**: GraphRAG chat future work (vector DB, analysis embeddings, `image_url` + safe Markdown images)
 - **`docs/GRAPH_SCHEMA.md`**: Graph schema definition
 - **`docs/REPO_COMPATIBILITY_CHECKLIST.md`**: Compatibility requirements

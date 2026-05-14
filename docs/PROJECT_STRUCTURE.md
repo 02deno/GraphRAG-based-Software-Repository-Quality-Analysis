@@ -178,6 +178,7 @@ GraphRAG_Project/
 ## 📁 Documentation Structure (`docs/`)
 
 **Purpose**: Project documentation and guides
+- **`PROJECT_DELIVERY_REPORT.md`**: English project delivery / submission report (screenshot placeholders in `docs/assets/`)
 - **`GRAPHRAG_CHAT_ROADMAP.md`**: Planned vector-store migration, analysis embeddings artifacts, and `image_url` retrieval + UI notes for GraphRAG chat
 - **`USAGE.md`**: Detailed usage examples (CLI and web)
 - **`PROJECT_STRUCTURE.md`**: Architecture details (this file)
