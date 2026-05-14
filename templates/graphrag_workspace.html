@@ -870,12 +870,6 @@
         state.lastApproxChars = approx || 0;
         var hint = el('token-hint');
         hint.textContent = approx ? ('Estimated prompt size (chars): ~' + approx) : '';
-        if (level === 'critical') {
-            var c = document.createElement('div');
-            c.className = 'warn-banner critical';
-            c.textContent = 'Context is very large — start a new session now to avoid truncation or failures. Use New chat, or enable GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS for automatic summary carryover.';
-            slot.appendChild(c);
-        }
     }
 
     function renderProjects() {
