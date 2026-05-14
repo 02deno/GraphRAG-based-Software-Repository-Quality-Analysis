@@ -16,7 +16,7 @@ from src.graphrag.context_formatter import format_subgraph_for_llm
 from src.graphrag.embedding_seeds import try_embedding_seed_ids
 from src.graphrag.neo4j_subgraph import Neo4jSubgraphExpander
 from src.graphrag.query_index import rank_seed_node_ids
-from src.graphrag.source_context import retrieve_source_context_for_llm
+from src.graphrag.source_context import load_run_meta, retrieve_source_context_for_llm
 from src.graphrag.subgraph_retriever import (
     build_multidigraph,
     default_edge_types_for_query,
@@ -51,9 +51,10 @@ _SYSTEM_PROMPT = (
     "anchor on the **Precomputed metrics** block and any excerpts under `_analysis/` "
     "(pipeline analysis for this run). Do not substitute a generic description of some "
     "other codebase.\n\n"
-    "If the **latest** user message is short or vague (e.g. a follow-up like 'what about "
-    "degree?'), combine it with the **prior turns** in this conversation and the new "
-    "evidence blocks—do not drift to unrelated files or topics.\n\n"
+    "**Artifact paths:** Strings like ``results/web_analysis_*``, ``graph.json``, or "
+    "virtual ``_analysis/…`` are **this run's outputs**, not the product's name. A Windows "
+    "path may contain a parent folder (e.g. a checkout used to host the web app); do not "
+    "rename the user's analyzed project after that folder unless the user asks about the tool itself.\n\n"
     "When **Source excerpts** appear, use them for implementation detail; cite paths and "
     "line ranges when possible. Prefer human-readable graph labels from the evidence.\n\n"
     "Respond in the same language as the user's question when possible.\n\n"
@@ -109,6 +110,42 @@ def _retrieval_query_blend(
     if len(blended) > max_len:
         return blended[: max(0, max_len - 3)] + "..."
     return blended
+
+
+def _format_analyzed_repo_subject(run_dir_path: Path) -> str:
+    """Clarify which codebase is the chat subject (vs host paths and pipeline artifacts).
+
+    ``visual_summary_view`` / ``_analysis/*`` chunks often embed absolute paths that include
+    a parent checkout (e.g. ``GraphRAG_Project``); without this hint models may describe the
+    tooling host instead of the analyzed repository.
+
+    Returns:
+        Markdown lines ending with a blank line so callers can concatenate safely.
+    """
+    meta = load_run_meta(run_dir_path)
+    root_s = meta.get("source_repo_root")
+    lines: list[str] = ["### Analyzed repository (subject of this chat)", ""]
+    if isinstance(root_s, str) and root_s.strip():
+        root = root_s.strip()
+        label = Path(root).name or root
+        lines.append(
+            f"- The uploaded/cloned project analyzed by this run lives under **`{root}`** "
+            f"(short label: **{label}**). Explain *that* codebase using ``File`` nodes and "
+            "indexed ``*.py`` / README excerpts (paths relative to that root)."
+        )
+    else:
+        lines.append(
+            "- ``graphrag_run_meta.json`` did not record ``source_repo_root``; infer the product "
+            "from graph ``File`` paths and indexed excerpts, not from ``results/web_analysis_*`` "
+            "folder names."
+        )
+    lines.append(
+        "- Paths under ``results/web_analysis_*`` and virtual ``_analysis/*`` are **saved "
+        "pipeline outputs** (metrics, summaries). They are not alternate product names; a "
+        "segment like ``GraphRAG_Project`` may only mark where the web app ran the analysis."
+    )
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _approx_chars_for_messages(msgs: Sequence[Mapping[str, str]]) -> int:
@@ -320,8 +357,10 @@ class GraphRagChatService:
             q_rank,
             max_chars=max_source_chars,
         )
+        subject = _format_analyzed_repo_subject(run_dir_path)
         user_block = (
-            "Evidence below is for this run only (metrics + graph slice + optional file/analysis "
+            subject
+            + "Evidence below is for this run only (metrics + graph slice + optional file/analysis "
             "excerpts). Answer the question directly; do not describe 'provided text' as an object.\n\n"
             f"### User question\n{msg}\n\n"
             f"### Precomputed metrics (may be partial)\n{metrics_text}\n\n"

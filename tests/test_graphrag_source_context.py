@@ -184,3 +184,20 @@ def test_metrics_intent_prioritizes_analysis_over_docs(tmp_path: Path) -> None:
     assert chunks, "expected ranked chunks"
     top_paths = [str(c.get("path") or "") for c in chunks[:5]]
     assert any(p.startswith("_analysis/") for p in top_paths), top_paths
+
+
+def test_repo_scope_intent_phrases() -> None:
+    from src.graphrag import source_context as sc
+
+    assert sc._repo_scope_intent("describe this codebase")
+    assert sc._repo_scope_intent("yüklenen repo nedir")
+    assert not sc._repo_scope_intent("betweenness on the calls graph")
+
+
+def test_analysis_chunk_repo_intent_penalty_respects_graph_queries() -> None:
+    from src.graphrag import source_context as sc
+
+    rec = {"path": "_analysis/analysis.txt", "kind": "analysis_report"}
+    assert sc._analysis_chunk_repo_intent_penalty("describe this project", rec) == -88.0
+    assert sc._analysis_chunk_repo_intent_penalty("centrality and betweenness", rec) == 0.0
+    assert sc._analysis_chunk_repo_intent_penalty("graph analysis results for this repo", rec) == 0.0

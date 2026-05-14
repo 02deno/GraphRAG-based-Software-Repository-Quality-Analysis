@@ -485,6 +485,61 @@ def _wants_graph_pipeline_metrics(query: str) -> bool:
     return any(n in q for n in needles_en) or any(n in q for n in needles_tr)
 
 
+def _repo_scope_intent(query: str) -> bool:
+    """True when the user likely asks about the product/codebase, not pipeline JSON layout."""
+    q = (query or "").lower()
+    needles_en = (
+        "this repo",
+        "the repo",
+        "this project",
+        "the project",
+        "this codebase",
+        "the codebase",
+        "what does it",
+        "what is it",
+        "tell me about",
+        "describe the",
+        "describe this",
+        "overview",
+        "main modules",
+        "entry point",
+        "entry points",
+        "what is this repository",
+        "uploaded repo",
+        "cloned repo",
+    )
+    needles_tr = (
+        "bu repo",
+        "şu repo",
+        "yüklenen repo",
+        "proje nedir",
+        "repo nedir",
+        "bu proje",
+        "proje hakkında",
+        "repo hakkında",
+        "genel bilgi",
+        "nedir bu",
+    )
+    return any(n in q for n in needles_en) or any(n in q for n in needles_tr)
+
+
+def _analysis_chunk_repo_intent_penalty(query: str, rec: Dict[str, Any]) -> float:
+    """Demote ``_analysis/*`` chunks when the user asks about the codebase, not graph metrics.
+
+    ``visual_summary_view`` / ``analysis.txt`` excerpts often contain absolute host paths
+    (e.g. a parent ``GraphRAG_Project`` checkout) and schema metadata; without this penalty
+    the model may wrongly describe the **tooling checkout** instead of the analyzed repository.
+    """
+    if _wants_graph_pipeline_metrics(query):
+        return 0.0
+    if not _repo_scope_intent(query):
+        return 0.0
+    path = str(rec.get("path", ""))
+    if rec.get("kind") == "analysis_report" or path.startswith("_analysis/"):
+        return -88.0
+    return 0.0
+
+
 def _analysis_chunk_score_boost(query: str, rec: Dict[str, Any]) -> float:
     """Raise lexical rank for persisted ``_analysis/*`` chunks when the query targets metrics."""
     if not _wants_graph_pipeline_metrics(query):
@@ -525,7 +580,9 @@ def retrieve_source_context_for_llm(
         ``(excerpt_block, diagnostics)``; block may be empty when no index or repo.
         Chunks whose paths start with ``_analysis/`` (pipeline metrics text) receive a
         **score bonus** when the question clearly targets graph-analysis metrics, so they
-        are not drowned out by generic Markdown documentation hits.
+        are not drowned out by generic Markdown documentation hits. When the question is
+        about the **product repository** (not graph metrics), ``_analysis/*`` excerpts are
+        **demoted** so absolute host paths and schema headers do not override real source files.
         When ``enabled`` is true, diagnostics may include ``included_chunks`` (ordered
         list of path/line/score metadata for excerpts actually packed into the block),
         optional per-chunk ``excerpt`` text for UI (length capped by
@@ -568,6 +625,7 @@ def retrieve_source_context_for_llm(
                 blob = f"{rec.get('path', '')}\n{rec.get('text', '')}"
                 s = score_query_against_blob(query, blob.lower())
                 s += _analysis_chunk_score_boost(query, rec)
+                s += _analysis_chunk_repo_intent_penalty(query, rec)
                 if s > 0:
                     scored.append((s, rec))
     except OSError as exc:
@@ -575,9 +633,34 @@ def retrieve_source_context_for_llm(
         return "", diag
 
     if not scored:
+        skip_analysis_fallback = _repo_scope_intent(query) and not _wants_graph_pipeline_metrics(
+            query
+        )
         try:
             with chunks_path.open(encoding="utf-8") as fh2:
                 for line in fh2:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(rec, dict):
+                        if skip_analysis_fallback:
+                            pth = str(rec.get("path", ""))
+                            if pth.startswith("_analysis/") or rec.get("kind") == "analysis_report":
+                                continue
+                        scored.append((0.0, rec))
+                    if len(scored) >= min(18, top_rank):
+                        break
+        except OSError:
+            pass
+
+    if not scored:
+        try:
+            with chunks_path.open(encoding="utf-8") as fh3:
+                for line in fh3:
                     line = line.strip()
                     if not line:
                         continue
