@@ -488,11 +488,37 @@
         session: null,
         lastContextWarn: 'none',
         lastApproxChars: 0,
-        sending: false
+        /** Per-session in-flight POST /message (so other sessions can still send). */
+        pendingSends: {},
+        /** Per-session AbortController for streaming fetch (abort when switching session). */
+        streamControllers: {}
     };
 
     var appNoticeTimer = null;
     var scrollChatRaf = null;
+
+    function abortChatStreamForSession(sessionId) {
+        if (!sessionId || !state.streamControllers) return;
+        var k = String(sessionId);
+        var c = state.streamControllers[k];
+        if (c) {
+            try {
+                c.abort();
+            } catch (e0) { /* ignore */ }
+            delete state.streamControllers[k];
+        }
+    }
+
+    function abortAllChatStreams() {
+        if (!state.streamControllers) return;
+        Object.keys(state.streamControllers).forEach(function (k) {
+            try {
+                state.streamControllers[k].abort();
+            } catch (e1) { /* ignore */ }
+        });
+        state.streamControllers = {};
+        state.pendingSends = {};
+    }
 
     function el(id) { return document.getElementById(id); }
 
@@ -660,7 +686,7 @@
         scrollChatToBottom();
     }
 
-    function readChatEventStream(res, userTextSnap, sessionSnap) {
+    function readChatEventStream(res, userTextSnap, sessionSnap, streamSessionId) {
         if (!res.body || typeof res.body.getReader !== 'function') {
             return Promise.reject(new Error('No readable stream body.'));
         }
@@ -699,18 +725,26 @@
                 return false;
             }
             if (obj.type === 'error') {
-                state.session = sessionSnap;
-                el('input').value = userTextSnap;
-                renderMessages();
+                if (String(state.sessionId) === String(streamSessionId)) {
+                    state.session = sessionSnap;
+                    el('input').value = userTextSnap;
+                    renderMessages();
+                } else {
+                    refreshSessionList();
+                }
                 showAppNotice(obj.error || 'Request failed');
                 terminal = 'error';
                 return true;
             }
             if (obj.type === 'complete') {
-                state.session = obj.session;
-                renderMessages();
-                setWarnBanner(obj.context_warn, obj.approx_input_chars);
-                refreshSessionList();
+                if (String(state.sessionId) === String(streamSessionId)) {
+                    state.session = obj.session;
+                    renderMessages();
+                    setWarnBanner(obj.context_warn, obj.approx_input_chars);
+                    refreshSessionList();
+                } else {
+                    refreshSessionList();
+                }
                 lastCompletePayload = obj;
                 terminal = 'complete';
                 return true;
@@ -1050,7 +1084,10 @@
         el('btn-new-session').disabled = !hasRun;
         el('btn-delete-session').disabled = !hasRun || !state.sessionId;
         el('input').disabled = !hasRun || !state.sessionId;
-        el('btn-send').disabled = !hasRun || !state.sessionId;
+        var sid = state.sessionId != null ? String(state.sessionId) : '';
+        var pendingThis = !!(sid && state.pendingSends[sid]);
+        el('btn-send').disabled = !hasRun || !state.sessionId || pendingThis;
+        el('btn-send').classList.toggle('is-busy', pendingThis);
         el('chat-title').textContent = state.session
             ? (state.session.title || 'Chat')
             : (state.runDir ? 'Select or create a session' : 'Select a project');
@@ -1058,6 +1095,7 @@
 
     function selectProject(runDir) {
         clearAppNotice();
+        abortAllChatStreams();
         state.runDir = runDir;
         state.sessionId = null;
         state.session = null;
@@ -1081,6 +1119,10 @@
 
     function selectSession(sessionId) {
         if (!state.runDir) return;
+        var prev = state.sessionId;
+        if (prev && String(prev) !== String(sessionId)) {
+            abortChatStreamForSession(prev);
+        }
         state.sessionId = sessionId;
         state.session = null;
         renderMessages();
@@ -1127,12 +1169,14 @@
 
     function send() {
         var text = (el('input').value || '').trim();
-        if (!text || !state.runDir || !state.sessionId || state.sending) return;
+        var streamSessionId = state.sessionId != null ? String(state.sessionId) : '';
+        if (!text || !state.runDir || !streamSessionId || state.pendingSends[streamSessionId]) return;
         if (!state.session) return;
         clearAppNotice();
-        var btn = el('btn-send');
-        state.sending = true;
-        btn.classList.add('is-busy');
+        var ac = new AbortController();
+        state.streamControllers[streamSessionId] = ac;
+        state.pendingSends[streamSessionId] = true;
+        updateChrome();
         var snap = cloneSession(state.session);
         var baseMsgs = state.session.messages ? state.session.messages.slice() : [];
         state.session = Object.assign({}, state.session, {
@@ -1149,7 +1193,7 @@
             '/' +
             encodeURIComponent(state.runDir) +
             '/sessions/' +
-            encodeURIComponent(state.sessionId) +
+            encodeURIComponent(streamSessionId) +
             '/message';
         var headers = { 'Content-Type': 'application/json' };
         headers[CHAT_STREAM_HDR] = '1';
@@ -1157,61 +1201,91 @@
         fetch(msgUrl, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({ message: text }),
+            signal: ac.signal
         })
             .then(function (res) {
                 var ct = (res.headers.get('Content-Type') || '').toLowerCase();
                 if (ct.indexOf('text/event-stream') !== -1) {
                     if (!res.ok) {
-                        state.session = snap;
-                        el('input').value = text;
-                        renderMessages();
-                        showAppNotice('Chat stream failed (HTTP ' + res.status + ').');
-                        return;
-                    }
-                    return readChatEventStream(res, text, snap).then(function (out) {
-                        var term = out && out.term;
-                        var payload = out && out.complete;
-                        if (term !== 'complete' && term !== 'error') {
+                        if (String(state.sessionId) === streamSessionId) {
                             state.session = snap;
                             el('input').value = text;
                             renderMessages();
+                        }
+                        showAppNotice('Chat stream failed (HTTP ' + res.status + ').');
+                        return;
+                    }
+                    return readChatEventStream(res, text, snap, streamSessionId).then(function (out) {
+                        var term = out && out.term;
+                        var payload = out && out.complete;
+                        if (term !== 'complete' && term !== 'error') {
+                            if (String(state.sessionId) === streamSessionId) {
+                                state.session = snap;
+                                el('input').value = text;
+                                renderMessages();
+                            }
                             showAppNotice(
                                 'The reply stream ended before a final answer. The chat model may still be running, or the connection timed out. Check that Ollama (or your API) is reachable, then try again or raise GRAPHRAG_CHAT_TIMEOUT_S in .env.'
                             );
                             return;
                         }
-                        if (term === 'complete' && payload && payload.context_auto_fork) {
+                        if (
+                            term === 'complete' &&
+                            payload &&
+                            payload.context_auto_fork &&
+                            String(state.sessionId) === String(streamSessionId)
+                        ) {
                             return runAutoSummaryFork();
                         }
                     });
                 }
                 return res.json().then(function (body) {
                     if (!res.ok || !body.ok) {
-                        state.session = snap;
-                        el('input').value = text;
-                        renderMessages();
+                        if (String(state.sessionId) === streamSessionId) {
+                            state.session = snap;
+                            el('input').value = text;
+                            renderMessages();
+                        }
                         showAppNotice((body && body.error) || 'Request failed (' + res.status + ')');
                         return;
                     }
-                    state.session = body.session;
-                    renderMessages();
-                    setWarnBanner(body.context_warn, body.approx_input_chars);
-                    refreshSessionList();
-                    if (body.context_auto_fork) {
-                        return runAutoSummaryFork();
+                    if (String(state.sessionId) === streamSessionId) {
+                        state.session = body.session;
+                        renderMessages();
+                        setWarnBanner(body.context_warn, body.approx_input_chars);
+                        refreshSessionList();
+                        if (body.context_auto_fork) {
+                            return runAutoSummaryFork();
+                        }
+                    } else {
+                        refreshSessionList();
                     }
                 });
             })
             .catch(function (e) {
-                state.session = snap;
-                el('input').value = text;
-                renderMessages();
+                if (e && e.name === 'AbortError') {
+                    if (String(state.sessionId) === streamSessionId) {
+                        state.session = snap;
+                        el('input').value = text;
+                        renderMessages();
+                    }
+                    refreshSessionList();
+                    return;
+                }
+                if (String(state.sessionId) === streamSessionId) {
+                    state.session = snap;
+                    el('input').value = text;
+                    renderMessages();
+                } else {
+                    refreshSessionList();
+                }
                 showAppNotice('Network: ' + e);
             })
-            .then(function () {
-                state.sending = false;
-                btn.classList.remove('is-busy');
+            .finally(function () {
+                delete state.pendingSends[streamSessionId];
+                delete state.streamControllers[streamSessionId];
+                updateChrome();
             });
     }
 
@@ -1243,7 +1317,7 @@
     el('input').addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (!state.sending) send();
+            if (!state.pendingSends[String(state.sessionId)]) send();
         }
     });
 
