@@ -64,7 +64,7 @@ GraphRAG_Project/
 - **`repo_checker.py`**: Weighted compatibility checker using ``CheckItem`` results
 
 **Scoring Categories**:
-- **Core Checks (70%)**: Python language, package-root/tests layout (root or ``backend/`` monorepo paths), static imports; headline score is **capped under 50%** when the repo is not Python-primary (see ``repo_checker``)
+- **Core Checks (70%)**: Python language, package-root/tests layout (root or ``backend/`` monorepo paths, top-level ``api/`` or ``app/`` with Python sources), static imports; headline score is **capped under 50%** when the repo is not Python-primary (see ``repo_checker``)
 - **Additional Checks (30%)**: Package structure, repo size, requirements, README
 
 ### Shared helpers (`src/utils/`)

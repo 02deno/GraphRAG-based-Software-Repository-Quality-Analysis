@@ -65,14 +65,14 @@ class RepoCompatibilityChecker:
             },
             {
                 "name": "src_folder_exists",
-                "description": "Python package root (src/, app/, backend/…)",
+                "description": "Python package root (src/, app/, api/, backend/…)",
                 "weight": 0.15,
                 "check_fn": self._check_src_folder,
                 "explanation": (
                     "Looks for a recognizable Python tree root: top-level ``src/``, "
                     "``backend/app`` or ``backend/src`` (full-stack / monorepos), "
-                    "top-level ``app/`` with ``.py`` files (common FastAPI layout), or "
-                    "substitutes such as ``lib/``. Helps the extractor anchor packages."
+                    "top-level ``app/`` or ``api/`` with ``.py`` files (common FastAPI "
+                    "layouts), or substitutes such as ``lib/``. Helps the extractor anchor packages."
                 ),
             },
             {
@@ -82,7 +82,7 @@ class RepoCompatibilityChecker:
                 "check_fn": self._check_tests_folder,
                 "explanation": (
                     "Detects ``tests/``, ``test/``, or ``specs/`` at the repo root or under "
-                    "common service folders (e.g. ``backend/tests``, ``app/tests``) so "
+                    "common service folders (e.g. ``backend/tests``, ``app/tests``, ``api/tests``) so "
                     "full-stack templates are not penalized for keeping tests next to the API."
                 ),
             },
@@ -291,12 +291,16 @@ class RepoCompatibilityChecker:
         if app_root.is_dir() and _directory_has_python_files(app_root):
             return True, 0.9, "Found top-level app/ with Python sources (e.g. FastAPI service)"
 
+        api_root = repo_path / "api"
+        if api_root.is_dir() and _directory_has_python_files(api_root):
+            return True, 0.9, "Found top-level api/ with Python sources (e.g. FastAPI package)"
+
         common_folders = ["lib", "source", "code"]
         for folder in common_folders:
             if (repo_path / folder).is_dir():
                 return True, 0.8, f"Found {folder}/ folder instead of src/"
 
-        return False, 0.0, "No src/, backend/app, backend/src, or app/ with Python sources found"
+        return False, 0.0, "No src/, backend/app, backend/src, app/, or api/ with Python sources found"
 
     def _check_tests_folder(self, repo_path: Path) -> Tuple[bool, float, str]:
         """Detect test directories at repo root or under common Python service paths.

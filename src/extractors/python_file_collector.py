@@ -8,7 +8,7 @@ def collect_python_files(repo_path: Path, exclude_dirs: Set[str] | None = None) 
     """List every ``*.py`` file under *repo_path*, skipping configured directory segments.
 
     The walk is recursive from *repo_path* (no ``src/``-only assumption), so monorepo trees
-    such as ``backend/app`` are included the same as a flat layout.
+    such as ``backend/app`` or a top-level ``api/`` service folder are included the same as a flat layout.
 
     Args:
         repo_path: Repository root to scan recursively.

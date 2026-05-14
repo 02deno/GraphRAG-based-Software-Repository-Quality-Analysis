@@ -116,8 +116,8 @@ GraphRAG_Project/
 
 **Core Checks (70% weight):**
 - **Python Primary Language** (25%): Repository is primarily Python-based
-- **Python package root** (15%): ``src/``, ``backend/app`` or ``backend/src``, top-level ``app/`` with Python, or ``lib/``-style fallbacks (monorepo-friendly)
-- **Tests directory** (10%): ``tests/`` at repo root or under paths like ``backend/tests``, ``app/tests``
+- **Python package root** (15%): ``src/``, ``backend/app`` or ``backend/src``, top-level ``app/`` or ``api/`` with Python files, or ``lib/``-style fallbacks (monorepo-friendly; ``api/`` covers common FastAPI layouts where the service lives beside ``tests/``)
+- **Tests directory** (10%): ``tests/`` at repo root or under paths like ``backend/tests``, ``app/tests``, ``api/tests``
 - **Static Imports** (20%): Parseable import statements
 
 **Additional Checks (30% weight):**
