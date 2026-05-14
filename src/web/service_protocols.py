@@ -34,7 +34,8 @@ class AnalysisPipelineService(Protocol):
         ``analysis_text``, ``analysis_view`` (structured metrics for the results UI),
         ``visual_summary_view`` (degree tables JSON), ``pipeline_sections`` (log cards),
         ``pipeline_output``, ``results_dir``, ``visual_summary_text``, and
-        ``visual_summary_path`` (path or ``None``).
+        ``visual_summary_path`` (path or ``None``). Reloaded runs may also expose
+        ``llm_insights`` when ``graphrag_llm_insights.json`` exists (see ``POST …/llm-insights``).
         """
         ...
 

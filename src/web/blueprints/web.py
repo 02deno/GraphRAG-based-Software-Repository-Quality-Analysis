@@ -29,6 +29,7 @@ from flask import (
 
 from src.compatibility.check_item import CheckItem
 from src.graph.json_document import load_graph_document
+from src.graphrag.analysis_llm_insights import generate_and_save_llm_insights
 from src.graphrag.neo4j_property_graph_export import export_graphrag_run_for_visualization
 from src.graphrag.neo4j_subgraph import Neo4jSubgraphExpander
 from src.web.handlers.repository_handler import RepositoryHandler
@@ -295,6 +296,7 @@ def analysis_results_bootstrap_bundle(run_dir: str):
         "visual_summary_view": results.get("visual_summary_view") or {},
         "visual": results.get("visual_summary_text") or "",
         "pipeline": results.get("pipeline_output") or "",
+        "llm_insights": results.get("llm_insights"),
     }
     resp = jsonify(payload)
     resp.headers["Cache-Control"] = "no-store"
@@ -322,6 +324,28 @@ def analysis_results_chat(run_dir: str):
     if not result.get("ok"):
         err = str(result.get("error", ""))
         status = 503 if "not configured" in err.lower() else 400
+        return jsonify(result), status
+    return jsonify(result)
+
+
+@web_bp.route("/analysis-results/<run_dir>/llm-insights", methods=["POST"])
+def analysis_results_llm_insights(run_dir: str):
+    """Generate or return cached LLM interpretation of metrics, charts list, and text reports.
+
+    Expects optional JSON ``{"regenerate": true}`` to force a new API call. Persists
+    ``graphrag_llm_insights.json`` under the run directory. Requires the same OpenAI-compatible
+    env vars as GraphRAG chat (``GRAPHRAG_OPENAI_BASE_URL``, ``GRAPHRAG_CHAT_MODEL``).
+    """
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        return jsonify({"ok": False, "error": "Analysis results folder was not found or is not valid."}), 404
+    body = request.get_json(silent=True) or {}
+    regenerate = bool(body.get("regenerate"))
+    logger.info("llm_insights run_dir=%s regenerate=%s", run_dir, regenerate)
+    result = generate_and_save_llm_insights(base, regenerate=regenerate)
+    if not result.get("ok"):
+        err = str(result.get("error", ""))
+        status = 503 if "requires" in err.lower() or "not configured" in err.lower() else 400
         return jsonify(result), status
     return jsonify(result)
 

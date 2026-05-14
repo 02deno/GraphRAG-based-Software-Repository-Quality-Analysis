@@ -7,12 +7,18 @@ from pathlib import Path
 from typing import Any, Dict
 
 from src.compatibility.repo_checker import RepoCompatibilityChecker
+from src.graphrag.analysis_llm_insights import load_llm_insights_file
 from src.graphrag.source_context import build_source_chunk_index, write_run_meta
 from src.pipeline import run_repository_pipeline
 from src.pipeline.output_paths import new_web_session_results_dir
 from src.pipeline.result import PipelineRunResult
 
 logger = logging.getLogger(__name__)
+
+
+def _llm_insights_payload(run_path: Path) -> Dict[str, Any] | None:
+    """Return cached LLM insights dict for the results UI, if present."""
+    return load_llm_insights_file(run_path)
 
 
 def _png_display_title(filename: str) -> str:
@@ -188,6 +194,7 @@ def package_web_results(
         else None,
         "visual_gallery": collect_visual_gallery_entries(results_dir),
         "graphrag_run_meta": {"schema_version": 1, "source_repo_root": resolved_repo},
+        "llm_insights": _llm_insights_payload(results_dir),
     }
 
 
@@ -244,6 +251,7 @@ def load_results_from_run_directory(run_path: Path) -> Dict[str, Any]:
         "visual_summary_path": str(vis_path) if vis_path.exists() else None,
         "visual_gallery": collect_visual_gallery_entries(run_path),
         "graphrag_run_meta": graphrag_meta,
+        "llm_insights": _llm_insights_payload(run_path),
     }
 
 
@@ -292,6 +300,7 @@ class AnalysisService:
             ``visual_gallery`` (PNG list for the UI), ``graphrag_run_meta`` (``schema_version``,
             ``source_repo_root`` for source chunk indexing), and on-disk
             ``graphrag_source_chunks.jsonl`` when indexing succeeds (Python plus documentation chunks).
+            ``llm_insights`` when ``graphrag_llm_insights.json`` exists (see LLM insights API).
 
         Raises:
             OSError: If reading or writing pipeline artifacts fails.

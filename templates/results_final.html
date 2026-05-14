@@ -570,6 +570,91 @@
             margin: 0;
             line-height: 1.4;
         }
+        .llm-insights-panel {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 18px 20px;
+            background: linear-gradient(165deg, #f8fafc 0%, #fff 55%);
+        }
+        .llm-insights-panel h3 { margin-top: 0; }
+        .llm-insights-meta {
+            font-size: 12px;
+            color: #64748b;
+            margin: 0 0 14px 0;
+        }
+        .llm-insights-summary {
+            font-size: 15px;
+            line-height: 1.55;
+            color: #1e293b;
+            margin: 0 0 16px 0;
+        }
+        .llm-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+        }
+        .llm-insights-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+        .llm-insights-card h5 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #0f172a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .llm-insights-card ul {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #334155;
+        }
+        .llm-insights-card li { margin-bottom: 6px; }
+        .llm-hotspot-row, .llm-risk-row {
+            font-size: 13px;
+            line-height: 1.45;
+            color: #334155;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .llm-hotspot-row:last-child, .llm-risk-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .llm-mono { font-family: ui-monospace, monospace; font-size: 12px; color: #0f172a; }
+        .llm-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #fff;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .llm-badge-sev-low { background: #64748b; }
+        .llm-badge-sev-medium { background: #ca8a04; }
+        .llm-badge-sev-high { background: #ea580c; }
+        .llm-badge-sev-critical { background: #b91c1c; }
+        .llm-badge-conf-low { background: #475569; }
+        .llm-badge-conf-medium { background: #2563eb; }
+        .llm-badge-conf-high { background: #7c3aed; }
+        .llm-insights-caveat {
+            margin-top: 16px;
+            padding: 12px 14px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #78350f;
+        }
+        .llm-insights-actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .llm-insights-status { font-size: 13px; color: #64748b; min-height: 1.2em; }
     </style>
 </head>
 <body>
@@ -987,6 +1072,126 @@
                 tables; use <em>Raw text report</em> for the classic export format. Betweenness uses a sampled
                 estimator (k=500) on graphs larger than 1000 nodes — look for <em>(sampled)</em> in card titles.
             </p>
+
+            {% if results and results.results_run_dir %}
+            <div class="llm-insights-panel results-section" id="llm-insights-panel" style="margin-bottom: 26px;">
+                <h3>🤖 AI-assisted interpretation</h3>
+                <p class="schema-note" style="margin-top:0;">
+                    One structured pass over the same metrics, chart names, and report text shown on this page.
+                    Useful for narrative, prioritization ideas, and test-gap hints — not a substitute for the
+                    deterministic tables or for runtime verification.
+                </p>
+                <div class="llm-insights-actions">
+                    <button type="button" class="btn" id="llm-insights-generate" style="padding:10px 18px;font-size:14px;">
+                        Generate AI summary
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="llm-insights-regenerate" style="padding:10px 18px;font-size:14px;display:none;">
+                        Regenerate
+                    </button>
+                    <span class="llm-insights-status" id="llm-insights-status" aria-live="polite"></span>
+                </div>
+                <div id="llm-insights-body">
+                    {% if results.llm_insights and results.llm_insights.schema_version == 1 %}
+                    {% set li = results.llm_insights %}
+                    <p class="llm-insights-meta">
+                        Generated {{ li.generated_at or "?" }}{% if li.model %} · model {{ li.model }}{% endif %}
+                        {% if li.prompt_version %} · prompt {{ li.prompt_version }}{% endif %}
+                    </p>
+                    <p class="llm-insights-summary">{{ li.executive_summary }}</p>
+                    <div class="llm-insights-grid">
+                        <div class="llm-insights-card">
+                            <h5>Key findings</h5>
+                            {% if li.key_findings %}
+                            <ul>{% for x in li.key_findings %}<li>{{ x }}</li>{% endfor %}</ul>
+                            {% else %}<p class="schema-note" style="margin:0;">—</p>{% endif %}
+                        </div>
+                        <div class="llm-insights-card">
+                            <h5>Suggested actions</h5>
+                            {% if li.suggested_actions %}
+                            <ul>{% for x in li.suggested_actions %}<li>{{ x }}</li>{% endfor %}</ul>
+                            {% else %}<p class="schema-note" style="margin:0;">—</p>{% endif %}
+                        </div>
+                        <div class="llm-insights-card">
+                            <h5>Testing notes</h5>
+                            {% if li.testing_observations %}
+                            <ul>{% for x in li.testing_observations %}<li>{{ x }}</li>{% endfor %}</ul>
+                            {% else %}<p class="schema-note" style="margin:0;">—</p>{% endif %}
+                        </div>
+                    </div>
+                    <div class="llm-insights-grid" style="margin-top:14px;">
+                        <div class="llm-insights-card">
+                            <h5>Likely defect / complexity hotspots</h5>
+                            {% if li.bug_risk_hotspots %}
+                                {% for h in li.bug_risk_hotspots %}
+                                <div class="llm-hotspot-row">
+                                    <span class="llm-mono">{{ h.location }}</span>
+                                    <span class="llm-badge llm-badge-conf-{{ h.confidence }}">{{ h.confidence }} confidence</span>
+                                    <div style="margin-top:6px;">{{ h.rationale }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}<p class="schema-note" style="margin:0;">—</p>{% endif %}
+                        </div>
+                        <div class="llm-insights-card">
+                            <h5>High-risk themes (graph-relative)</h5>
+                            {% if li.high_risk_areas %}
+                                {% for r in li.high_risk_areas %}
+                                <div class="llm-risk-row">
+                                    <strong>{{ r.title }}</strong>
+                                    <span class="llm-badge llm-badge-sev-{{ r.severity }}">{{ r.severity }}</span>
+                                    <div style="margin-top:6px;">{{ r.detail }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}<p class="schema-note" style="margin:0;">—</p>{% endif %}
+                        </div>
+                    </div>
+                    <div class="llm-insights-caveat"><strong>Note:</strong> {{ li.caveats }}</div>
+                    {% else %}
+                    <p class="llm-insights-meta" id="llm-insights-placeholder">No AI summary on disk yet for this run. Click generate (requires LLM env configuration).</p>
+                    {% endif %}
+                </div>
+            </div>
+            <script>
+            (function () {
+                var runDir = {{ results.results_run_dir|tojson }};
+                var genUrl = {{ url_for('web.analysis_results_llm_insights', run_dir=results.results_run_dir)|tojson }};
+                var btn = document.getElementById('llm-insights-generate');
+                var regen = document.getElementById('llm-insights-regenerate');
+                var st = document.getElementById('llm-insights-status');
+                var hasCached = {{ (results.llm_insights and results.llm_insights.schema_version == 1)|tojson }};
+                if (!btn || !runDir) return;
+                if (hasCached && regen) {
+                    regen.style.display = 'inline-block';
+                    btn.textContent = 'Refresh from disk';
+                }
+                function setBusy(b, msg) {
+                    btn.disabled = b;
+                    if (regen) regen.disabled = b;
+                    if (st) st.textContent = msg || '';
+                }
+                function post(regenerate) {
+                    setBusy(true, regenerate ? 'Regenerating…' : 'Calling model…');
+                    fetch(genUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-GraphRAG-Progressive-UI': '1' },
+                        body: JSON.stringify({ regenerate: !!regenerate })
+                    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+                    .then(function (pack) {
+                        if (!pack.ok || !pack.j || !pack.j.ok) {
+                            var err = (pack.j && pack.j.error) ? pack.j.error : 'Request failed';
+                            setBusy(false, err);
+                            return;
+                        }
+                        setBusy(false, '');
+                        window.location.reload();
+                    }).catch(function () {
+                        setBusy(false, 'Network error');
+                    });
+                }
+                btn.addEventListener('click', function () { post(false); });
+                if (regen) regen.addEventListener('click', function () { post(true); });
+            })();
+            </script>
+            {% endif %}
 
             {% if results.analysis_view and results.analysis_view.schema_version == 1 %}
             {% set av = results.analysis_view %}
