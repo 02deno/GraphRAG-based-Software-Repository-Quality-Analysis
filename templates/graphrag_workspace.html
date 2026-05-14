@@ -190,11 +190,15 @@
         .bubble .inner { display: inline-block; text-align: left; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
         .bubble.user .inner { background: var(--user-bubble); max-width: min(92%, 640px); }
         .bubble.assistant .inner { background: var(--assistant-bg); max-width: min(92%, 720px); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
-        .bubble.assistant .inner.markdown-body {
+        .bubble.assistant .inner.markdown-body,
+        .bubble .inner.stream-reply-inner.markdown-body {
             white-space: normal;
-            max-width: min(92%, 720px);
+            max-width: min(96%, 900px);
+            overflow-x: auto;
+            overflow-wrap: break-word;
+            -webkit-overflow-scrolling: touch;
         }
-        .markdown-body { font-size: 14px; line-height: 1.5; color: #111827; }
+        .markdown-body { font-size: 14px; line-height: 1.5; color: #111827; max-width: 100%; }
         .markdown-body > :first-child { margin-top: 0; }
         .markdown-body > :last-child { margin-bottom: 0; }
         .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
@@ -237,9 +241,22 @@
         .markdown-body pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
         .markdown-body a { color: #1d4ed8; }
         .markdown-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 0.75em 0; }
-        .markdown-body table { border-collapse: collapse; font-size: 13px; margin: 0.5em 0; }
-        .markdown-body th, .markdown-body td { border: 1px solid #e2e8f0; padding: 6px 8px; }
-        .markdown-body th { background: #f1f5f9; }
+        .markdown-body table {
+            border-collapse: collapse;
+            font-size: 13px;
+            margin: 0.65em 0;
+            width: max-content;
+            max-width: none;
+        }
+        .markdown-body th, .markdown-body td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 10px;
+            vertical-align: top;
+            word-break: normal;
+            overflow-wrap: anywhere;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+        .markdown-body th { background: #f1f5f9; font-weight: 600; }
         .warn-banner { margin: 0 20px 10px; padding: 10px 14px; border-radius: 8px; font-size: 13px; max-width: 860px; width: calc(100% - 40px); margin-left: auto; margin-right: auto; }
         .warn-banner.critical { background: #fef2f2; color: var(--crit); border: 1px solid #fecaca; }
         .app-notice {
@@ -576,10 +593,377 @@
         appNoticeTimer = setTimeout(clearAppNotice, ms);
     }
 
+    var _markedAssistantConfigured = false;
+
+    function _countPipes(line) {
+        return (String(line).match(/\|/g) || []).length;
+    }
+
+    /** `` ```lang`` glued to body text on the same line (common LLM glitch). */
+    function healGluedFencedCodeOpeners(s) {
+        return String(s || '').replace(/^(`{3})([a-zA-Z0-9]{1,24})([A-Za-z./\\])/gm, '$1$2\n$3');
+    }
+
+    /** ``##1.Title`` already partially fixed; ensure ``## 1.Title`` → ``## 1. Title`` and ``2.Section`` line starts. */
+    function healHeadingAndSectionNumberGlue(s) {
+        var t = String(s || '');
+        t = t.replace(/(^|\n)(#{1,6}\s*)(\d+)\.([A-Za-zŞĞÜÖÇİşğüöçı])/g, '$1$2$3. $4');
+        t = t.replace(/(^|\n)([1-9])\.([A-ZŞĞÜÖÇİ][^\n]{2,200})/g, '$1$2. $3');
+        return t;
+    }
+
+    /** Tab-only “tables” (no pipes) → GFM pipe rows so marked can render them. */
+    function healLooseTabularBlocksToGfm(s) {
+        var lines = String(s || '').split('\n');
+        var out = [];
+        var i = 0;
+        var n = lines.length;
+        while (i < n) {
+            var raw = lines[i];
+            var t = raw.trim();
+            if (t.startsWith('```')) {
+                out.push(raw);
+                i++;
+                while (i < n && lines[i].trim() !== '```') {
+                    out.push(lines[i]);
+                    i++;
+                }
+                if (i < n) {
+                    out.push(lines[i]);
+                    i++;
+                }
+                continue;
+            }
+            if (t.indexOf('\t') < 0 || t.indexOf('|') >= 0) {
+                out.push(raw);
+                i++;
+                continue;
+            }
+            var cells0 = t.split(/\t+/).map(function (c) {
+                return c.trim();
+            }).filter(function (c) {
+                return c.length > 0;
+            });
+            if (cells0.length < 2 || cells0.length > 14) {
+                out.push(raw);
+                i++;
+                continue;
+            }
+            var k0 = cells0.length;
+            var block = [cells0];
+            var j = i + 1;
+            while (j < n) {
+                var tj = lines[j].trim();
+                if (tj === '') break;
+                if (tj.startsWith('```')) break;
+                if (tj.indexOf('|') >= 0) break;
+                if (tj.indexOf('\t') < 0) break;
+                var cj = tj.split(/\t+/).map(function (c) {
+                    return c.trim();
+                }).filter(function (c) {
+                    return c.length > 0;
+                });
+                if (cj.length < 2) break;
+                if (Math.abs(cj.length - k0) > 2) break;
+                block.push(cj);
+                j++;
+            }
+            if (block.length >= 2) {
+                var maxCols = 0;
+                block.forEach(function (r) {
+                    maxCols = Math.max(maxCols, r.length);
+                });
+                function escCell(c) {
+                    return String(c || '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+                }
+                function padRow(r) {
+                    var x = r.slice();
+                    while (x.length < maxCols) x.push('');
+                    return x.slice(0, maxCols).map(escCell);
+                }
+                var padded = block.map(padRow);
+                out.push('| ' + padded[0].join(' | ') + ' |');
+                out.push('| ' + padded[0].map(function () {
+                    return '---';
+                }).join(' | ') + ' |');
+                for (var r = 1; r < padded.length; r++) {
+                    out.push('| ' + padded[r].join(' | ') + ' |');
+                }
+                i = j;
+                continue;
+            }
+            out.push(raw);
+            i++;
+        }
+        return out.join('\n');
+    }
+
+    /** When a ``|---|`` row has fewer columns than the prior pipe row, synthesize a valid GFM separator. */
+    function padShortTableSeparatorRows(s) {
+        var lines = String(s || '').split('\n');
+        var out = [];
+        var lastPipeCells = 0;
+        for (var i = 0; i < lines.length; i++) {
+            var raw = lines[i];
+            var t = raw.trim();
+            if (t === '') {
+                lastPipeCells = 0;
+                out.push(raw);
+                continue;
+            }
+            if (/^#{1,6}\s/.test(t)) {
+                lastPipeCells = 0;
+                out.push(raw);
+                continue;
+            }
+            if (isTableSeparatorLine(raw)) {
+                var need = lastPipeCells;
+                if (need >= 2 && _countPipes(t) < need + 1) {
+                    out.push('| ' + new Array(need).fill('---').join(' | ') + ' |');
+                } else {
+                    out.push(raw);
+                }
+                lastPipeCells = 0;
+                continue;
+            }
+            if (t.startsWith('|')) {
+                lastPipeCells = t.split('|').filter(function (x) {
+                    return x.trim().length > 0;
+                }).length;
+                out.push(raw);
+                continue;
+            }
+            lastPipeCells = 0;
+            out.push(raw);
+        }
+        return out.join('\n');
+    }
+
+    /** Single-line rows like ``1<TAB>api\\main.py<TAB>5.282`` (no pipes) → GFM pipe row. */
+    function healDenseTabMatrixRows(s) {
+        return String(s || '')
+            .split('\n')
+            .map(function (line) {
+                var u = line.trim();
+                if (u.indexOf('|') >= 0) return line;
+                if (u.indexOf('\t') < 0) return line;
+                var parts = u.split(/\t+/).map(function (c) {
+                    return c.trim();
+                }).filter(function (c) {
+                    return c.length > 0;
+                });
+                if (parts.length < 2) return line;
+                var lead = parts[0];
+                var leadOk =
+                    /^[1-9]\d*$/.test(lead) || lead === '…' || lead === '...' || lead === '\u2026';
+                if (!leadOk) return line;
+                return (
+                    '| ' +
+                    parts
+                        .map(function (c) {
+                            return String(c).replace(/\|/g, '\\|');
+                        })
+                        .join(' | ') +
+                    ' |'
+                );
+            })
+            .join('\n');
+    }
+
+    /** Merge ``|------`` with a following dash-only / tab line (no leading ``|``) into one separator row. */
+    function healOrphanDashSeparatorContinuation(s) {
+        var lines = String(s || '').split('\n');
+        var out = [];
+        for (var i = 0; i < lines.length; i++) {
+            var raw = lines[i];
+            var t = raw.trim();
+            if (i + 1 < lines.length) {
+                var t2 = lines[i + 1].trim();
+                if (
+                    t.startsWith('|') &&
+                    /-{2,}/.test(t) &&
+                    /^[\|\s\-:]+$/.test(t) &&
+                    t2 &&
+                    t2.indexOf('|') < 0 &&
+                    /-{2,}/.test(t2) &&
+                    /^[\s\-:\t]+$/.test(t2)
+                ) {
+                    out.push((t + ' ' + t2.replace(/\t+/g, ' | ')).replace(/\s{2,}/g, ' ').trim());
+                    i++;
+                    continue;
+                }
+            }
+            out.push(raw);
+        }
+        return out.join('\n');
+    }
+
+    /** GFM table separator row: pipes, dashes/colons, spaces only (may be split rarely). */
+    function isTableSeparatorLine(line) {
+        var t = String(line || '').trim();
+        if (!t || t.indexOf('|') < 0) return false;
+        if (!/-{2,}/.test(t)) return false;
+        return /^[\|\s\-:]+$/.test(t);
+    }
+
+    /**
+     * LLMs often break a single logical GFM row across multiple lines (especially wide "Why it's risky" cells).
+     * Marked requires one physical line per table row; merge continuations until a new row or block boundary.
+     */
+    function repairFragmentedGfmTableRows(s) {
+        var lines = s.split('\n');
+        var out = [];
+        var i = 0;
+        var n = lines.length;
+        while (i < n) {
+            var raw = lines[i];
+            var t = raw.trim();
+            if (t.startsWith('```')) {
+                out.push(raw);
+                i++;
+                while (i < n && lines[i].trim() !== '```') {
+                    out.push(lines[i]);
+                    i++;
+                }
+                if (i < n) {
+                    out.push(lines[i]);
+                    i++;
+                }
+                continue;
+            }
+            if (isTableSeparatorLine(raw)) {
+                out.push(raw);
+                i++;
+                continue;
+            }
+            if (!t.startsWith('|')) {
+                out.push(raw);
+                i++;
+                continue;
+            }
+            var row = t;
+            i++;
+            while (i < n) {
+                var raw2 = lines[i];
+                var t2 = raw2.trim();
+                if (t2 === '') {
+                    break;
+                }
+                if (/^#{1,6}\s/.test(t2)) {
+                    break;
+                }
+                if (isTableSeparatorLine(raw2)) {
+                    break;
+                }
+                if (row.endsWith('|') && !t2.startsWith('|')) {
+                    break;
+                }
+                if (row.endsWith('|') && t2.startsWith('|')) {
+                    if (_countPipes(row) >= 3 || /^\|\s*\d+\s*\|/.test(t2)) {
+                        break;
+                    }
+                }
+                row = row + ' ' + t2;
+                i++;
+            }
+            row = row.replace(/\s{2,}/g, ' ').trim();
+            out.push(row);
+            if (i < n && lines[i].trim() === '') {
+                out.push(lines[i]);
+                i++;
+            }
+        }
+        return out.join('\n');
+    }
+
+    /** Configure marked once: passing only ``{gfm,breaks}`` into ``parse()`` can reset other defaults in marked v12+. */
+    function ensureAssistantMarkdownEngine() {
+        if (_markedAssistantConfigured) return;
+        if (typeof marked === 'undefined') return;
+        try {
+            if (typeof marked.getDefaults === 'function' && typeof marked.use === 'function') {
+                marked.use(marked.getDefaults());
+            }
+            if (typeof marked.use === 'function') {
+                marked.use({ gfm: true, breaks: true, headerIds: false, mangle: false });
+            } else if (typeof marked.setOptions === 'function') {
+                marked.setOptions({ gfm: true, breaks: true, headerIds: false, mangle: false });
+            }
+            _markedAssistantConfigured = true;
+        } catch (eCfg) { /* ignore; retry on next render */ }
+    }
+
+    /** Heal common LLM markdown glitches so GFM tables and ATX headings parse reliably. */
+    function normalizeAssistantMarkdown(md) {
+        var s = String(md || '');
+        if (!s) return '';
+        s = s.replace(/\r\n/g, '\n');
+        s = healGluedFencedCodeOpeners(s);
+        // ATX headings missing space after hashes: "##2.Title" -> "## 2.Title"
+        s = s.replace(/(^|\n)(#{1,6})([^\s#\n])/g, '$1$2 $3');
+        s = healHeadingAndSectionNumberGlue(s);
+        // Table row glued to preceding text: "...propagation| Metric | ... |"
+        s = s.replace(/([^\n|])(\|\s*[^|\n]+\s*\|\s*[^|\n]+\s*\|)/g, '$1\n$2');
+        // Blank line between a heading line and a pipe-table improves parsing
+        s = s.replace(/(^|\n)(#{1,6}[^\n]+)\n(\|[^\n]*\|[^\n]*\|)/g, '$1$2\n\n$3');
+        // Word stuck to numbered list: "identified1. High" -> break before "1."
+        s = s.replace(
+            /([a-zA-Z)\]α-ωΑ-ΩşğüöçıİŞĞÜÖÇ0-9])(\d+\.\s+[A-Za-zŞĞÜÖÇİşğüöçıα-ωΑ-Ω])/g,
+            '$1\n\n$2'
+        );
+        s = healLooseTabularBlocksToGfm(s);
+        s = healDenseTabMatrixRows(s);
+        s = healOrphanDashSeparatorContinuation(s);
+        s = repairFragmentedGfmTableRows(s);
+        s = padShortTableSeparatorRows(s);
+        s = closeUnbalancedMarkdownFences(s);
+        return s;
+    }
+
+    /** If an odd number of ``` fences, append a closing fence so the rest is not stuck inside <pre>. */
+    function closeUnbalancedMarkdownFences(s) {
+        var str = String(s || '');
+        var parts = str.split('```');
+        if (parts.length > 1 && parts.length % 2 === 0) {
+            return str.replace(/\s*$/, '') + '\n```\n';
+        }
+        return str;
+    }
+
     function escapeHtml(s) {
         var d = document.createElement('div');
         d.textContent = s;
         return d.innerHTML;
+    }
+
+    /** Remove tbody rows where every cell is only markdown separator dashes (GFM misparsed separator as data). */
+    function stripTbodyRowsThatLookLikeMarkdownSeparators(html) {
+        try {
+            var div = document.createElement('div');
+            div.innerHTML = html;
+            div.querySelectorAll('table tbody').forEach(function (tb) {
+                var guard = 0;
+                while (guard++ < 16) {
+                    var removed = false;
+                    tb.querySelectorAll('tr').forEach(function (tr) {
+                        var cells = tr.querySelectorAll('td, th');
+                        if (cells.length < 2) return;
+                        var onlySep = Array.from(cells).every(function (cell) {
+                            var t = cell.textContent.replace(/\u00a0/g, ' ').trim();
+                            return /^[\s\-:|]+$/.test(t) && /-{2,}/.test(t);
+                        });
+                        if (onlySep) {
+                            tr.remove();
+                            removed = true;
+                        }
+                    });
+                    if (!removed) break;
+                }
+            });
+            return div.innerHTML;
+        } catch (eTb) {
+            return html;
+        }
     }
 
     function renderAssistantMarkdown(md) {
@@ -587,8 +971,12 @@
         if (!raw) return '';
         if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
             try {
-                var html = marked.parse(raw, { breaks: true, gfm: true });
-                return DOMPurify.sanitize(html);
+                ensureAssistantMarkdownEngine();
+                var prepped = normalizeAssistantMarkdown(raw);
+                var html = marked.parse(prepped);
+                html = DOMPurify.sanitize(html, { ADD_ATTR: ['colspan', 'rowspan'] });
+                html = stripTbodyRowsThatLookLikeMarkdownSeparators(html);
+                return html;
             } catch (e2) {
                 return escapeHtml(raw);
             }
