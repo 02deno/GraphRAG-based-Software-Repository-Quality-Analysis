@@ -113,14 +113,32 @@ def append_message_pair(
     assistant_text: str,
     title_if_empty: str,
     clear_carryover: bool = False,
+    source_context_diagnostics: Dict[str, Any] | None = None,
 ) -> Dict[str, Any] | None:
-    """Append user + assistant messages and refresh title when still default."""
+    """Append user + assistant messages and refresh title when still default.
+
+    Args:
+        run_path: Run directory containing ``graphrag_chat_sessions/``.
+        session_id: Session file id.
+        user_text: Latest user message body.
+        assistant_text: Latest assistant reply body.
+        title_if_empty: Session title when still ``New chat`` / empty.
+        clear_carryover: When True, clear ``carryover_summary`` after append.
+        source_context_diagnostics: Optional per-turn source index metadata for the UI
+            (JSON-serializable dict); stored only on the new assistant message.
+    """
     data = load_session(run_path, session_id)
     if data is None:
         return None
     msgs = list(data.get("messages") or [])
     msgs.append({"role": "user", "content": user_text.strip()[:32000]})
-    msgs.append({"role": "assistant", "content": assistant_text.strip()[:64000]})
+    assistant_msg: Dict[str, Any] = {
+        "role": "assistant",
+        "content": assistant_text.strip()[:64000],
+    }
+    if isinstance(source_context_diagnostics, dict) and source_context_diagnostics:
+        assistant_msg["source_context_diagnostics"] = source_context_diagnostics
+    msgs.append(assistant_msg)
     data["messages"] = msgs
     if (data.get("title") or "").strip() in ("", "New chat"):
         data["title"] = (title_if_empty or "Chat").strip()[:120]

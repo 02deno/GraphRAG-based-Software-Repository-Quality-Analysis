@@ -23,10 +23,16 @@ def test_create_append_delete_roundtrip(tmp_path: Path) -> None:
         assistant_text="Hi",
         title_if_empty="Hello",
         clear_carryover=True,
+        source_context_diagnostics={"enabled": True, "chunks_used": 2, "included_chunks": []},
     )
     assert updated is not None
     assert len(updated["messages"]) == 2
+    assert updated["messages"][1].get("source_context_diagnostics", {}).get("chunks_used") == 2
     assert updated["carryover_summary"] == ""
+
+    reloaded = session_store.load_session(run, s["id"])
+    assert reloaded is not None
+    assert reloaded["messages"][1].get("source_context_diagnostics", {}).get("chunks_used") == 2
 
     listed = session_store.list_sessions(run)
     assert len(listed) == 1

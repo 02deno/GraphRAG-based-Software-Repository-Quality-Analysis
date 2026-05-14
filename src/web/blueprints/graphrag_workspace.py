@@ -229,6 +229,7 @@ def api_session_message(run_dir: str, session_id: str):
                         assistant_text=reply,
                         title_if_empty=message[:80],
                         clear_carryover=had_carryover,
+                        source_context_diagnostics=result.get("source_context_diagnostics"),
                     )
                     if updated is None:
                         events.put(("error", {"ok": False, "error": "Session could not be updated."}))
@@ -307,6 +308,7 @@ def api_session_message(run_dir: str, session_id: str):
         assistant_text=reply,
         title_if_empty=message[:80],
         clear_carryover=had_carryover,
+        source_context_diagnostics=result.get("source_context_diagnostics"),
     )
     if updated is None:
         return jsonify({"ok": False, "error": "Session could not be updated."}), 500

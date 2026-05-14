@@ -468,7 +468,6 @@
         session: null,
         lastContextWarn: 'none',
         lastApproxChars: 0,
-        lastSourceDiag: null,
         sending: false
     };
 
@@ -620,7 +619,6 @@
             }
             state.sessionId = null;
             state.session = null;
-            state.lastSourceDiag = null;
             refreshSessionList();
             renderMessages();
             updateChrome();
@@ -690,7 +688,6 @@
             }
             if (obj.type === 'complete') {
                 state.session = obj.session;
-                state.lastSourceDiag = obj.source_context_diagnostics != null ? obj.source_context_diagnostics : null;
                 renderMessages();
                 setWarnBanner(obj.context_warn, obj.approx_input_chars);
                 refreshSessionList();
@@ -889,9 +886,8 @@
         });
     }
 
-    function appendSourceDiagPanel(box) {
-        var d = state.lastSourceDiag;
-        if (!d) return;
+    function appendSourceDiagPanel(box, d) {
+        if (!d || typeof d !== 'object') return;
         var wrap = document.createElement('div');
         wrap.className = 'source-diag-block';
         var det = document.createElement('details');
@@ -1011,12 +1007,10 @@
             }
             wrap.appendChild(inner);
             box.appendChild(wrap);
+            if (m.role === 'assistant' && m.source_context_diagnostics) {
+                appendSourceDiagPanel(box, m.source_context_diagnostics);
+            }
         });
-        var msgs = state.session.messages;
-        var last = msgs.length ? msgs[msgs.length - 1] : null;
-        if (state.lastSourceDiag && last && last.role === 'assistant' && last.content !== STREAMING_ASSISTANT) {
-            appendSourceDiagPanel(box);
-        }
         scrollChatToBottom();
     }
 
@@ -1037,7 +1031,6 @@
         state.runDir = runDir;
         state.sessionId = null;
         state.session = null;
-        state.lastSourceDiag = null;
         el('session-list').innerHTML = '';
         el('session-block').style.display = 'none';
         renderProjects();
@@ -1060,7 +1053,6 @@
         if (!state.runDir) return;
         state.sessionId = sessionId;
         state.session = null;
-        state.lastSourceDiag = null;
         renderMessages();
         api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(sessionId)).then(function (res) {
             if (!res.body.ok) {
@@ -1189,7 +1181,6 @@
                         return;
                     }
                     state.session = body.session;
-                    state.lastSourceDiag = body.source_context_diagnostics != null ? body.source_context_diagnostics : null;
                     renderMessages();
                     setWarnBanner(body.context_warn, body.approx_input_chars);
                     refreshSessionList();
