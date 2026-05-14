@@ -55,7 +55,7 @@ Orchestration uses `src/pipeline/run_pipeline.py` (`run_repository_pipeline`), i
 
 1. **Seeding** from query text (lexical / community / optional embeddings).  
 2. **Subgraph expansion** (NetworkX or Neo4j when configured).  
-3. **Source context** from on-disk `graphrag_source_chunks.jsonl` per analysis run, capped by character budget and top-`k` rank.  
+3. **Source context** from on-disk `graphrag_source_chunks.jsonl` per analysis run (Python ``File`` excerpts plus README / ``docs/**`` prose), capped by character budget and top-`k` rank.  
 4. **LLM** call with system instructions, analysis snippet, graph/context block, and conversation history.
 
 Detailed module map: `docs/PROJECT_STRUCTURE.md`.

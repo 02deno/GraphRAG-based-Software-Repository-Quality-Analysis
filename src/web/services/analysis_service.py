@@ -138,7 +138,8 @@ def package_web_results(
     ``visual_summary_view`` and ``pipeline_sections`` for structured cards.
 
     When ``source_repo_path`` is set, writes ``graphrag_run_meta.json`` and builds
-    ``graphrag_source_chunks.jsonl`` for GraphRAG source excerpts (best-effort).
+    ``graphrag_source_chunks.jsonl`` (Python ``File`` chunks plus README / ``docs/**``
+    documentation) for GraphRAG source excerpts (best-effort).
 
     Returns:
         Payload dict including ``graphrag_run_meta`` (``schema_version``, ``source_repo_root``).
@@ -290,7 +291,7 @@ class AnalysisService:
             ``results_run_dir``, ``visual_summary_text``, ``visual_summary_path``,
             ``visual_gallery`` (PNG list for the UI), ``graphrag_run_meta`` (``schema_version``,
             ``source_repo_root`` for source chunk indexing), and on-disk
-            ``graphrag_source_chunks.jsonl`` when indexing succeeds.
+            ``graphrag_source_chunks.jsonl`` when indexing succeeds (Python plus documentation chunks).
 
         Raises:
             OSError: If reading or writing pipeline artifacts fails.

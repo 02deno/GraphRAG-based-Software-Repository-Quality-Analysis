@@ -1,6 +1,6 @@
 # GraphRAG chat — future retrieval and media
 
-This note captures planned directions after the current **lexical** source index, optional **dense embedding seeds** (`graphrag_embedding_cache.npz` per run), and **automatic session fork** (`GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS` / `POST /graphrag/api/<run_dir>/sessions/fork`).
+This note captures planned directions after the current **lexical** source index (``graphrag_source_chunks.jsonl``: Python ``File`` nodes plus README / ``docs/**`` prose), optional **dense embedding seeds** (`graphrag_embedding_cache.npz` per run), and **automatic session fork** (`GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS` / `POST /graphrag/api/<run_dir>/sessions/fork`).
 
 ## Vector index and storage
 

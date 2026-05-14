@@ -1,4 +1,9 @@
-"""Persist repository root metadata and lexical source chunks for GraphRAG chat."""
+"""Persist repository root metadata and lexical source chunks for GraphRAG chat.
+
+Chunks are written to ``graphrag_source_chunks.jsonl``: ``.py`` excerpts from
+``File`` nodes in ``graph.json``, plus optional documentation (README, ``docs/``
+markdown/text) for the same lexical scoring at retrieval time.
+"""
 
 from __future__ import annotations
 
@@ -95,12 +100,158 @@ def _chunk_lines(lines: List[str], *, window: int, overlap: int) -> List[Tuple[i
     return chunks
 
 
+_ROOT_DOC_FILENAMES: Tuple[str, ...] = (
+    "README.md",
+    "readme.md",
+    "README.rst",
+    "README.txt",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+)
+
+
+def _doc_rel_excluded(rel: str) -> bool:
+    low = rel.replace("\\", "/").lower()
+    needles = (
+        "/.venv/",
+        "/venv/",
+        "__pycache__",
+        "/.git/",
+        "/site-packages/",
+        "/node_modules/",
+        "/dist/",
+        "/build/",
+    )
+    return any(n in low for n in needles)
+
+
+def _documentation_paths(repo_root: Path) -> List[str]:
+    """Return repo-relative paths to README and ``docs/**`` prose for chunk indexing.
+
+    Controlled by ``GRAPHRAG_SOURCE_MAX_DOC_FILES`` (``0`` disables documentation
+    chunks; default ``48``). Skips paths under venv, ``.git``, etc.
+    """
+    max_doc = int(os.environ.get("GRAPHRAG_SOURCE_MAX_DOC_FILES", "48"))
+    if max_doc <= 0:
+        return []
+    out: List[str] = []
+    seen: set[str] = set()
+    try:
+        root = repo_root.resolve()
+    except OSError:
+        return []
+    if not root.is_dir():
+        return []
+
+    for name in _ROOT_DOC_FILENAMES:
+        if len(out) >= max_doc:
+            break
+        p = root / name
+        if not p.is_file():
+            continue
+        rel = name.replace("\\", "/")
+        if _doc_rel_excluded(rel):
+            continue
+        low = rel.lower()
+        if not (low.endswith(".md") or low.endswith(".rst") or low.endswith(".txt")):
+            continue
+        if rel not in seen:
+            seen.add(rel)
+            out.append(rel)
+
+    docs_dir = root / "docs"
+    if docs_dir.is_dir() and len(out) < max_doc:
+        for p in sorted(docs_dir.rglob("*")):
+            if len(out) >= max_doc:
+                break
+            if not p.is_file():
+                continue
+            name_low = p.name.lower()
+            if not (
+                name_low.endswith(".md")
+                or name_low.endswith(".rst")
+                or name_low.endswith(".txt")
+            ):
+                continue
+            try:
+                rel = str(p.resolve().relative_to(root)).replace("\\", "/")
+            except ValueError:
+                continue
+            if _doc_rel_excluded(rel) or rel in seen:
+                continue
+            seen.add(rel)
+            out.append(rel)
+
+    return out
+
+
+def _write_jsonl_chunks_for_rel(
+    fh,
+    root: Path,
+    rel: str,
+    *,
+    window: int,
+    overlap: int,
+    max_bytes: int,
+) -> int:
+    """Append chunk JSONL lines for one repo-relative file; returns lines written."""
+    abs_path = (root / rel).resolve()
+    try:
+        abs_path.relative_to(root)
+    except ValueError:
+        return 0
+    if not abs_path.is_file():
+        return 0
+    try:
+        raw = abs_path.read_bytes()[:max_bytes]
+    except OSError:
+        return 0
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        text = raw.decode("utf-8", errors="replace")
+    lines = text.splitlines(keepends=True)
+    count = 0
+    is_py = rel.lower().endswith(".py")
+    for start, end, chunk in _chunk_lines(lines, window=window, overlap=overlap):
+        if not chunk.strip():
+            continue
+        rec: Dict[str, Any] = {
+            "path": rel,
+            "start_line": start,
+            "end_line": end,
+            "text": chunk[:12000],
+        }
+        if not is_py:
+            rec["kind"] = "documentation"
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        count += 1
+    return count
+
+
+def _fence_lang_for_source_path(path: str) -> str:
+    """Return a Markdown code-fence language tag for *path*."""
+    low = path.lower()
+    if low.endswith(".py"):
+        return "python"
+    if low.endswith(".md"):
+        return "markdown"
+    if low.endswith(".rst"):
+        return "rst"
+    return "text"
+
+
 def build_source_chunk_index(
     results_dir: Path,
     repo_root: Path,
     nodes: Sequence[Dict[str, Any]],
 ) -> int:
-    """Write ``graphrag_source_chunks.jsonl`` from ``File`` nodes under *repo_root*.
+    """Write ``graphrag_source_chunks.jsonl`` from ``File`` nodes and documentation.
+
+    Python chunks use ``File`` ``*.py`` paths from *nodes* (unchanged). Documentation
+    chunks append README / common root prose and ``docs/**/*.md`` (and ``.rst`` /
+    ``.txt``) when present, using slightly larger line windows by default.
 
     Args:
         results_dir: Run output directory.
@@ -114,6 +265,8 @@ def build_source_chunk_index(
     max_bytes = max(4096, int(os.environ.get("GRAPHRAG_SOURCE_MAX_BYTES_PER_FILE", "200000")))
     window = max(10, int(os.environ.get("GRAPHRAG_SOURCE_CHUNK_LINES", "90")))
     overlap = max(0, int(os.environ.get("GRAPHRAG_SOURCE_CHUNK_OVERLAP_LINES", "12")))
+    doc_window = max(10, int(os.environ.get("GRAPHRAG_SOURCE_DOC_CHUNK_LINES", "120")))
+    doc_overlap = max(0, int(os.environ.get("GRAPHRAG_SOURCE_DOC_CHUNK_OVERLAP_LINES", "24")))
 
     try:
         root = repo_root.resolve()
@@ -123,39 +276,23 @@ def build_source_chunk_index(
         logger.warning("Source index skipped: repo root is not a directory: %s", repo_root)
         return 0
 
-    paths = _py_paths_from_nodes(nodes)[:max_files]
+    py_paths = _py_paths_from_nodes(nodes)[:max_files]
+    doc_paths = _documentation_paths(root)
+    seen_py = set(py_paths)
+    doc_only = [p for p in doc_paths if p not in seen_py]
+
     out_path = results_dir / _CHUNKS_JSONL
     count = 0
     try:
         with out_path.open("w", encoding="utf-8", newline="\n") as fh:
-            for rel in paths:
-                abs_path = (root / rel).resolve()
-                try:
-                    abs_path.relative_to(root)
-                except ValueError:
-                    continue
-                if not abs_path.is_file():
-                    continue
-                try:
-                    raw = abs_path.read_bytes()[:max_bytes]
-                except OSError:
-                    continue
-                try:
-                    text = raw.decode("utf-8")
-                except UnicodeDecodeError:
-                    text = raw.decode("utf-8", errors="replace")
-                lines = text.splitlines(keepends=True)
-                for start, end, chunk in _chunk_lines(lines, window=window, overlap=overlap):
-                    if not chunk.strip():
-                        continue
-                    rec = {
-                        "path": rel,
-                        "start_line": start,
-                        "end_line": end,
-                        "text": chunk[:12000],
-                    }
-                    fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                    count += 1
+            for rel in py_paths:
+                count += _write_jsonl_chunks_for_rel(
+                    fh, root, rel, window=window, overlap=overlap, max_bytes=max_bytes
+                )
+            for rel in doc_only:
+                count += _write_jsonl_chunks_for_rel(
+                    fh, root, rel, window=doc_window, overlap=doc_overlap, max_bytes=max_bytes
+                )
     except OSError as exc:
         logger.warning("Could not write source chunk index: %s", exc)
         return 0
@@ -172,7 +309,13 @@ def build_source_chunk_index(
         )
     except OSError as exc:
         logger.warning("Could not write %s: %s", meta_path.name, exc)
-    logger.info("GraphRAG source index wrote %d chunks under %s", count, results_dir.name)
+    logger.info(
+        "GraphRAG source index wrote %d chunks (%d py files, +%d doc paths) under %s",
+        count,
+        len(py_paths),
+        len(doc_only),
+        results_dir.name,
+    )
     return count
 
 
@@ -231,7 +374,7 @@ def retrieve_source_context_for_llm(
     if not chunks_path.is_file() or chunks_path.stat().st_size == 0:
         _ensure_chunk_index(run_dir_path)
     if not chunks_path.is_file() or chunks_path.stat().st_size == 0:
-        diag["reason"] = "no source chunks (build failed or no Python files)"
+        diag["reason"] = "no source chunks (index empty: no Python files and no documentation paths indexed)"
         return "", diag
 
     diag["enabled"] = True
@@ -284,7 +427,8 @@ def retrieve_source_context_for_llm(
         a = int(rec.get("start_line", 0))
         b = int(rec.get("end_line", 0))
         body = str(rec.get("text", ""))
-        block = f"#### {path} (lines {a}-{b})\n```python\n{body}\n```\n"
+        lang = _fence_lang_for_source_path(path)
+        block = f"#### {path} (lines {a}-{b})\n```{lang}\n{body}\n```\n"
         truncated = False
         if len(block) > budget:
             truncated = True
@@ -303,6 +447,7 @@ def retrieve_source_context_for_llm(
                 "score": round(float(_s), 4),
                 "approx_chars": len(block),
                 "truncated": truncated,
+                **({"kind": rec["kind"]} if isinstance(rec.get("kind"), str) else {}),
             }
         )
         if budget <= 0:
