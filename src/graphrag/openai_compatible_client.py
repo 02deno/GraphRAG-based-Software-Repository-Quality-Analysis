@@ -17,7 +17,7 @@ class OpenAICompatibleChatClient:
         base_url: str,
         api_key: str,
         model: str,
-        timeout_s: float = 120.0,
+        timeout_s: float = 300.0,
     ) -> None:
         """Store connection parameters for chat completions.
 
@@ -25,7 +25,7 @@ class OpenAICompatibleChatClient:
             base_url: API root including ``/v1`` when required (e.g. OpenAI or Ollama).
             api_key: Bearer token; may be empty for local servers that omit auth.
             model: Model id accepted by the upstream server.
-            timeout_s: HTTP read/write timeout in seconds.
+            timeout_s: HTTP read/write timeout in seconds (raise with ``GRAPHRAG_CHAT_TIMEOUT_S`` for slow local models).
         """
         normalized = base_url.rstrip("/")
         self._model = model
@@ -84,4 +84,13 @@ def load_chat_client_from_env() -> OpenAICompatibleChatClient:
             "GraphRAG LLM requires GRAPHRAG_OPENAI_BASE_URL and GRAPHRAG_CHAT_MODEL "
             "(set GRAPHRAG_OPENAI_API_KEY for hosted APIs; optional for local Ollama)."
         )
-    return OpenAICompatibleChatClient(base_url=base, api_key=key, model=model)
+    raw_timeout = os.environ.get("GRAPHRAG_CHAT_TIMEOUT_S", "").strip()
+    timeout_s = 300.0
+    if raw_timeout:
+        try:
+            parsed = float(raw_timeout)
+            if parsed > 0:
+                timeout_s = parsed
+        except ValueError:
+            pass
+    return OpenAICompatibleChatClient(base_url=base, api_key=key, model=model, timeout_s=timeout_s)

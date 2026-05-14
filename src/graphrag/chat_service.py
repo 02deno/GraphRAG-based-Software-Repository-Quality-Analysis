@@ -211,15 +211,15 @@ class GraphRagChatService:
                 max_nodes=max_nodes,
             )
 
-        if progress_hook:
-            progress_hook("format_context", "Formatting metrics, subgraph text, and source excerpts…")
-
         sub_edges = induced_subgraph_edges(g, subgraph_ids, allowed)
         if progress_hook:
             progress_hook(
                 "subgraph_expand",
                 f"Subgraph: {len(subgraph_ids)} nodes, {len(sub_edges)} edges ({retrieval_backend}).",
             )
+        if progress_hook:
+            progress_hook("format_context", "Formatting metrics, subgraph text, and source excerpts…")
+
         node_subset = [n for n in nodes if str(n.get("id", "")) in subgraph_ids]
         subgraph_text = format_subgraph_for_llm(
             node_subset,
@@ -239,6 +239,12 @@ class GraphRagChatService:
         )
         if source_block.strip():
             user_block += "\n\n### Source code excerpts (indexed repository)\n" + source_block
+
+        if progress_hook:
+            progress_hook(
+                "context_ready",
+                f"Context assembled (~{len(user_block)} chars in the user message block).",
+            )
 
         return {
             "ok": True,
@@ -402,6 +408,13 @@ class GraphRagChatService:
 
         approx = _approx_chars_for_messages(messages_out)
         context_warn = _context_warn_level(approx)
+
+        if progress_hook:
+            progress_hook(
+                "llm",
+                "Calling the chat model (large prompts can take several minutes on local hardware)…",
+            )
+        logger.info("GraphRAG LLM request starting approx_input_chars=%d", approx)
 
         try:
             reply = self._llm.complete_chat(messages_out, temperature=0.2)

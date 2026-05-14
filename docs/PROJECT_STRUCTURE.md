@@ -89,7 +89,7 @@ GraphRAG_Project/
 - **`neo4j_property_graph_export.py`**: Bounded Cypher export of ``GraphRAGNode`` / ``GRAPHRAG_EDGE`` for the results-page Neo4j preview (per edge-type row budget so ``MODIFIED_BY`` is not starved by a single global ``LIMIT``); ``web.analysis_results_neo4j_property_graph`` calls ``Neo4jSubgraphExpander.ensure_synced`` from ``graph.json`` before export so the browser view is populated even if chat was never used.
 - **`neo4j_subgraph.py`**: ``Neo4jSubgraphExpander`` syncs ``graph.json`` into Neo4j and performs typed BFS expansion when a driver is configured.
 - **`embedding_seeds.py`**: OpenAI-compatible ``POST …/v1/embeddings`` (base URL normalized so a trailing ``/v1`` is not doubled) + per-run ``.npz`` cache; cosine-ranked seed ids merged in the chat service.
-- **`openai_compatible_client.py`**: Chat client from ``GRAPHRAG_OPENAI_*`` / ``GRAPHRAG_CHAT_MODEL``.
+- **`openai_compatible_client.py`**: Chat client from ``GRAPHRAG_OPENAI_*`` / ``GRAPHRAG_CHAT_MODEL``; optional ``GRAPHRAG_CHAT_TIMEOUT_S`` (seconds) for slow ``/chat/completions`` on local hardware.
 - **`chat_service.py`**: Orchestrates seeds, subgraph expansion, source excerpts, optional **conversation history** + **carryover summary** for multi-turn prompts, ``approx_input_chars`` / ``context_warn`` heuristics, and LLM summarization for session fork.
 - **`session_store.py`**: JSON files per chat session under ``results/<run_dir>/graphrag_chat_sessions/`` (list/load/save/delete helpers).
 

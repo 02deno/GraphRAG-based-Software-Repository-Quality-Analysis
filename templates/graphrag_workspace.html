@@ -345,6 +345,7 @@
         var dec = new TextDecoder();
         var buf = '';
         var progressLines = [];
+        var terminal = null;
         function pushProgressLine(s) {
             if (!s) return;
             progressLines.push(s);
@@ -362,6 +363,7 @@
                 el('input').value = userTextSnap;
                 renderMessages();
                 showAppNotice(obj.error || 'Request failed');
+                terminal = 'error';
                 return true;
             }
             if (obj.type === 'complete') {
@@ -369,6 +371,7 @@
                 renderMessages();
                 setWarnBanner(obj.context_warn, obj.approx_input_chars);
                 refreshSessionList();
+                terminal = 'complete';
                 return true;
             }
             return false;
@@ -401,14 +404,14 @@
                 var parts = buf.split(/\r?\n\r?\n/);
                 buf = parts.pop() || '';
                 for (var i = 0; i < parts.length; i++) {
-                    if (processBlock(parts[i])) return;
+                    if (processBlock(parts[i])) return terminal;
                 }
                 if (result.done) {
-                    if (buf.trim() && processBlock(buf)) return;
+                    if (buf.trim() && processBlock(buf)) return terminal;
                     if (buf.trim()) {
                         console.warn('chat SSE ended with unparsed tail:', buf.slice(0, 400));
                     }
-                    return;
+                    return terminal;
                 }
                 return pump();
             });
@@ -747,7 +750,16 @@
                         showAppNotice('Chat stream failed (HTTP ' + res.status + ').');
                         return;
                     }
-                    return readChatEventStream(res, text, snap);
+                    return readChatEventStream(res, text, snap).then(function (term) {
+                        if (term !== 'complete' && term !== 'error') {
+                            state.session = snap;
+                            el('input').value = text;
+                            renderMessages();
+                            showAppNotice(
+                                'The reply stream ended before a final answer. The chat model may still be running, or the connection timed out. Check that Ollama (or your API) is reachable, then try again or raise GRAPHRAG_CHAT_TIMEOUT_S in .env.'
+                            );
+                        }
+                    });
                 }
                 return res.json().then(function (body) {
                     if (!res.ok || !body.ok) {
