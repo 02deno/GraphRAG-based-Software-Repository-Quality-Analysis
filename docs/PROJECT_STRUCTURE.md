@@ -23,6 +23,7 @@ GraphRAG_Project/
 ├── docs/                             # Documentation
 ├── results/                          # Output Directory
 ├── data/                             # Sample Repositories
+├── scripts/                          # Local diagnostics (e.g. check_graphrag_connections.py)
 ├── requirements.txt                    # Dependencies
 ├── .env.example                        # FLASK_* / GRAPHRAG_* template (copy to .env)
 ├── run_web_app.py                    # Web Application Launcher
@@ -31,6 +32,7 @@ GraphRAG_Project/
 
 ## Project documentation
 
+- **`scripts/check_graphrag_connections.py`** — optional CLI: probes ``GRAPHRAG_OPENAI_*`` (Ollama-compatible ``/models``, ``/chat/completions``, ``/embeddings``) and ``GRAPHRAG_NEO4J_*`` after loading ``.env``; use ``--override-dotenv`` when shell vars should not win.
 - **`docs/MIDTERM_PROJECT_REPORT.md`** — detailed midterm-style narrative (architecture, examples, implemented vs missing). Add screenshots under **`docs/assets/`** (see `docs/assets/README.md`).
 
 ## Backend Structure (`src/`)

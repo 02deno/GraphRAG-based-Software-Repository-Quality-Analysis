@@ -13,6 +13,9 @@ pip install -r requirements.txt
 # src/main_pipeline.py load ".env" with python-dotenv before reading GRAPHRAG_* /
 # FLASK_* variables; existing shell env values are not overwritten.
 
+# Optional: verify Ollama (OpenAI-compatible) + Neo4j match your .env (no secrets printed)
+python scripts/check_graphrag_connections.py --override-dotenv
+
 # Optional: verbose UTC logs — stderr + rotating file logs/graphrag.log (5 MB × 5)
 # set GRAPHRAG_LOG_LEVEL=DEBUG
 # set GRAPHRAG_LOG_FILE=C:\path\to\my.log   # optional override
