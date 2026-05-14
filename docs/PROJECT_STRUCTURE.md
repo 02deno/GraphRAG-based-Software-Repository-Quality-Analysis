@@ -91,7 +91,7 @@ GraphRAG_Project/
 - **`embedding_seeds.py`**: OpenAI-compatible ``POST …/v1/embeddings`` (base URL normalized so a trailing ``/v1`` is not doubled) + per-run ``.npz`` cache; cosine-ranked seed ids merged in the chat service.
 - **`openai_compatible_client.py`**: OpenAI-compatible ``POST /chat/completions`` (buffered and streamed via ``stream_chat_completion``) from ``GRAPHRAG_OPENAI_*`` / ``GRAPHRAG_CHAT_MODEL``; optional ``GRAPHRAG_CHAT_TIMEOUT_S`` (seconds) for slow local hardware.
 - **`chat_service.py`**: Orchestrates seeds, subgraph expansion, source excerpts, optional **conversation history** + **carryover summary** for multi-turn prompts, ``approx_input_chars`` / ``context_warn`` heuristics, optional ``context_auto_fork`` when ``GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS`` is met (requires prior turns), and LLM summarization for session fork.
-- **`session_store.py`**: JSON files per chat session under ``results/<run_dir>/graphrag_chat_sessions/`` (list/load/save/delete helpers); assistant messages may include persisted ``source_context_diagnostics`` for workspace **Source snippets** after reload.
+- **`session_store.py`**: JSON files per chat session under ``results/<run_dir>/graphrag_chat_sessions/`` (list/load/save/delete helpers); streaming ``POST …/message`` persists the **user** turn before SSE starts, then appends the **assistant** when the model finishes (so switching chats or aborting the reader still leaves the question on disk). Assistant messages may include persisted ``source_context_diagnostics`` for workspace **Source snippets** after reload.
 
 ### Graph Model & Construction Layer (`src/graph/`)
 **Purpose**: Core graph data model and construction logic

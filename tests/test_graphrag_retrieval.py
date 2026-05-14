@@ -94,3 +94,16 @@ def test_community_seeds_use_member_ids() -> None:
     }
     ids = community_member_seeds_from_view("a.py imports", view, max_communities=2, max_ids_total=10)
     assert "f_a" in ids
+
+
+def test_retrieval_query_blend_short_followup() -> None:
+    from src.graphrag.chat_service import _retrieval_query_blend
+
+    hist = [{"role": "user", "content": "What are graph analysis results for this repo?"}]
+    blended = _retrieval_query_blend("Degree centrality?", hist)
+    assert "graph analysis" in blended.lower()
+    assert "Degree centrality" in blended
+    assert "Follow-up:" in blended
+
+    long_q = "x" * 50
+    assert _retrieval_query_blend(long_q, hist) == long_q

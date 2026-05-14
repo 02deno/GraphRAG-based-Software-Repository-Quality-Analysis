@@ -105,6 +105,65 @@ def create_session(
     return data
 
 
+def append_user_message(
+    run_path: Path,
+    session_id: str,
+    *,
+    user_text: str,
+    title_if_empty: str,
+) -> Dict[str, Any] | None:
+    """Append a user message only (used before streaming LLM work).
+
+    Persists the question immediately so switching tabs or aborting the SSE
+    reader does not leave the session file empty on disk.
+
+    Args:
+        run_path: Run directory containing ``graphrag_chat_sessions/``.
+        session_id: Session file id.
+        user_text: User message body.
+        title_if_empty: Session title when still ``New chat`` / empty.
+    """
+    data = load_session(run_path, session_id)
+    if data is None:
+        return None
+    msgs = list(data.get("messages") or [])
+    msgs.append({"role": "user", "content": user_text.strip()[:32000]})
+    data["messages"] = msgs
+    if (data.get("title") or "").strip() in ("", "New chat"):
+        data["title"] = (title_if_empty or "Chat").strip()[:120]
+    save_session(run_path, data)
+    return data
+
+
+def append_assistant_reply(
+    run_path: Path,
+    session_id: str,
+    *,
+    assistant_text: str,
+    clear_carryover: bool = False,
+    source_context_diagnostics: Dict[str, Any] | None = None,
+) -> Dict[str, Any] | None:
+    """Append an assistant message after the latest user message on disk."""
+    data = load_session(run_path, session_id)
+    if data is None:
+        return None
+    msgs = list(data.get("messages") or [])
+    if not msgs or str(msgs[-1].get("role") or "") != "user":
+        return None
+    assistant_msg: Dict[str, Any] = {
+        "role": "assistant",
+        "content": assistant_text.strip()[:64000],
+    }
+    if isinstance(source_context_diagnostics, dict) and source_context_diagnostics:
+        assistant_msg["source_context_diagnostics"] = source_context_diagnostics
+    msgs.append(assistant_msg)
+    data["messages"] = msgs
+    if clear_carryover:
+        data["carryover_summary"] = ""
+    save_session(run_path, data)
+    return data
+
+
 def append_message_pair(
     run_path: Path,
     session_id: str,
@@ -127,25 +186,20 @@ def append_message_pair(
         source_context_diagnostics: Optional per-turn source index metadata for the UI
             (JSON-serializable dict); stored only on the new assistant message.
     """
-    data = load_session(run_path, session_id)
-    if data is None:
+    if append_user_message(
+        run_path,
+        session_id,
+        user_text=user_text,
+        title_if_empty=title_if_empty,
+    ) is None:
         return None
-    msgs = list(data.get("messages") or [])
-    msgs.append({"role": "user", "content": user_text.strip()[:32000]})
-    assistant_msg: Dict[str, Any] = {
-        "role": "assistant",
-        "content": assistant_text.strip()[:64000],
-    }
-    if isinstance(source_context_diagnostics, dict) and source_context_diagnostics:
-        assistant_msg["source_context_diagnostics"] = source_context_diagnostics
-    msgs.append(assistant_msg)
-    data["messages"] = msgs
-    if (data.get("title") or "").strip() in ("", "New chat"):
-        data["title"] = (title_if_empty or "Chat").strip()[:120]
-    if clear_carryover:
-        data["carryover_summary"] = ""
-    save_session(run_path, data)
-    return data
+    return append_assistant_reply(
+        run_path,
+        session_id,
+        assistant_text=assistant_text,
+        clear_carryover=clear_carryover,
+        source_context_diagnostics=source_context_diagnostics,
+    )
 
 
 def estimate_context_chars_for_turn(

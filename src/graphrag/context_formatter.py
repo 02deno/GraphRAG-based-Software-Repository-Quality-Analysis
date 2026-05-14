@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Sequence
 
 _CTX_HEADER = (
-    "The following is an induced subgraph from a static software repository graph "
+    "Induced subgraph from this repository's static graph "
     "(nodes: files, classes, functions, tests, commits; edges: imports, containment, "
-    "calls, tests, commits touching files). Use only this structure to justify claims; "
-    "mark speculation clearly when information is missing.\n\n"
+    "calls, tests, commits touching files). Use it to justify claims; mark speculation "
+    "when something is not in the slice.\n\n"
 )
 
 

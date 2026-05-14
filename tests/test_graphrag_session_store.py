@@ -42,6 +42,30 @@ def test_create_append_delete_roundtrip(tmp_path: Path) -> None:
     assert session_store.load_session(run, s["id"]) is None
 
 
+def test_append_user_then_assistant_roundtrip(tmp_path: Path) -> None:
+    run = tmp_path / "web_analysis_dummy_20260101_000002"
+    run.mkdir()
+    (run / "graph.json").write_text("{}", encoding="utf-8")
+    s = session_store.create_session(run, title="New chat", carryover_summary="")
+    sid = s["id"]
+    u = session_store.append_user_message(run, sid, user_text="Q?", title_if_empty="Q?")
+    assert u is not None
+    assert len(u["messages"]) == 1
+    assert u["messages"][0]["role"] == "user"
+    listed = session_store.list_sessions(run)
+    assert listed[0]["message_count"] == 1
+    a = session_store.append_assistant_reply(
+        run,
+        sid,
+        assistant_text="A.",
+        clear_carryover=False,
+        source_context_diagnostics=None,
+    )
+    assert a is not None
+    assert len(a["messages"]) == 2
+    assert a["messages"][1]["role"] == "assistant"
+
+
 def test_invalid_session_id_returns_none(tmp_path: Path) -> None:
     run = tmp_path / "web_analysis_dummy_20260101_000001"
     run.mkdir()

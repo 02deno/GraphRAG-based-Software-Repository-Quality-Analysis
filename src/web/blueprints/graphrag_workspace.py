@@ -23,7 +23,9 @@ from flask import (
 
 from src.graphrag.chat_service import GraphRagChatService
 from src.graphrag.session_store import (
+    append_assistant_reply,
     append_message_pair,
+    append_user_message,
     create_session,
     delete_session,
     list_sessions,
@@ -196,6 +198,14 @@ def api_session_message(run_dir: str, session_id: str):
     wants_stream = request.headers.get(_CHAT_STREAM_HEADER, "").strip().lower() in ("1", "true", "yes")
 
     if wants_stream:
+        pre_user = append_user_message(
+            base,
+            session_id,
+            user_text=message,
+            title_if_empty=message[:80],
+        )
+        if pre_user is None:
+            return jsonify({"ok": False, "error": "Session could not be updated."}), 500
 
         @stream_with_context
         def event_stream() -> Iterator[bytes]:
@@ -222,12 +232,10 @@ def api_session_message(run_dir: str, session_id: str):
                         events.put(("error", result))
                         return
                     reply = str(result.get("reply", "") or "")
-                    updated = append_message_pair(
+                    updated = append_assistant_reply(
                         base,
                         session_id,
-                        user_text=message,
                         assistant_text=reply,
-                        title_if_empty=message[:80],
                         clear_carryover=had_carryover,
                         source_context_diagnostics=result.get("source_context_diagnostics"),
                     )

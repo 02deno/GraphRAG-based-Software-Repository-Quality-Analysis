@@ -35,32 +35,80 @@ _SUMMARY_SYSTEM = (
 )
 
 _SYSTEM_PROMPT = (
-    "You are an expert assistant for software quality, testing, and architecture. "
-    "You answer using the supplied graph subgraph, precomputed metrics, and any "
-    "indexed source excerpts. If the evidence is insufficient, say so clearly and "
-    "state what is missing. "
-    "When the user asks about **graph analysis results** (centrality, betweenness, "
+    "You are an expert assistant for software quality, testing, and architecture for "
+    "**this** analyzed repository run. You answer **directly**—start with what the user "
+    "asked for (facts, lists, trade-offs), using the graph subgraph, precomputed metrics, "
+    "and indexed source excerpts as evidence. "
+    "If the evidence is insufficient, say so briefly and name what is missing.\n\n"
+    "**Voice (critical):** Write like an engineer on the team, not like a school essay "
+    "about a 'passage'. Do **not** open with or lean on meta-phrases such as "
+    "\"The provided text\", \"The following excerpt\", \"Based on the context supplied\", "
+    "\"It appears that the text is\", or \"The output is divided into sections\". "
+    "Do not narrate that you were 'given' material—just use it. When citing, name the "
+    "artifact (e.g. precomputed metrics, `path:lines`, graph node label) instead.\n\n"
+    "When the user asks about **graph analysis results** (centrality, degree, betweenness, "
     "PageRank, communities, Louvain/modularity, risk candidates, composite scores), "
-    "base your answer primarily on the **Precomputed metrics** block and any **Source "
-    "excerpts** whose paths begin with `_analysis/` (those are the persisted pipeline "
-    "analysis texts for this run). Do not substitute a generic description of an unrelated "
-    "repository; stay anchored to this evidence. "
-    "When **Source excerpts** appear, use them for implementation details and "
-    "cite file paths and line ranges when possible. "
-    "When you mention graph entities, prefer human-readable labels from the context. "
+    "anchor on the **Precomputed metrics** block and any excerpts under `_analysis/` "
+    "(pipeline analysis for this run). Do not substitute a generic description of some "
+    "other codebase.\n\n"
+    "If the **latest** user message is short or vague (e.g. a follow-up like 'what about "
+    "degree?'), combine it with the **prior turns** in this conversation and the new "
+    "evidence blocks—do not drift to unrelated files or topics.\n\n"
+    "When **Source excerpts** appear, use them for implementation detail; cite paths and "
+    "line ranges when possible. Prefer human-readable graph labels from the evidence.\n\n"
     "Respond in the same language as the user's question when possible.\n\n"
-    "Format every answer in **Markdown**: use `##` / `###` headings, bullet or numbered "
-    "lists where helpful, and fenced code blocks for short snippets taken from the context. "
-    "Avoid dumping huge code; quote only the lines needed to support a point.\n\n"
-    "Be **substantive**: for non-trivial questions, default to several paragraphs (or "
-    "structured sections) covering main ideas, relationships in the graph, risks, and "
-    "concrete next steps—not a one-line summary unless the user explicitly asks for brevity."
+    "Format answers in **Markdown**: `##` / `###` headings, bullets where helpful, short "
+    "fenced code only when quoting from the evidence. Avoid huge dumps.\n\n"
+    "Be **substantive** on non-trivial questions: several paragraphs or clear sections "
+    "unless the user explicitly wants brevity."
 )
 
 _CARRYOVER_USER_PREFIX = (
     "The following is a short summary from a prior chat session for continuity only; "
     "answer the next user message using the graph context attached to that message.\n\n"
 )
+
+
+def _retrieval_query_blend(
+    user_message: str,
+    conversation_history: Sequence[Mapping[str, Any]] | None,
+    *,
+    short_len: int = 42,
+    max_len: int = 2800,
+) -> str:
+    """Blend the latest prior user turn into short follow-ups for retrieval only.
+
+    Improves lexical seeds, embedding seeds, edge-type selection, and source excerpt
+    ranking when the current message is brief (e.g. \"What about degree centrality?\")
+    while leaving the visible ``### User question`` text as the actual latest message.
+
+    Args:
+        user_message: Current user message (trimmed internally).
+        conversation_history: Prior ``user`` / ``assistant`` turns (current message excluded).
+        short_len: When the current message is shorter than this, try blending.
+        max_len: Cap on the blended query string.
+
+    Returns:
+        A string used only for retrieval scoring, never shown as the user's question line.
+    """
+    msg = (user_message or "").strip()
+    if len(msg) >= short_len:
+        return msg
+    prev_user = ""
+    for m in conversation_history or []:
+        if not isinstance(m, Mapping):
+            continue
+        if str(m.get("role", "")).strip().lower() != "user":
+            continue
+        c = str(m.get("content", "") or "").strip()
+        if c:
+            prev_user = c
+    if not prev_user or prev_user == msg:
+        return msg
+    blended = f"{prev_user}\n\nFollow-up: {msg}".strip()
+    if len(blended) > max_len:
+        return blended[: max(0, max_len - 3)] + "..."
+    return blended
 
 
 def _approx_chars_for_messages(msgs: Sequence[Mapping[str, str]]) -> int:
@@ -132,6 +180,7 @@ class GraphRagChatService:
         run_dir_path: Path,
         user_message: str,
         *,
+        retrieval_query: str | None = None,
         max_depth: int = 2,
         max_nodes: int = 220,
         top_seeds: int = 14,
@@ -144,11 +193,16 @@ class GraphRagChatService:
 
         Optional *progress_hook* receives ``(stage_id, human_message)`` for long phases
         (embeddings, Neo4j sync, etc.) so HTTP layers can stream status to the client.
+
+        Args:
+            retrieval_query: When set, used for lexical/embedding/source ranking instead of
+                *user_message* (e.g. blended with a prior user turn for short follow-ups).
         """
         msg = (user_message or "").strip()
         if not msg:
             return {"ok": False, "error": "Empty message."}
 
+        q_rank = (retrieval_query or "").strip() or msg
         graph_path = run_dir_path / "graph.json"
         if not graph_path.is_file():
             return {"ok": False, "error": "graph.json not found for this run."}
@@ -176,9 +230,9 @@ class GraphRagChatService:
         if progress_hook:
             progress_hook("lexical_seeds", "Ranking lexical seeds and scanning communities…")
 
-        ranked = rank_seed_node_ids(nodes, msg, top_k=top_seeds)
+        ranked = rank_seed_node_ids(nodes, q_rank, top_k=top_seeds)
         lexical_seeds = [nid for nid, _s in ranked]
-        comm_seeds = community_member_seeds_from_view(msg, analysis_view)
+        comm_seeds = community_member_seeds_from_view(q_rank, analysis_view)
         if progress_hook:
             progress_hook(
                 "embedding_seeds",
@@ -188,7 +242,7 @@ class GraphRagChatService:
         embed_seeds, embed_diag = try_embedding_seed_ids(
             run_dir_path,
             nodes,
-            msg,
+            q_rank,
             top_k=min(12, top_seeds),
             progress=embed_cb,
         )
@@ -203,7 +257,7 @@ class GraphRagChatService:
             progress_hook("graph_index", "Building in-memory graph index for expansion…")
 
         g = build_multidigraph(nodes, edges)
-        allowed = default_edge_types_for_query(msg)
+        allowed = default_edge_types_for_query(q_rank)
         seeds_in_graph = [s for s in seed_order if s in g]
         if not seeds_in_graph:
             return {"ok": False, "error": "No seed nodes could be mapped onto the graph."}
@@ -263,16 +317,21 @@ class GraphRagChatService:
         metrics_text = format_analysis_view_summary(analysis_view, max_chars=max_metrics_chars)
         source_block, source_diag = retrieve_source_context_for_llm(
             run_dir_path,
-            msg,
+            q_rank,
             max_chars=max_source_chars,
         )
         user_block = (
+            "Evidence below is for this run only (metrics + graph slice + optional file/analysis "
+            "excerpts). Answer the question directly; do not describe 'provided text' as an object.\n\n"
             f"### User question\n{msg}\n\n"
             f"### Precomputed metrics (may be partial)\n{metrics_text}\n\n"
             f"### Retrieved subgraph\n{subgraph_text}"
         )
         if source_block.strip():
-            user_block += "\n\n### Source excerpts (repository, docs, and analysis reports)\n" + source_block
+            user_block += (
+                "\n\n### Source excerpts (indexed repository / docs / `_analysis/` reports)\n"
+                + source_block
+            )
 
         if progress_hook:
             progress_hook(
@@ -401,9 +460,13 @@ class GraphRagChatService:
                 ),
             }
 
+        prior_hist: List[Mapping[str, Any]] = list(conversation_history or [])
+        retrieval_blend = _retrieval_query_blend(user_message, prior_hist)
+
         ret = self._retrieve_context(
             run_dir_path,
             user_message,
+            retrieval_query=retrieval_blend,
             max_depth=max_depth,
             max_nodes=max_nodes,
             top_seeds=top_seeds,
@@ -427,7 +490,7 @@ class GraphRagChatService:
                 }
             )
 
-        hist: List[Mapping[str, Any]] = list(conversation_history or [])
+        hist = prior_hist
         if max_history_messages > 0 and hist:
             hist = hist[-max_history_messages:]
             for m in hist:
@@ -483,7 +546,6 @@ class GraphRagChatService:
             return {"ok": False, "error": f"LLM request failed: {exc!s}"}
 
         fork_thr = _context_auto_fork_chars()
-        prior_hist = list(conversation_history or [])
         auto_fork = bool(
             fork_thr > 0
             and approx >= fork_thr

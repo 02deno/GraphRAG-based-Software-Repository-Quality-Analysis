@@ -494,6 +494,8 @@
         streamControllers: {}
     };
 
+    /** While any session has an in-flight ``POST /message``, poll session metadata so sidebar counts update when background turns finish. */
+    var sessionListPollTimer = null;
     var appNoticeTimer = null;
     var scrollChatRaf = null;
 
@@ -510,6 +512,10 @@
     }
 
     function abortAllChatStreams() {
+        if (sessionListPollTimer) {
+            clearInterval(sessionListPollTimer);
+            sessionListPollTimer = null;
+        }
         if (!state.streamControllers) return;
         Object.keys(state.streamControllers).forEach(function (k) {
             try {
@@ -1151,6 +1157,19 @@
         });
     }
 
+    function ensureSessionListPollWhilePending() {
+        if (sessionListPollTimer) return;
+        sessionListPollTimer = setInterval(function () {
+            var pend = state.pendingSends || {};
+            if (!Object.keys(pend).length) {
+                clearInterval(sessionListPollTimer);
+                sessionListPollTimer = null;
+                return;
+            }
+            refreshSessionList();
+        }, 3000);
+    }
+
     function newSession() {
         if (!state.runDir) return;
         api('/' + encodeURIComponent(state.runDir) + '/sessions', {
@@ -1176,6 +1195,7 @@
         var ac = new AbortController();
         state.streamControllers[streamSessionId] = ac;
         state.pendingSends[streamSessionId] = true;
+        ensureSessionListPollWhilePending();
         updateChrome();
         var snap = cloneSession(state.session);
         var baseMsgs = state.session.messages ? state.session.messages.slice() : [];
@@ -1269,6 +1289,29 @@
                         state.session = snap;
                         el('input').value = text;
                         renderMessages();
+                    } else {
+                        var rdAbort = state.runDir;
+                        var sidAbort = streamSessionId;
+                        [2500, 12000, 35000].forEach(function (delayMs) {
+                            setTimeout(function () {
+                                if (state.runDir !== rdAbort) return;
+                                refreshSessionList();
+                                if (String(state.sessionId) === String(sidAbort)) {
+                                    api(
+                                        '/' +
+                                            encodeURIComponent(rdAbort) +
+                                            '/sessions/' +
+                                            encodeURIComponent(sidAbort)
+                                    ).then(function (r) {
+                                        if (r.body.ok && String(state.sessionId) === String(sidAbort)) {
+                                            state.session = r.body.session;
+                                            renderMessages();
+                                            updateChrome();
+                                        }
+                                    });
+                                }
+                            }, delayMs);
+                        });
                     }
                     refreshSessionList();
                     return;
