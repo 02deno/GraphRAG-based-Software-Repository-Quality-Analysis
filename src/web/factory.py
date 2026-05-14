@@ -12,6 +12,7 @@ from src.logging_config import configure_standard_logging, get_logger
 from src.graphrag.chat_service import GraphRagChatService
 from src.graphrag.neo4j_driver import create_neo4j_driver_from_env
 from src.graphrag.openai_compatible_client import load_chat_client_from_env
+from src.web.blueprints.graphrag_workspace import graphrag_ws_bp
 from src.web.blueprints.web import web_bp
 from src.web.config import get_project_root, load_flask_config
 from src.web.handlers.repository_handler import RepositoryHandler
@@ -63,6 +64,7 @@ def create_app() -> Flask:
 
     app.extensions["graphrag_chat_service"] = GraphRagChatService(_llm, neo4j_driver=_neo)
     app.register_blueprint(web_bp)
+    app.register_blueprint(graphrag_ws_bp)
 
     @app.after_request
     def _log_request_outcome(response):

@@ -28,7 +28,9 @@ from flask import (
 )
 
 from src.compatibility.check_item import CheckItem
+from src.graph.json_document import load_graph_document
 from src.graphrag.neo4j_property_graph_export import export_graphrag_run_for_visualization
+from src.graphrag.neo4j_subgraph import Neo4jSubgraphExpander
 from src.web.handlers.repository_handler import RepositoryHandler
 from src.web.report_docx import build_analysis_docx_bytes
 from src.web.results_paths import (
@@ -328,15 +330,36 @@ def analysis_results_chat(run_dir: str):
 def analysis_results_neo4j_property_graph(run_dir: str):
     """Return a bounded Neo4j property-graph snapshot for the GraphRAG run (JSON for vis).
 
+    Loads ``graph.json`` for this run and ensures Neo4j is synced (same write path as GraphRAG
+    chat expansion) before reading ``GraphRAGNode`` / ``GRAPHRAG_EDGE`` rows, so the preview is
+    populated even if the user has not opened the assistant yet.
+
     Query params: ``max_edges`` (50–2000, default 500), ``max_nodes`` (20–800, default 400).
     Requires a configured Bolt driver on the app (same as chat Neo4j expansion).
     """
     base = safe_resolve_results_run_dir(run_dir)
     if base is None:
         return jsonify({"ok": False, "error": "Analysis results folder was not found or is not valid."}), 404
+    graph_path = base / "graph.json"
+    if not graph_path.is_file():
+        return jsonify({"ok": False, "error": "graph.json not found for this run."}), 404
+    try:
+        doc = load_graph_document(graph_path)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("neo4j_property_graph: could not read graph.json run_dir=%s: %s", run_dir, exc)
+        return jsonify({"ok": False, "error": "Could not read graph.json for this run."}), 500
+    nodes = list(doc.get("nodes") or [])
+    edges = list(doc.get("edges") or [])
+
     driver = current_app.extensions.get("neo4j_driver")
     if driver is None:
         return jsonify({"ok": False, "error": "Neo4j is not configured on this server."}), 503
+
+    expander = Neo4jSubgraphExpander(driver)
+    synced = expander.ensure_synced(run_dir, nodes, edges, graph_path=graph_path)
+    if not synced:
+        logger.warning("neo4j_property_graph: ensure_synced returned false run_dir=%s", run_dir)
+
     max_edges = request.args.get("max_edges", default=500, type=int) or 500
     max_nodes = request.args.get("max_nodes", default=400, type=int) or 400
     max_edges = max(50, min(max_edges, 2000))
@@ -351,6 +374,15 @@ def analysis_results_neo4j_property_graph(run_dir: str):
     except Exception as exc:
         logger.exception("neo4j_property_graph export failed run_dir=%s", run_dir)
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+    if not payload.get("nodes") and not payload.get("edges"):
+        if len(edges) == 0:
+            payload["viewer_hint"] = "This run has no edges in graph.json, so there is nothing to draw."
+        elif not synced:
+            payload["viewer_hint"] = (
+                "Could not sync this run into Neo4j; check GRAPHRAG_NEO4J_* settings and logs/graphrag.log."
+            )
+
     return jsonify({"ok": True, **payload})
 
 

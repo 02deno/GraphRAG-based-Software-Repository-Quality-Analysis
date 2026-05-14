@@ -407,6 +407,45 @@
             padding: 18px 20px;
             margin-bottom: 24px;
         }
+        .graphrag-workspace-cta-wrap {
+            margin: -2px 0 16px 0;
+        }
+        .graphrag-workspace-cta-wrap.graphrag-workspace-cta-top {
+            margin: 0 0 20px 0;
+        }
+        a.graphrag-workspace-btn {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            padding: 14px 18px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-decoration: none;
+            color: #fff !important;
+            background: linear-gradient(180deg, #22c55e 0%, #16a34a 45%, #15803d 100%);
+            border: 1px solid #14532d;
+            border-radius: 10px;
+            box-shadow: 0 3px 12px rgba(22, 101, 52, 0.35);
+            line-height: 1.3;
+        }
+        a.graphrag-workspace-btn:hover {
+            filter: brightness(1.06);
+            box-shadow: 0 4px 16px rgba(22, 101, 52, 0.4);
+        }
+        a.graphrag-workspace-btn:focus {
+            outline: 3px solid #bbf7d0;
+            outline-offset: 2px;
+        }
+        .graphrag-workspace-cta-hint {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #3f6212;
+            text-align: center;
+            line-height: 1.4;
+        }
         .graphrag-panel h3 {
             margin-top: 0;
             color: #166534;
@@ -493,6 +532,13 @@
 </head>
 <body>
     <div class="container">
+        {% if results and results.results_run_dir and results.graph_data %}
+        <div class="graphrag-workspace-cta-wrap graphrag-workspace-cta-top">
+            <a class="graphrag-workspace-btn"
+               href="{{ url_for('graphrag_ws.workspace_page', run_dir=results.results_run_dir) }}">Open full chat workspace</a>
+            <span class="graphrag-workspace-cta-hint">Multi-turn sessions, project list, and context-size warnings in the dedicated workspace.</span>
+        </div>
+        {% endif %}
         <div class="success-header">
             <h1>✅ Graph Analysis Complete!</h1>
             <p>Your repository has been successfully analyzed</p>
@@ -1028,10 +1074,11 @@
                                 return;
                             }
                             var t = payload.truncation || {};
+                            var hint = payload.viewer_hint ? (' ' + payload.viewer_hint) : '';
                             statusEl.textContent =
                                 'Showing up to ' + (t.nodes_shown || 0) + ' nodes and ' + (t.edges_returned || 0)
                                 + ' edges (server caps: ' + (t.node_cap || '') + ' nodes, ' + (t.edge_limit_requested || '') + ' edges). '
-                                + 'Drag background to pan; pinch or wheel to zoom. Physics stops after layout.';
+                                + 'Drag background to pan; pinch or wheel to zoom. Physics stops after layout.' + hint;
                             buildNetwork(payload);
                         })
                         .catch(function (e) {

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, Sequence
 
 from src.graph.json_document import load_graph_document
 from src.graphrag.analysis_context import format_analysis_view_summary
@@ -25,6 +26,13 @@ from src.web.service_protocols import ChatCompletionClient
 
 logger = logging.getLogger(__name__)
 
+_SUMMARY_SYSTEM = (
+    "You compress a software-repository Q&A thread into a compact handoff note. "
+    "Output 8–14 bullet points in the same language as the thread when possible. "
+    "Keep facts, file/module names, and conclusions; drop pleasantries. "
+    "Do not exceed 3500 characters."
+)
+
 _SYSTEM_PROMPT = (
     "You are an expert assistant for software quality, testing, and architecture. "
     "You answer using the supplied graph subgraph, precomputed metrics, and any "
@@ -34,6 +42,35 @@ _SYSTEM_PROMPT = (
     "When you mention graph entities, prefer human-readable labels from the context. "
     "Respond in the same language as the user's question when possible."
 )
+
+_CARRYOVER_USER_PREFIX = (
+    "The following is a short summary from a prior chat session for continuity only; "
+    "answer the next user message using the graph context attached to that message.\n\n"
+)
+
+
+def _approx_chars_for_messages(msgs: Sequence[Mapping[str, str]]) -> int:
+    total = 0
+    for m in msgs:
+        total += len(str(m.get("content") or ""))
+    return total
+
+
+def _context_warn_level(approx_chars: int) -> str:
+    """Return ``none``, ``approaching``, or ``critical`` from env thresholds."""
+    try:
+        warn_at = int(os.getenv("GRAPHRAG_CHAT_WARN_INPUT_CHARS", "24000").strip() or "24000")
+    except ValueError:
+        warn_at = 24000
+    try:
+        crit_at = int(os.getenv("GRAPHRAG_CHAT_CRITICAL_INPUT_CHARS", "36000").strip() or "36000")
+    except ValueError:
+        crit_at = 36000
+    if approx_chars >= crit_at:
+        return "critical"
+    if approx_chars >= warn_at:
+        return "approaching"
+    return "none"
 
 
 class GraphRagChatService:
@@ -55,7 +92,7 @@ class GraphRagChatService:
         self._llm = llm
         self._neo4j = neo4j_driver
 
-    def answer(
+    def _retrieve_context(
         self,
         run_dir_path: Path,
         user_message: str,
@@ -67,30 +104,7 @@ class GraphRagChatService:
         max_metrics_chars: int = 5_000,
         max_source_chars: int = 14_000,
     ) -> Dict[str, Any]:
-        """Retrieve a subgraph for *user_message* and return an LLM reply.
-
-        Args:
-            run_dir_path: Resolved ``results/web_analysis_*`` directory.
-            user_message: Natural language question.
-            max_depth: BFS depth from combined seeds.
-            max_nodes: Maximum nodes in the induced subgraph.
-            top_seeds: How many lexical seed nodes to take from :func:`rank_seed_node_ids`.
-            max_subgraph_chars: Character budget for serialized subgraph text.
-            max_metrics_chars: Character budget for ``analysis_view`` summary text.
-            max_source_chars: Character budget for indexed ``.py`` source excerpts.
-
-        Returns:
-            Dict with ``ok`` (bool), optional ``reply``, and diagnostics keys.
-        """
-        if self._llm is None:
-            return {
-                "ok": False,
-                "error": (
-                    "GraphRAG chat is not configured. Set GRAPHRAG_OPENAI_BASE_URL, "
-                    "GRAPHRAG_CHAT_MODEL, and (for hosted APIs) GRAPHRAG_OPENAI_API_KEY. "
-                    "For Ollama use e.g. http://127.0.0.1:11434/v1 as the base URL."
-                ),
-            }
+        """Build the RAG user block and diagnostics for *user_message* (no LLM call)."""
         msg = (user_message or "").strip()
         if not msg:
             return {"ok": False, "error": "Empty message."}
@@ -192,19 +206,10 @@ class GraphRagChatService:
         )
         if source_block.strip():
             user_block += "\n\n### Source code excerpts (indexed repository)\n" + source_block
-        messages: List[Mapping[str, str]] = [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": user_block},
-        ]
-        try:
-            reply = self._llm.complete_chat(messages, temperature=0.2)
-        except Exception as exc:
-            logger.exception("GraphRAG LLM call failed")
-            return {"ok": False, "error": f"LLM request failed: {exc!s}"}
 
         return {
             "ok": True,
-            "reply": reply,
+            "user_block": user_block,
             "seed_nodes": seeds_in_graph[:top_seeds],
             "lexical_seeds": lexical_seeds,
             "community_seeds": comm_seeds,
@@ -218,3 +223,158 @@ class GraphRagChatService:
             "max_nodes": max_nodes,
             "source_context_diagnostics": source_diag,
         }
+
+    def summarize_thread_for_carryover(
+        self,
+        messages: Sequence[Mapping[str, Any]],
+    ) -> Dict[str, Any]:
+        """Ask the LLM for a compact bullet summary to seed a new session.
+
+        Args:
+            messages: Prior ``user`` / ``assistant`` turns (plain text only).
+
+        Returns:
+            ``ok``, ``summary`` on success, or ``error`` on failure.
+        """
+        if self._llm is None:
+            return {
+                "ok": False,
+                "error": (
+                    "GraphRAG chat is not configured. Set GRAPHRAG_OPENAI_BASE_URL and "
+                    "GRAPHRAG_CHAT_MODEL (and API key when required)."
+                ),
+            }
+        chunks: List[str] = []
+        for m in messages:
+            if not isinstance(m, Mapping):
+                continue
+            role = str(m.get("role", "")).strip().lower()
+            content = str(m.get("content", "")).strip()
+            if role not in ("user", "assistant") or not content:
+                continue
+            chunks.append(f"{role.upper()}:\n{content[:12000]}")
+        transcript = "\n\n---\n\n".join(chunks)
+        if not transcript.strip():
+            return {"ok": False, "error": "No messages to summarize."}
+        transcript = transcript[-52000:]
+        llm_messages: List[Mapping[str, str]] = [
+            {"role": "system", "content": _SUMMARY_SYSTEM},
+            {
+                "role": "user",
+                "content": "Prior conversation:\n\n" + transcript + "\n\nProduce the summary now.",
+            },
+        ]
+        try:
+            summary = self._llm.complete_chat(llm_messages, temperature=0.15)
+        except Exception as exc:
+            logger.exception("GraphRAG carryover summary failed")
+            return {"ok": False, "error": f"LLM request failed: {exc!s}"}
+        summary = (summary or "").strip()
+        if len(summary) > 4000:
+            summary = summary[:3997] + "..."
+        return {"ok": True, "summary": summary}
+
+    def answer(
+        self,
+        run_dir_path: Path,
+        user_message: str,
+        *,
+        max_depth: int = 2,
+        max_nodes: int = 220,
+        top_seeds: int = 14,
+        max_subgraph_chars: int = 22_000,
+        max_metrics_chars: int = 5_000,
+        max_source_chars: int = 14_000,
+        conversation_history: Sequence[Mapping[str, Any]] | None = None,
+        carryover_summary: str | None = None,
+        max_history_messages: int = 24,
+        max_history_chars_per_message: int = 12_000,
+    ) -> Dict[str, Any]:
+        """Retrieve a subgraph for *user_message* and return an LLM reply.
+
+        Args:
+            run_dir_path: Resolved ``results/web_analysis_*`` directory.
+            user_message: Natural language question.
+            max_depth: BFS depth from combined seeds.
+            max_nodes: Maximum nodes in the induced subgraph.
+            top_seeds: How many lexical seed nodes to take from :func:`rank_seed_node_ids`.
+            max_subgraph_chars: Character budget for serialized subgraph text.
+            max_metrics_chars: Character budget for ``analysis_view`` summary text.
+            max_source_chars: Character budget for indexed ``.py`` source excerpts.
+            conversation_history: Prior ``user`` / ``assistant`` messages (plain text).
+            carryover_summary: Optional short summary from a forked session.
+            max_history_messages: Max prior turns to include (each message counts as one).
+            max_history_chars_per_message: Truncate each stored message to this length.
+
+        Returns:
+            Dict with ``ok`` (bool), optional ``reply``, diagnostics, ``approx_input_chars``,
+            and ``context_warn`` (``none`` | ``approaching`` | ``critical``).
+        """
+        if self._llm is None:
+            return {
+                "ok": False,
+                "error": (
+                    "GraphRAG chat is not configured. Set GRAPHRAG_OPENAI_BASE_URL, "
+                    "GRAPHRAG_CHAT_MODEL, and (for hosted APIs) GRAPHRAG_OPENAI_API_KEY. "
+                    "For Ollama use e.g. http://127.0.0.1:11434/v1 as the base URL."
+                ),
+            }
+
+        ret = self._retrieve_context(
+            run_dir_path,
+            user_message,
+            max_depth=max_depth,
+            max_nodes=max_nodes,
+            top_seeds=top_seeds,
+            max_subgraph_chars=max_subgraph_chars,
+            max_metrics_chars=max_metrics_chars,
+            max_source_chars=max_source_chars,
+        )
+        if not ret.get("ok"):
+            return ret
+
+        user_block = str(ret.pop("user_block", "") or "")
+
+        messages_out: List[Mapping[str, str]] = [{"role": "system", "content": _SYSTEM_PROMPT}]
+        carry = (carryover_summary or "").strip()
+        if carry:
+            messages_out.append(
+                {
+                    "role": "user",
+                    "content": _CARRYOVER_USER_PREFIX + carry[:8000],
+                }
+            )
+
+        hist: List[Mapping[str, Any]] = list(conversation_history or [])
+        if max_history_messages > 0 and hist:
+            hist = hist[-max_history_messages:]
+            for m in hist:
+                if not isinstance(m, Mapping):
+                    continue
+                role = str(m.get("role", "")).strip().lower()
+                if role not in ("user", "assistant"):
+                    continue
+                content = str(m.get("content", "")).strip()
+                if not content:
+                    continue
+                cap = max_history_chars_per_message
+                if len(content) > cap:
+                    content = content[: max(0, cap - 1)] + "…"
+                messages_out.append({"role": role, "content": content})
+
+        messages_out.append({"role": "user", "content": user_block})
+
+        approx = _approx_chars_for_messages(messages_out)
+        context_warn = _context_warn_level(approx)
+
+        try:
+            reply = self._llm.complete_chat(messages_out, temperature=0.2)
+        except Exception as exc:
+            logger.exception("GraphRAG LLM call failed")
+            return {"ok": False, "error": f"LLM request failed: {exc!s}"}
+
+        ret["ok"] = True
+        ret["reply"] = reply
+        ret["approx_input_chars"] = approx
+        ret["context_warn"] = context_warn
+        return ret

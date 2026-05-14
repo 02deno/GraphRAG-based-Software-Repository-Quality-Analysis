@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphRAG workspace</title>
+    <style>
+        :root {
+            --sidebar-bg: #202123;
+            --sidebar-hover: #2f3033;
+            --sidebar-text: #ececf1;
+            --sidebar-muted: #8e8ea0;
+            --border: #e5e5e5;
+            --main-bg: #ffffff;
+            --user-bubble: #dcf8c6;
+            --assistant-bg: #f4f4f5;
+            --accent: #1a7f37;
+            --warn: #b45309;
+            --crit: #b91c1c;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--main-bg); color: #111; height: 100vh; display: flex; flex-direction: column; }
+        .layout { display: flex; flex: 1; min-height: 0; }
+        aside {
+            width: 280px; min-width: 240px; background: var(--sidebar-bg); color: var(--sidebar-text);
+            display: flex; flex-direction: column; border-right: 1px solid #000;
+        }
+        aside header { padding: 14px 16px; font-weight: 600; font-size: 15px; border-bottom: 1px solid #3e3f42; }
+        aside .nav-scroll { flex: 1; overflow: auto; padding: 8px 0 16px; }
+        .nav-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sidebar-muted); padding: 10px 16px 6px; }
+        .project-row { padding: 10px 16px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; }
+        .project-row:hover { background: var(--sidebar-hover); }
+        .project-row.active { background: var(--sidebar-hover); border-left-color: var(--accent); }
+        .session-row { padding: 8px 16px 8px 28px; cursor: pointer; font-size: 12px; color: #c5c5d2; border-left: 3px solid transparent; }
+        .session-row:hover { background: var(--sidebar-hover); color: #fff; }
+        .session-row.active { background: #343541; border-left-color: #6ea36e; color: #fff; }
+        .session-meta { font-size: 10px; color: var(--sidebar-muted); margin-top: 2px; }
+        aside footer { padding: 10px 12px; border-top: 1px solid #3e3f42; }
+        aside footer a { color: #9ea0ff; font-size: 12px; text-decoration: none; }
+        aside footer a:hover { text-decoration: underline; }
+        main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--main-bg); }
+        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid var(--border); gap: 12px; flex-wrap: wrap; }
+        .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; }
+        .topbar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        button.btn {
+            border: 1px solid var(--border); background: #fff; border-radius: 6px; padding: 7px 12px; font-size: 13px; cursor: pointer;
+        }
+        button.btn:hover { background: #f9f9f9; }
+        button.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        button.btn-primary:hover { filter: brightness(1.05); }
+        button.btn-danger { color: #991b1b; border-color: #fecaca; }
+        .messages { flex: 1; overflow: auto; padding: 20px 24px 100px; max-width: 860px; width: 100%; margin: 0 auto; }
+        .bubble { margin-bottom: 14px; max-width: 100%; }
+        .bubble.user { text-align: right; }
+        .bubble .inner { display: inline-block; text-align: left; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+        .bubble.user .inner { background: var(--user-bubble); }
+        .bubble.assistant .inner { background: var(--assistant-bg); }
+        .warn-banner { margin: 0 20px 10px; padding: 10px 14px; border-radius: 8px; font-size: 13px; max-width: 860px; width: calc(100% - 40px); margin-left: auto; margin-right: auto; }
+        .warn-banner.approaching { background: #fffbeb; color: var(--warn); border: 1px solid #fde68a; }
+        .warn-banner.critical { background: #fef2f2; color: var(--crit); border: 1px solid #fecaca; }
+        .composer { border-top: 1px solid var(--border); padding: 12px 20px 16px; background: #fafafa; }
+        .composer-inner { max-width: 860px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+        .composer textarea {
+            flex: 1; min-height: 44px; max-height: 200px; resize: vertical; padding: 10px 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; font-family: inherit;
+        }
+        .hint { font-size: 11px; color: #666; margin-top: 6px; max-width: 860px; margin-left: auto; margin-right: auto; }
+        .empty-state { color: #666; font-size: 14px; padding: 40px 20px; text-align: center; }
+        .meta-line { font-size: 12px; color: #555; margin-top: 6px; padding: 0 4px; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside>
+        <header>GraphRAG</header>
+        <div class="nav-scroll">
+            <div class="nav-section-title">Projects</div>
+            <div id="project-list" class="empty-state" style="padding:16px;">Loading…</div>
+            <div id="session-block" style="display:none;">
+                <div class="nav-section-title">Sessions</div>
+                <div id="session-list"></div>
+            </div>
+        </div>
+        <footer>
+            <a href="{{ url_for('web.index') }}">← Repository upload</a>
+        </footer>
+    </aside>
+    <main>
+        <div class="topbar">
+            <h1 id="chat-title">Select a project</h1>
+            <div class="topbar-actions">
+                <button type="button" class="btn btn-primary" id="btn-new-session" disabled>New chat</button>
+                <button type="button" class="btn" id="btn-fork-summary" disabled>Summary → new chat</button>
+                <button type="button" class="btn btn-danger" id="btn-delete-session" disabled>Delete chat</button>
+            </div>
+        </div>
+        <div id="warn-slot"></div>
+        <div class="messages" id="messages">
+            <div class="empty-state">Loading…</div>
+        </div>
+        <div class="composer">
+            <div class="composer-inner">
+                <textarea id="input" placeholder="Ask about structure, tests, risk…" rows="2" disabled></textarea>
+                <button type="button" class="btn btn-primary" id="btn-send" disabled>Send</button>
+            </div>
+            <p class="hint" id="token-hint"></p>
+        </div>
+    </main>
+</div>
+<script>
+(function () {
+    var API = '/graphrag/api';
+    var initialRun = {{ (initial_run_dir or '')|tojson }};
+
+    var state = {
+        projects: [],
+        runDir: null,
+        sessionId: null,
+        session: null,
+        lastContextWarn: 'none',
+        lastApproxChars: 0
+    };
+
+    function el(id) { return document.getElementById(id); }
+
+    function api(path, opts) {
+        opts = opts || {};
+        return fetch(API + path, opts).then(function (r) {
+            return r.json().then(function (j) { return { okHttp: r.ok, status: r.status, body: j }; });
+        });
+    }
+
+    function setWarnBanner(level, approx) {
+        var slot = el('warn-slot');
+        slot.innerHTML = '';
+        state.lastContextWarn = level || 'none';
+        state.lastApproxChars = approx || 0;
+        var hint = el('token-hint');
+        hint.textContent = approx ? ('Estimated prompt size (chars): ~' + approx) : '';
+        if (level === 'approaching') {
+            var d = document.createElement('div');
+            d.className = 'warn-banner approaching';
+            d.textContent = 'Context is getting large. Start a new chat soon, or use “Summary → new chat” to continue with a fresh session.';
+            slot.appendChild(d);
+        } else if (level === 'critical') {
+            var c = document.createElement('div');
+            c.className = 'warn-banner critical';
+            c.textContent = 'Context is very large — start a new session now to avoid truncation or failures. You can carry a summary into the new chat.';
+            slot.appendChild(c);
+        }
+    }
+
+    function renderProjects() {
+        var list = el('project-list');
+        list.innerHTML = '';
+        if (!state.projects.length) {
+            list.textContent = 'No completed analyses yet. Run a web analysis first.';
+            return;
+        }
+        state.projects.forEach(function (p) {
+            var row = document.createElement('div');
+            row.className = 'project-row' + (state.runDir === p.run_dir ? ' active' : '');
+            row.textContent = p.label;
+            row.title = p.run_dir;
+            row.onclick = function () { selectProject(p.run_dir); };
+            list.appendChild(row);
+        });
+    }
+
+    function renderSessions(sessions) {
+        var block = el('session-block');
+        var list = el('session-list');
+        list.innerHTML = '';
+        if (!state.runDir) {
+            block.style.display = 'none';
+            return;
+        }
+        block.style.display = 'block';
+        (sessions || []).forEach(function (s) {
+            var row = document.createElement('div');
+            row.className = 'session-row' + (state.sessionId === s.id ? ' active' : '');
+            row.textContent = s.title || 'Chat';
+            var meta = document.createElement('div');
+            meta.className = 'session-meta';
+            meta.textContent = (s.message_count || 0) + ' messages';
+            row.appendChild(meta);
+            row.onclick = function () { selectSession(s.id); };
+            list.appendChild(row);
+        });
+    }
+
+    function renderMessages() {
+        var box = el('messages');
+        if (!state.runDir) {
+            box.innerHTML = '<div class="empty-state">Choose a project from the left.</div>';
+            return;
+        }
+        if (!state.sessionId) {
+            box.innerHTML = '<div class="empty-state">Pick a session or click “New chat”.</div>';
+            return;
+        }
+        if (!state.session) {
+            box.innerHTML = '<div class="empty-state">Loading…</div>';
+            return;
+        }
+        if (!state.session.messages || !state.session.messages.length) {
+            box.innerHTML = '<div class="empty-state">No messages yet. Ask a question below.</div>';
+            return;
+        }
+        box.innerHTML = '';
+        state.session.messages.forEach(function (m) {
+            var wrap = document.createElement('div');
+            wrap.className = 'bubble ' + (m.role === 'user' ? 'user' : 'assistant');
+            var inner = document.createElement('div');
+            inner.className = 'inner';
+            inner.textContent = m.content || '';
+            wrap.appendChild(inner);
+            box.appendChild(wrap);
+        });
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function updateChrome() {
+        var hasRun = !!state.runDir;
+        el('btn-new-session').disabled = !hasRun;
+        el('btn-fork-summary').disabled = !hasRun || !state.sessionId;
+        el('btn-delete-session').disabled = !hasRun || !state.sessionId;
+        el('input').disabled = !hasRun || !state.sessionId;
+        el('btn-send').disabled = !hasRun || !state.sessionId;
+        el('chat-title').textContent = state.session
+            ? (state.session.title || 'Chat')
+            : (state.runDir ? 'Select or create a session' : 'Select a project');
+    }
+
+    function selectProject(runDir) {
+        state.runDir = runDir;
+        state.sessionId = null;
+        state.session = null;
+        el('session-list').innerHTML = '';
+        el('session-block').style.display = 'none';
+        renderProjects();
+        updateChrome();
+        setWarnBanner('none', 0);
+        api('/' + encodeURIComponent(runDir) + '/sessions').then(function (res) {
+            if (!res.body.ok) return;
+            renderSessions(res.body.sessions);
+        });
+        renderMessages();
+    }
+
+    function selectSession(sessionId) {
+        if (!state.runDir) return;
+        state.sessionId = sessionId;
+        state.session = null;
+        renderMessages();
+        api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(sessionId)).then(function (res) {
+            if (!res.body.ok) {
+                state.sessionId = null;
+                state.session = null;
+                updateChrome();
+                renderMessages();
+                return;
+            }
+            state.session = res.body.session;
+            api('/' + encodeURIComponent(state.runDir) + '/sessions').then(function (r2) {
+                if (r2.body.ok) renderSessions(r2.body.sessions);
+            });
+            renderMessages();
+            updateChrome();
+            setWarnBanner('none', 0);
+        });
+    }
+
+    function refreshSessionList() {
+        if (!state.runDir) return;
+        api('/' + encodeURIComponent(state.runDir) + '/sessions').then(function (res) {
+            if (res.body.ok) renderSessions(res.body.sessions);
+        });
+    }
+
+    function newSession() {
+        if (!state.runDir) return;
+        api('/' + encodeURIComponent(state.runDir) + '/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'New chat' })
+        }).then(function (res) {
+            if (!res.body.ok) {
+                alert(res.body.error || 'Failed');
+                return;
+            }
+            refreshSessionList();
+            selectSession(res.body.session.id);
+        });
+    }
+
+    function forkSummary() {
+        if (!state.runDir || !state.sessionId) return;
+        api('/' + encodeURIComponent(state.runDir) + '/sessions/fork', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_session_id: state.sessionId, title: 'Continued chat' })
+        }).then(function (res) {
+            if (!res.body.ok) {
+                alert(res.body.error || 'Fork failed');
+                return;
+            }
+            refreshSessionList();
+            selectSession(res.body.session.id);
+        });
+    }
+
+    function deleteSession() {
+        if (!state.runDir || !state.sessionId) return;
+        if (!confirm('Delete this chat session?')) return;
+        api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(state.sessionId), { method: 'DELETE' }).then(function (res) {
+            if (!res.body.ok) {
+                alert(res.body.error || 'Delete failed');
+                return;
+            }
+            state.sessionId = null;
+            state.session = null;
+            refreshSessionList();
+            renderMessages();
+            updateChrome();
+            setWarnBanner('none', 0);
+        });
+    }
+
+    function send() {
+        var text = (el('input').value || '').trim();
+        if (!text || !state.runDir || !state.sessionId) return;
+        el('btn-send').disabled = true;
+        api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(state.sessionId) + '/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        }).then(function (res) {
+            el('btn-send').disabled = false;
+            if (!res.body.ok) {
+                alert(res.body.error || 'Request failed');
+                return;
+            }
+            el('input').value = '';
+            state.session = res.body.session;
+            renderMessages();
+            setWarnBanner(res.body.context_warn, res.body.approx_input_chars);
+            refreshSessionList();
+        }).catch(function (e) {
+            el('btn-send').disabled = false;
+            alert('Network: ' + e);
+        });
+    }
+
+    el('btn-new-session').onclick = newSession;
+    el('btn-fork-summary').onclick = forkSummary;
+    el('btn-delete-session').onclick = deleteSession;
+    el('btn-send').onclick = send;
+    el('input').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            send();
+        }
+    });
+
+    api('/projects').then(function (res) {
+        if (!res.body.ok) {
+            el('project-list').textContent = 'Could not load projects.';
+            return;
+        }
+        state.projects = res.body.projects || [];
+        renderProjects();
+        if (initialRun && state.projects.some(function (p) { return p.run_dir === initialRun; })) {
+            selectProject(initialRun);
+        } else if (state.projects.length) {
+            selectProject(state.projects[0].run_dir);
+        }
+        updateChrome();
+    });
+})();
+</script>
+</body>
+</html>
