@@ -101,9 +101,9 @@ class GraphRagChatService:
         max_depth: int = 2,
         max_nodes: int = 220,
         top_seeds: int = 14,
-        max_subgraph_chars: int = 22_000,
-        max_metrics_chars: int = 5_000,
-        max_source_chars: int = 14_000,
+        max_subgraph_chars: int = 18_000,
+        max_metrics_chars: int = 4_500,
+        max_source_chars: int = 11_000,
         progress_hook: Callable[[str, str | None], None] | None = None,
     ) -> Dict[str, Any]:
         """Build the RAG user block and diagnostics for *user_message* (no LLM call).
@@ -321,9 +321,9 @@ class GraphRagChatService:
         max_depth: int = 2,
         max_nodes: int = 220,
         top_seeds: int = 14,
-        max_subgraph_chars: int = 22_000,
-        max_metrics_chars: int = 5_000,
-        max_source_chars: int = 14_000,
+        max_subgraph_chars: int = 18_000,
+        max_metrics_chars: int = 4_500,
+        max_source_chars: int = 11_000,
         conversation_history: Sequence[Mapping[str, Any]] | None = None,
         carryover_summary: str | None = None,
         max_history_messages: int = 24,
@@ -412,6 +412,13 @@ class GraphRagChatService:
 
         approx = _approx_chars_for_messages(messages_out)
         context_warn = _context_warn_level(approx)
+        if approx > 32_000:
+            logger.warning(
+                "GraphRAG assembled prompt is very large (approx_input_chars=%d); expect slow "
+                "local LLM turns. Prefer a new chat, shorter history, or smaller "
+                "GRAPHRAG_SOURCE_* / subgraph budgets.",
+                approx,
+            )
 
         if progress_hook:
             progress_hook(

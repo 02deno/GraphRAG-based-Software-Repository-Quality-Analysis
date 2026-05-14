@@ -9,7 +9,17 @@ import threading
 from collections.abc import Iterator
 from pathlib import Path
 
-from flask import Blueprint, Response, current_app, jsonify, render_template, request, stream_with_context
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    stream_with_context,
+    url_for,
+)
 
 from src.graphrag.chat_service import GraphRagChatService
 from src.graphrag.session_store import (
@@ -145,14 +155,26 @@ def api_session_detail(run_dir: str, session_id: str):
     return jsonify({"ok": True, "session": data})
 
 
-@graphrag_ws_bp.route("/api/<run_dir>/sessions/<session_id>/message", methods=["POST"])
+@graphrag_ws_bp.route("/api/<run_dir>/sessions/<session_id>/message", methods=["GET", "POST"])
 def api_session_message(run_dir: str, session_id: str):
     """Append a user message, run GraphRAG + LLM, store the assistant reply.
 
-    With header ``X-GraphRAG-Chat-Stream: 1``, returns ``text/event-stream`` where each
-    ``data:`` line is JSON: ``progress`` (retrieval), ``token`` (assistant text fragments
-    from a streamed chat completion), then ``complete`` or ``error``.
+    ``GET`` on this URL is not supported for chat; browsers or tools that probe it
+    are redirected to the HTML workspace so logs are not spammed with 405 noise.
+
+    With header ``X-GraphRAG-Chat-Stream: 1`` on ``POST``, returns ``text/event-stream``
+    where each ``data:`` line is JSON: ``progress`` (retrieval), ``token`` (assistant
+    text fragments from a streamed chat completion), then ``complete`` or ``error``.
     """
+    if request.method == "GET":
+        logger.debug(
+            "graphrag_message_get_redirect run_dir=%s session_id=%s",
+            run_dir,
+            session_id,
+        )
+        if safe_resolve_results_run_dir(run_dir) is None:
+            return redirect(url_for("graphrag_ws.workspace_page"), code=302)
+        return redirect(url_for("graphrag_ws.workspace_page", run_dir=run_dir), code=302)
     base = safe_resolve_results_run_dir(run_dir)
     if base is None:
         return jsonify({"ok": False, "error": "Invalid or missing run directory."}), 404
