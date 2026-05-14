@@ -489,6 +489,7 @@
             color: #fff;
             font-weight: 500;
         }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -1078,6 +1079,7 @@
         <div class="download-section">
             <h4>📥 Download Results</h4>
             <p>Download individual files or one combined Word report (text + pipeline log + embedded charts).</p>
+            <p class="schema-note" id="results-bootstrap-status" style="margin-top:6px;">Preparing download helpers…</p>
 
             {% if results.results_run_dir %}
             <a href="{{ url_for('web.export_analysis_docx', run_dir=results.results_run_dir) }}" class="btn btn-success" download>
@@ -1122,127 +1124,161 @@
             </a>
         </div>
 
-        <script id="results-bootstrap" type="application/json">
-{{ {"graph": results.graph_data, "analysis": results.analysis_text, "analysis_view": results.analysis_view or {}, "visual_summary_view": results.visual_summary_view or {}, "visual": results.visual_summary_text or "", "pipeline": results.pipeline_output or ""}|tojson }}
-        </script>
-        <script>
+        <script id="results-bootstrap-loader">
 (function () {
-            var el = document.getElementById('results-bootstrap');
-            var payload = {};
-            try {
-                payload = JSON.parse(el.textContent);
-            } catch (e) {
-                console.error('Failed to parse embedded results', e);
-            }
-            var graphData = payload.graph;
-            var analysisText = payload.analysis;
-            var analysisView = payload.analysis_view || {};
-            var visualSummaryView = payload.visual_summary_view || {};
-            var visualSummaryText = payload.visual;
-            var pipelineText = payload.pipeline;
+            var statusEl = document.getElementById('results-bootstrap-status');
+            var bundleUrl = {{ url_for('web.analysis_results_bootstrap_bundle', run_dir=results.results_run_dir)|tojson }};
 
-            function downloadJSON() {
-                if (graphData === undefined || graphData === null) {
-                    alert('Graph data is not available to download.');
+            function stubDownload() {
+                alert('Export data is still loading. Please wait a moment and try again.');
+            }
+            window.downloadJSON = stubDownload;
+            window.downloadAnalysis = stubDownload;
+            window.downloadAnalysisView = stubDownload;
+            window.downloadVisualSummary = stubDownload;
+            window.downloadVisualSummaryView = stubDownload;
+            window.downloadPipeline = stubDownload;
+
+            function setStatus(msg, isErr) {
+                if (!statusEl) return;
+                statusEl.textContent = msg;
+                statusEl.style.color = isErr ? '#b91c1c' : '';
+            }
+
+            function wireDownloads(payload) {
+                if (!payload || !payload.ok) {
+                    setStatus((payload && payload.error) || 'Bundle failed to load.', true);
                     return;
                 }
-                var blob = new Blob([JSON.stringify(graphData, null, 2)], {type: 'application/json'});
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'graph_analysis_results.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }
+                var graphData = payload.graph;
+                var analysisText = payload.analysis;
+                var analysisView = payload.analysis_view || {};
+                var visualSummaryView = payload.visual_summary_view || {};
+                var visualSummaryText = payload.visual;
+                var pipelineText = payload.pipeline;
 
-            function downloadAnalysis() {
-                if (analysisText === undefined || analysisText === null) {
-                    alert('Analysis text is not available to download.');
-                    return;
+                function downloadJSON() {
+                    if (graphData === undefined || graphData === null) {
+                        alert('Graph data is not available to download.');
+                        return;
+                    }
+                    var blob = new Blob([JSON.stringify(graphData, null, 2)], {type: 'application/json'});
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'graph_analysis_results.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
                 }
-                var blob = new Blob([String(analysisText)], {type: 'text/plain;charset=utf-8'});
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'graph_analysis_report.txt';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }
 
-            function downloadVisualSummaryView() {
-                if (!visualSummaryView || visualSummaryView.schema_version !== 1) {
-                    alert('Visual summary JSON is not available for this run.');
-                    return;
+                function downloadAnalysis() {
+                    if (analysisText === undefined || analysisText === null) {
+                        alert('Analysis text is not available to download.');
+                        return;
+                    }
+                    var blob = new Blob([String(analysisText)], {type: 'text/plain;charset=utf-8'});
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'graph_analysis_report.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
                 }
-                var blob = new Blob([JSON.stringify(visualSummaryView, null, 2)], {type: 'application/json;charset=utf-8'});
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'visual_summary_view.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }
 
-            function downloadVisualSummary() {
-                if (!visualSummaryText) {
-                    alert('Visual summary is not available to download.');
-                    return;
+                function downloadVisualSummaryView() {
+                    if (!visualSummaryView || visualSummaryView.schema_version !== 1) {
+                        alert('Visual summary JSON is not available for this run.');
+                        return;
+                    }
+                    var blob = new Blob([JSON.stringify(visualSummaryView, null, 2)], {type: 'application/json;charset=utf-8'});
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'visual_summary_view.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
                 }
-                var blob = new Blob([String(visualSummaryText)], {type: 'text/plain;charset=utf-8'});
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'visual_summary.txt';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }
 
-            function downloadAnalysisView() {
-                if (!analysisView || analysisView.schema_version !== 1) {
-                    alert('Structured metrics JSON is not available for this run.');
-                    return;
+                function downloadVisualSummary() {
+                    if (!visualSummaryText) {
+                        alert('Visual summary is not available to download.');
+                        return;
+                    }
+                    var blob = new Blob([String(visualSummaryText)], {type: 'text/plain;charset=utf-8'});
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'visual_summary.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
                 }
-                var blob = new Blob([JSON.stringify(analysisView, null, 2)], {type: 'application/json;charset=utf-8'});
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'analysis_view.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }
 
-            function downloadPipeline() {
-                if (pipelineText === undefined || pipelineText === null || pipelineText === '') {
-                    alert('Pipeline log is not available to download.');
-                    return;
+                function downloadAnalysisView() {
+                    if (!analysisView || analysisView.schema_version !== 1) {
+                        alert('Structured metrics JSON is not available for this run.');
+                        return;
+                    }
+                    var blob = new Blob([JSON.stringify(analysisView, null, 2)], {type: 'application/json;charset=utf-8'});
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'analysis_view.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
                 }
-                var blob = new Blob([String(pipelineText)], {type: 'text/plain;charset=utf-8'});
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'pipeline_log.txt';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+
+                function downloadPipeline() {
+                    if (pipelineText === undefined || pipelineText === null || pipelineText === '') {
+                        alert('Pipeline log is not available to download.');
+                        return;
+                    }
+                    var blob = new Blob([String(pipelineText)], {type: 'text/plain;charset=utf-8'});
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'pipeline_log.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }
+
+                window.downloadJSON = downloadJSON;
+                window.downloadAnalysis = downloadAnalysis;
+                window.downloadAnalysisView = downloadAnalysisView;
+                window.downloadVisualSummary = downloadVisualSummary;
+                window.downloadVisualSummaryView = downloadVisualSummaryView;
+                window.downloadPipeline = downloadPipeline;
+                setStatus('');
+                if (statusEl) statusEl.style.display = 'none';
             }
 
-            window.downloadJSON = downloadJSON;
-            window.downloadAnalysis = downloadAnalysis;
-            window.downloadAnalysisView = downloadAnalysisView;
-            window.downloadVisualSummary = downloadVisualSummary;
-            window.downloadVisualSummaryView = downloadVisualSummaryView;
-            window.downloadPipeline = downloadPipeline;
+            fetch(bundleUrl, { credentials: 'same-origin' })
+                .then(function (r) {
+                    if (!r.ok) {
+                        return r.json().then(function (j) {
+                            throw new Error(j.error || ('HTTP ' + r.status));
+                        }).catch(function () {
+                            throw new Error('HTTP ' + r.status);
+                        });
+                    }
+                    return r.json();
+                })
+                .then(wireDownloads)
+                .catch(function (err) {
+                    console.error('bootstrap-bundle', err);
+                    setStatus('Could not load download bundle: ' + err, true);
+                });
 })();
         </script>
 

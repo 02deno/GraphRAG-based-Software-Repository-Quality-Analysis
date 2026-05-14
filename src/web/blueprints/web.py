@@ -261,8 +261,42 @@ def analysis_results_page(run_dir: str):
     if base is None:
         flash("Analysis results folder was not found or is not valid.")
         return redirect(url_for("web.index"))
-    results = load_results_from_run_directory(base)
+    try:
+        results = load_results_from_run_directory(base)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        logger.exception("Failed to load results for run_dir=%s", run_dir)
+        flash(f"Could not read analysis results for this run: {exc!s}")
+        return redirect(url_for("web.index"))
     return render_template("results_final.html", **_results_final_template_kwargs(results))
+
+
+@web_bp.route("/analysis-results/<run_dir>/bootstrap-bundle.json")
+def analysis_results_bootstrap_bundle(run_dir: str):
+    """Return the same JSON the results page uses for download helpers (not embedded in HTML).
+
+    Keeping this payload out of ``<script type="application/json">`` avoids broken pages when
+    analysis text or graph literals contain ``</script>`` or when the bundle is very large.
+    """
+    base = safe_resolve_results_run_dir(run_dir)
+    if base is None:
+        return jsonify({"ok": False, "error": "Analysis results folder was not found or is not valid."}), 404
+    try:
+        results = load_results_from_run_directory(base)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        logger.exception("bootstrap_bundle read failed run_dir=%s", run_dir)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    payload = {
+        "ok": True,
+        "graph": results.get("graph_data"),
+        "analysis": results.get("analysis_text") or "",
+        "analysis_view": results.get("analysis_view") or {},
+        "visual_summary_view": results.get("visual_summary_view") or {},
+        "visual": results.get("visual_summary_text") or "",
+        "pipeline": results.get("pipeline_output") or "",
+    }
+    resp = jsonify(payload)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @web_bp.route("/analysis-results/<run_dir>/chat", methods=["POST"])
