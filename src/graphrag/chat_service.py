@@ -580,6 +580,7 @@ class GraphRagChatService:
                 reply = self._llm.complete_chat(messages_out, temperature=chat_temp)
                 if token_hook is not None and reply:
                     token_hook(reply)
+            logger.info("GraphRAG LLM reply success reply_chars=%d", len(reply))
         except Exception as exc:
             logger.exception("GraphRAG LLM call failed")
             return {"ok": False, "error": f"LLM request failed: {exc!s}"}

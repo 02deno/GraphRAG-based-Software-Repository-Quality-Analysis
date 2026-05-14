@@ -375,7 +375,7 @@
             <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="analyze-progress-bar">
                 <div class="progress-bar-fill" id="analyze-progress-fill"></div>
             </div>
-            <p class="progress-steps-hint">Activity log: HTTP 200 means the progress stream is connected; analysis keeps running until a <code>complete</code> event arrives, then the app navigates to results (deferred slightly so the browser can leave this page reliably). If you still see this card after a few seconds, use <strong>Open results</strong> below.</p>
+            <p class="progress-steps-hint">Activity log: HTTP 200 means the stream is connected. After <code>complete</code>, the app opens results with a normal page navigation (GET form + redirect). If you stay on this screen ~5s, an <strong>Open results</strong> link appears.</p>
             <div class="progress-steps-wrap">
                 <ol id="analyze-progress-steps" class="progress-steps" aria-live="polite" aria-relevant="additions"></ol>
             </div>
@@ -562,6 +562,14 @@
     /** When set, navigate only after the SSE body is fully drained (avoids starving the dev server). */
     var pendingSseResultsUrl = null;
     var navFallbackTimer = null;
+    var visHandlerRef = null;
+
+    function clearVisHandler() {
+        if (visHandlerRef) {
+            document.removeEventListener('visibilitychange', visHandlerRef);
+            visHandlerRef = null;
+        }
+    }
 
     function clearNavFallbackTimer() {
         if (navFallbackTimer) {
@@ -586,21 +594,37 @@
             abs = raw;
         }
         clearNavFallbackTimer();
+
+        clearVisHandler();
+        var visHandler = function () {
+            if (document.visibilityState === 'hidden') {
+                clearVisHandler();
+                clearNavFallbackTimer();
+            }
+        };
+        visHandlerRef = visHandler;
+        document.addEventListener('visibilitychange', visHandler);
+
         navFallbackTimer = setTimeout(function () {
             navFallbackTimer = null;
+            clearVisHandler();
             if (!overlay || overlay.classList.contains('hidden')) {
+                return;
+            }
+            var p = window.location.pathname || '';
+            if (p.indexOf('/analysis-results') !== -1) {
                 return;
             }
             var card = document.querySelector('#analyze-progress .progress-card');
             if (!card || card.querySelector('.graphrag-nav-fallback')) {
                 return;
             }
-            var p = document.createElement('p');
-            p.className = 'graphrag-nav-fallback';
-            p.style.marginTop = '14px';
-            p.style.fontSize = '14px';
-            p.style.lineHeight = '1.45';
-            p.appendChild(document.createTextNode('Automatic redirect did not leave this page. '));
+            var pEl = document.createElement('p');
+            pEl.className = 'graphrag-nav-fallback';
+            pEl.style.marginTop = '14px';
+            pEl.style.fontSize = '14px';
+            pEl.style.lineHeight = '1.45';
+            pEl.appendChild(document.createTextNode('Still here? Some browsers delay navigation during a live download. '));
             var a = document.createElement('a');
             a.href = abs;
             a.className = 'btn btn-success';
@@ -609,20 +633,53 @@
             a.style.padding = '8px 16px';
             a.style.fontSize = '14px';
             a.textContent = 'Open results';
-            p.appendChild(a);
-            card.appendChild(p);
+            pEl.appendChild(document.createElement('br'));
+            pEl.appendChild(a);
+            pEl.appendChild(document.createElement('br'));
+            pEl.appendChild(document.createTextNode('Hâlâ buradaysanız: «Open results» düğmesine tıklayın.'));
+            card.appendChild(pEl);
             if (btn) btn.disabled = false;
-        }, 3500);
-        setTimeout(function () {
+        }, 5000);
+
+        function performNavigation() {
             try {
-                window.location.href = abs;
-            } catch (eNav) {
-                window.__graphRagResultsNav = false;
-                clearNavFallbackTimer();
-                if (btn) btn.disabled = false;
-                hideOverlay();
-                alert('Could not navigate automatically. Use “Open results” above or copy the URL from the server log.');
+                var form = document.createElement('form');
+                form.method = 'GET';
+                form.action = abs;
+                document.body.appendChild(form);
+                form.submit();
+            } catch (eForm) {
+                try {
+                    window.top.location.replace(abs);
+                } catch (eRep) {
+                    try {
+                        window.top.location.href = abs;
+                    } catch (eHref) {
+                        window.__graphRagResultsNav = false;
+                        clearNavFallbackTimer();
+                        clearVisHandler();
+                        if (btn) btn.disabled = false;
+                        hideOverlay();
+                        alert('Could not open results automatically. Use the button when it appears, or open the latest run from the home page.');
+                    }
+                }
             }
+            setTimeout(function () {
+                try {
+                    if (!overlay || overlay.classList.contains('hidden')) {
+                        return;
+                    }
+                    var pathNow = window.location.pathname || '';
+                    if (pathNow.indexOf('/analysis-results') !== -1) {
+                        return;
+                    }
+                    window.top.location.replace(abs);
+                } catch (eRetry) { /* ignore */ }
+            }, 350);
+        }
+
+        setTimeout(function () {
+            performNavigation();
         }, 0);
     }
 
@@ -664,6 +721,7 @@
     function showOverlay() {
         if (!overlay) return;
         clearNavFallbackTimer();
+        clearVisHandler();
         var oldFb = document.querySelector('#analyze-progress .graphrag-nav-fallback');
         if (oldFb && oldFb.parentNode) {
             oldFb.parentNode.removeChild(oldFb);
@@ -726,6 +784,7 @@
 
     function hideOverlay() {
         clearNavFallbackTimer();
+        clearVisHandler();
         stopFakeProgress();
         if (!overlay) return;
         overlay.classList.add('hidden');

@@ -3,10 +3,33 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections.abc import Iterator, Mapping, Sequence
+from urllib.parse import urlparse
 
 import httpx
+
+logger = logging.getLogger(__name__)
+
+
+def _assistant_message_visible_text(msg: Mapping[str, object] | dict[str, object]) -> str | None:
+    """Return user-visible assistant text from a ``choices[0].message`` object.
+
+    Some providers (e.g. Ollama Cloud on certain models) put the visible reply in
+    ``reasoning`` while leaving ``content`` empty until a finalization step; treat
+    non-empty ``reasoning`` as a fallback so GraphRAG does not fail on HTTP 200.
+    """
+    if not isinstance(msg, dict):
+        return None
+    for key in ("content", "reasoning", "thinking"):
+        val = msg.get(key)
+        if val is None:
+            continue
+        s = str(val).strip()
+        if s:
+            return s
+    return None
 
 
 class OpenAICompatibleChatClient:
@@ -32,6 +55,8 @@ class OpenAICompatibleChatClient:
         self._model = model
         self._api_key = api_key
         self._client = httpx.Client(base_url=normalized, timeout=timeout_s)
+        parsed = urlparse(normalized if "://" in normalized else f"http://{normalized}")
+        self._log_host = parsed.netloc or normalized or "unknown"
 
     def complete_chat(
         self,
@@ -39,8 +64,17 @@ class OpenAICompatibleChatClient:
         *,
         max_tokens: int | None = None,
         temperature: float = 0.2,
+        response_format_json_object: bool = False,
     ) -> str:
-        """Return assistant text from a chat completion response."""
+        """Return assistant text from a chat completion response.
+
+        Args:
+            messages: OpenAI-style chat messages (role + content strings).
+            max_tokens: Optional cap on generated tokens.
+            temperature: Sampling temperature.
+            response_format_json_object: When True, sends OpenAI ``response_format`` JSON object mode
+                (supported on ``api.openai.com``; other servers may ignore or reject the field).
+        """
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
@@ -51,17 +85,76 @@ class OpenAICompatibleChatClient:
         }
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
-        response = self._client.post("/chat/completions", headers=headers, json=payload)
-        response.raise_for_status()
+        if response_format_json_object:
+            payload["response_format"] = {"type": "json_object"}
+        logger.info(
+            "chat_completions POST /chat/completions host=%s model=%s messages=%d "
+            "max_tokens=%s temperature=%s json_object=%s api_key_set=%s",
+            self._log_host,
+            self._model,
+            len(messages),
+            max_tokens,
+            temperature,
+            response_format_json_object,
+            bool(self._api_key),
+        )
+        try:
+            response = self._client.post("/chat/completions", headers=headers, json=payload)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            preview = ""
+            if exc.response is not None:
+                try:
+                    preview = (exc.response.text or "")[:800]
+                except OSError:
+                    preview = ""
+            logger.warning(
+                "chat_completions HTTP error host=%s model=%s status=%s body_preview=%r",
+                self._log_host,
+                self._model,
+                exc.response.status_code if exc.response else None,
+                preview,
+            )
+            raise
         data = response.json()
         choices = data.get("choices") or []
         if not choices:
+            logger.error("chat_completions no choices host=%s model=%s", self._log_host, self._model)
             raise RuntimeError("chat completion returned no choices")
-        msg = choices[0].get("message") or {}
-        content = msg.get("content")
-        if content is None or str(content).strip() == "":
+        ch0 = choices[0] if isinstance(choices[0], dict) else {}
+        msg = ch0.get("message") or {}
+        text = _assistant_message_visible_text(msg if isinstance(msg, dict) else {})
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+        c_raw = msg.get("content") if isinstance(msg, dict) else None
+        r_raw = msg.get("reasoning") if isinstance(msg, dict) else None
+        t_raw = msg.get("thinking") if isinstance(msg, dict) else None
+        if not text:
+            logger.error(
+                "chat_completions empty assistant host=%s model=%s finish_reason=%s "
+                "message_keys=%s content_len=%s reasoning_len=%s thinking_len=%s usage=%s",
+                self._log_host,
+                self._model,
+                ch0.get("finish_reason"),
+                sorted(msg.keys()) if isinstance(msg, dict) else None,
+                len(str(c_raw or "")),
+                len(str(r_raw or "")),
+                len(str(t_raw or "")),
+                usage,
+            )
             raise RuntimeError("chat completion returned empty assistant content")
-        return str(content).strip()
+        logger.info(
+            "chat_completions response host=%s model=%s reply_chars=%d finish_reason=%s "
+            "content_nonempty=%s reasoning_nonempty=%s thinking_nonempty=%s usage=%s",
+            self._log_host,
+            self._model,
+            len(text),
+            ch0.get("finish_reason"),
+            bool(c_raw and str(c_raw).strip()),
+            bool(r_raw and str(r_raw).strip()),
+            bool(t_raw and str(t_raw).strip()),
+            usage,
+        )
+        return text
 
     def stream_chat_completion(
         self,
@@ -92,14 +185,41 @@ class OpenAICompatibleChatClient:
         }
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        logger.info(
+            "chat_completions stream POST /chat/completions host=%s model=%s messages=%d "
+            "max_tokens=%s temperature=%s api_key_set=%s",
+            self._log_host,
+            self._model,
+            len(messages),
+            max_tokens,
+            temperature,
+            bool(self._api_key),
+        )
         yielded_any = False
+        streamed_chars = 0
         with self._client.stream(
             "POST",
             "/chat/completions",
             headers=headers,
             json=payload,
         ) as response:
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                preview = ""
+                if exc.response is not None:
+                    try:
+                        preview = (exc.response.text or "")[:800]
+                    except OSError:
+                        preview = ""
+                logger.warning(
+                    "chat_completions stream HTTP error host=%s model=%s status=%s body_preview=%r",
+                    self._log_host,
+                    self._model,
+                    exc.response.status_code if exc.response else None,
+                    preview,
+                )
+                raise
             for line in response.iter_lines():
                 if not line:
                     continue
@@ -128,15 +248,36 @@ class OpenAICompatibleChatClient:
                 ch0 = choices[0] if isinstance(choices[0], dict) else {}
                 delta = ch0.get("delta") if isinstance(ch0.get("delta"), dict) else {}
                 piece = delta.get("content")
+                if piece is None or (isinstance(piece, str) and not piece.strip()):
+                    piece = delta.get("reasoning")
+                if piece is None or (isinstance(piece, str) and not str(piece).strip()):
+                    piece = delta.get("thinking")
                 if piece is None:
                     msg_obj = ch0.get("message")
                     if isinstance(msg_obj, dict):
                         piece = msg_obj.get("content")
+                        if piece is None or (isinstance(piece, str) and not str(piece).strip()):
+                            piece = msg_obj.get("reasoning")
+                        if piece is None or (isinstance(piece, str) and not str(piece).strip()):
+                            piece = msg_obj.get("thinking")
                 if piece:
                     yielded_any = True
-                    yield str(piece)
+                    frag = str(piece)
+                    streamed_chars += len(frag)
+                    yield frag
         if not yielded_any:
+            logger.error(
+                "chat_completions stream ended with no assistant text host=%s model=%s",
+                self._log_host,
+                self._model,
+            )
             raise RuntimeError("stream ended without assistant content")
+        logger.info(
+            "chat_completions stream done host=%s model=%s yielded_chars=%d",
+            self._log_host,
+            self._model,
+            streamed_chars,
+        )
 
     def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -169,4 +310,12 @@ def load_chat_client_from_env() -> OpenAICompatibleChatClient:
                 timeout_s = parsed
         except ValueError:
             pass
-    return OpenAICompatibleChatClient(base_url=base, api_key=key, model=model, timeout_s=timeout_s)
+    client = OpenAICompatibleChatClient(base_url=base, api_key=key, model=model, timeout_s=timeout_s)
+    logger.info(
+        "OpenAI-compatible chat client ready host=%s model=%s timeout_s=%s api_key_set=%s",
+        client._log_host,
+        model,
+        timeout_s,
+        bool(key),
+    )
+    return client

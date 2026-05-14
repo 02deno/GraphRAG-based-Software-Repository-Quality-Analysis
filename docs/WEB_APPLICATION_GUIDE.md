@@ -171,7 +171,7 @@ export FLASK_DEBUG=False
 - **Visual Scoring**: Color-coded score display
 - **Detailed Metrics**: Individual check results
 - **Interactive Elements**: Confirmation dialogs and actions
-- **Graph analysis progress**: ``POST /analyze`` with both headers streams **SSE** ``progress`` events (graph build includes **relative file paths**; visualization names each **PNG**). The overlay falls back to **timed** milestone lines (each includes elapsed seconds and a unique index) when the response is **HTML** only. ``complete`` carries ``redirect`` to ``GET /analysis-results/<run_dir>``; the client navigates on the next event-loop tick (avoids racing the fetch stream reader) and shows an **Open results** link if the tab is still on ``/compatibility`` after a few seconds.
+- **Graph analysis progress**: ``POST /analyze`` with both headers streams **SSE** ``progress`` events (graph build includes **relative file paths**; visualization names each **PNG**). The overlay falls back to **timed** milestone lines (each includes elapsed seconds and a unique index) when the response is **HTML** only. ``complete`` carries ``redirect`` to ``GET /analysis-results/<run_dir>``; the client opens that URL via a **GET form submit** (plus a delayed ``location.replace`` if still on ``/compatibility``) and shows **Open results** if the tab has not moved after a few seconds.
 - **Accessibility**: Semantic HTML and keyboard navigation
 
 #### Analysis Results (`templates/results_final.html`)

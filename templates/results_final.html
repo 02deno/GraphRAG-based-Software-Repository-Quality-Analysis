@@ -1169,7 +1169,22 @@
                     if (st) st.textContent = msg || '';
                 }
                 function post(regenerate) {
-                    setBusy(true, regenerate ? 'Regenerating…' : 'Calling model…');
+                    var poll = null;
+                    function clearPoll() {
+                        if (poll) {
+                            clearInterval(poll);
+                            poll = null;
+                        }
+                    }
+                    var started = Date.now();
+                    var base = regenerate ? 'Regenerating' : 'Calling model';
+                    setBusy(true, base + '… 0s');
+                    poll = setInterval(function () {
+                        var s = Math.floor((Date.now() - started) / 1000);
+                        if (st) {
+                            st.textContent = base + '… ' + s + 's — large prompt to cloud; 1–3 min is normal · uzun sürebilir';
+                        }
+                    }, 1000);
                     fetch(genUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-GraphRAG-Progressive-UI': '1' },
@@ -1185,6 +1200,8 @@
                         window.location.reload();
                     }).catch(function () {
                         setBusy(false, 'Network error');
+                    }).finally(function () {
+                        clearPoll();
                     });
                 }
                 btn.addEventListener('click', function () { post(false); });

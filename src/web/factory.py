@@ -14,7 +14,7 @@ from src.graphrag.neo4j_driver import create_neo4j_driver_from_env
 from src.graphrag.openai_compatible_client import load_chat_client_from_env
 from src.web.blueprints.graphrag_workspace import graphrag_ws_bp
 from src.web.blueprints.web import web_bp
-from src.web.config import get_project_root, load_flask_config
+from src.web.config import get_project_root, load_flask_config, load_project_dotenv
 from src.web.handlers.repository_handler import RepositoryHandler
 from src.web.services.analysis_service import AnalysisService
 
@@ -29,15 +29,16 @@ def create_app() -> Flask:
     Returns:
         A fully wired :class:`flask.Flask` instance (same object ``app`` as in ``app.py``).
     """
-    try:
-        from dotenv import load_dotenv
-
-        load_dotenv(get_project_root() / ".env", override=False)
-    except ImportError:
-        pass
+    dotenv_forced = load_project_dotenv()
 
     configure_standard_logging()
-    get_logger(__name__).info("Flask application factory starting (project_root=%s)", get_project_root())
+    _log = get_logger(__name__)
+    _log.info("Flask application factory starting (project_root=%s)", get_project_root())
+    if dotenv_forced:
+        _log.info(
+            "Project .env applied with override=True (GRAPHRAG_DOTENV_OVERRIDE); "
+            "shell GRAPHRAG_* values were replaced from the file."
+        )
 
     project_root = get_project_root()
     app = Flask(__name__, template_folder=str(project_root / "templates"))

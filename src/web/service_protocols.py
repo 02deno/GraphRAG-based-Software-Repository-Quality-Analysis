@@ -54,6 +54,7 @@ class ChatCompletionClient(Protocol):
         *,
         max_tokens: int | None = None,
         temperature: float = 0.2,
+        response_format_json_object: bool = False,
     ) -> str:
         """Return assistant message text from a chat completion call."""
         ...
