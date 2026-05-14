@@ -171,7 +171,7 @@ export FLASK_DEBUG=False
 - **Visual Scoring**: Color-coded score display
 - **Detailed Metrics**: Individual check results
 - **Interactive Elements**: Confirmation dialogs and actions
-- **Graph analysis progress**: ``POST /analyze`` with both headers streams **SSE** ``progress`` events (graph build includes **relative file paths**; visualization names each **PNG**). The overlay falls back to **timed** milestone lines (each includes elapsed seconds and a unique index) when the response is **HTML** only. ``complete`` carries ``redirect`` to ``GET /analysis-results/<run_dir>``.
+- **Graph analysis progress**: ``POST /analyze`` with both headers streams **SSE** ``progress`` events (graph build includes **relative file paths**; visualization names each **PNG**). The overlay falls back to **timed** milestone lines (each includes elapsed seconds and a unique index) when the response is **HTML** only. ``complete`` carries ``redirect`` to ``GET /analysis-results/<run_dir>``; the client opens that URL immediately and stops reading the stream so a slow-close connection cannot leave the overlay stuck at 100%.
 - **Accessibility**: Semantic HTML and keyboard navigation
 
 #### Analysis Results (`templates/results_final.html`)

@@ -375,7 +375,7 @@
             <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="analyze-progress-bar">
                 <div class="progress-bar-fill" id="analyze-progress-fill"></div>
             </div>
-            <p class="progress-steps-hint">Activity log: HTTP 200 means the progress stream is connected; analysis keeps running until a final complete event/redirect arrives.</p>
+            <p class="progress-steps-hint">Activity log: HTTP 200 means the progress stream is connected; analysis keeps running until a <code>complete</code> event arrives, then the app opens results (the stream reader is cancelled so a half-open connection cannot block the redirect).</p>
             <div class="progress-steps-wrap">
                 <ol id="analyze-progress-steps" class="progress-steps" aria-live="polite" aria-relevant="additions"></ol>
             </div>
@@ -681,7 +681,7 @@
         }
     }
 
-    function handleSsePayload(payload, btn) {
+    function handleSsePayload(payload, btn, reader) {
         if (payload.type === 'progress') {
             appendProgressStep(payload.percent, payload.message);
             stopFakeProgress();
@@ -699,13 +699,21 @@
         if (payload.type === 'complete') {
             analyzeStreamComplete = true;
             appendProgressStep(100, 'Opening results…');
-            pendingSseResultsUrl = payload.redirect || latestResultsUrl;
+            var redirectTarget = payload.redirect || latestResultsUrl;
+            pendingSseResultsUrl = redirectTarget;
+            openResultsPage(redirectTarget, btn);
+            pendingSseResultsUrl = null;
+            if (reader && typeof reader.cancel === 'function') {
+                try {
+                    reader.cancel();
+                } catch (eCancel) { /* ignore */ }
+            }
             return true;
         }
         return false;
     }
 
-    function processSseTextBlock(block, btn) {
+    function processSseTextBlock(block, btn, reader) {
         var lines = block.split(/\r?\n/);
         for (var j = 0; j < lines.length; j++) {
             var line = lines[j];
@@ -716,7 +724,7 @@
             } catch (err) {
                 continue;
             }
-            if (handleSsePayload(payload, btn)) return true;
+            if (handleSsePayload(payload, btn, reader)) return true;
         }
         return false;
     }
@@ -742,13 +750,13 @@
                 buf = parts.pop() || '';
                 var terminalHandled = false;
                 for (var i = 0; i < parts.length; i++) {
-                    if (processSseTextBlock(parts[i], btn)) {
+                    if (processSseTextBlock(parts[i], btn, reader)) {
                         terminalHandled = true;
                         break;
                     }
                 }
                 if (result.done && buf.trim()) {
-                    if (processSseTextBlock(buf, btn)) {
+                    if (processSseTextBlock(buf, btn, reader)) {
                         terminalHandled = true;
                     } else {
                         console.warn('analyze stream ended without complete; tail:', buf.slice(0, 500));
@@ -773,6 +781,9 @@
                 }
                 return pump();
             }, function (readErr) {
+                if (analyzeStreamComplete) {
+                    return;
+                }
                 hideOverlay();
                 if (btn) btn.disabled = false;
                 alert('Progress stream was interrupted.');
