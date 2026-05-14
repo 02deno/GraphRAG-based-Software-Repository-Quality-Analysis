@@ -6,7 +6,8 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Tuple
+from collections.abc import Callable, Sequence
+from typing import Any, Dict, List, Tuple
 
 import httpx
 import numpy as np
@@ -53,6 +54,7 @@ def embed_texts_openai_compatible(
     api_key: str,
     model: str,
     timeout_s: float = 120.0,
+    progress: Callable[[str], None] | None = None,
 ) -> List[List[float]]:
     """POST batches to OpenAI-compatible ``/v1/embeddings`` and return vectors in order."""
     endpoint = _openai_compatible_embeddings_url(base_url)
@@ -60,8 +62,12 @@ def embed_texts_openai_compatible(
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     out: List[List[float]] = []
+    n = len(texts)
     with httpx.Client(timeout=timeout_s) as client:
-        for i in range(0, len(texts), _EMBED_BATCH):
+        for i in range(0, n, _EMBED_BATCH):
+            if progress and n > 0:
+                hi = min(i + _EMBED_BATCH, n)
+                progress(f"Embeddings API: {hi} / {n} texts")
             batch = list(texts[i : i + _EMBED_BATCH])
             resp = client.post(
                 endpoint,
@@ -115,6 +121,7 @@ def try_embedding_seed_ids(
     query: str,
     *,
     top_k: int = 12,
+    progress: Callable[[str], None] | None = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """Return top node ids by cosine similarity of query embedding to node texts.
 
@@ -127,6 +134,7 @@ def try_embedding_seed_ids(
         nodes: All graph nodes.
         query: User question.
         top_k: How many ids to return.
+        progress: Optional status lines for UIs (embedding batches, query vector, etc.).
 
     Returns:
         ``(ids, diagnostics)`` where *diagnostics* explains cache hit / skip reason.
@@ -172,6 +180,8 @@ def try_embedding_seed_ids(
 
     try:
         if meta_ok:
+            if progress:
+                progress("Loaded embedding cache from disk.")
             loaded = np.load(cache_path, allow_pickle=True)
             arr_ids = loaded["ids"]
             emb = np.asarray(loaded["emb"], dtype=np.float32)
@@ -184,7 +194,11 @@ def try_embedding_seed_ids(
                 len(texts),
                 model,
             )
-            vectors = embed_texts_openai_compatible(texts, base_url=base, api_key=key, model=model)
+            if progress:
+                progress("Building embedding cache on disk (batched API)…")
+            vectors = embed_texts_openai_compatible(
+                texts, base_url=base, api_key=key, model=model, progress=progress
+            )
             emb = np.asarray(vectors, dtype=np.float32)
             np.savez_compressed(cache_path, ids=np.asarray(ids, dtype=object), emb=emb)
             meta_path.write_text(json.dumps({**fp, "node_count": len(ids)}, indent=2) + "\n", encoding="utf-8")
@@ -195,7 +209,11 @@ def try_embedding_seed_ids(
         return [], diag
 
     try:
-        qvec_list = embed_texts_openai_compatible([query.strip()], base_url=base, api_key=key, model=model)
+        if progress:
+            progress("Embedding your question for similarity…")
+        qvec_list = embed_texts_openai_compatible(
+            [query.strip()], base_url=base, api_key=key, model=model, progress=progress
+        )
         q = np.asarray(qvec_list[0], dtype=np.float32)
     except Exception as exc:
         logger.warning("GraphRAG query embedding failed: %s", exc)

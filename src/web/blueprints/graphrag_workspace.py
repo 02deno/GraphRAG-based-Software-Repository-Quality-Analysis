@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import queue
+import threading
+from collections.abc import Iterator
 from pathlib import Path
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, Response, current_app, jsonify, render_template, request, stream_with_context
 
 from src.graphrag.chat_service import GraphRagChatService
 from src.graphrag.session_store import (
@@ -18,6 +22,13 @@ from src.graphrag.session_store import (
 from src.web.results_paths import safe_resolve_results_run_dir
 
 logger = logging.getLogger(__name__)
+
+_CHAT_STREAM_HEADER = "X-GraphRAG-Chat-Stream"
+
+
+def _sse_chat_event(obj: dict[str, object]) -> bytes:
+    """Serialize one SSE ``data:`` frame for workspace chat progress."""
+    return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n".encode("utf-8")
 
 graphrag_ws_bp = Blueprint("graphrag_ws", __name__, url_prefix="/graphrag")
 
@@ -136,7 +147,11 @@ def api_session_detail(run_dir: str, session_id: str):
 
 @graphrag_ws_bp.route("/api/<run_dir>/sessions/<session_id>/message", methods=["POST"])
 def api_session_message(run_dir: str, session_id: str):
-    """Append a user message, run GraphRAG + LLM, store the assistant reply."""
+    """Append a user message, run GraphRAG + LLM, store the assistant reply.
+
+    With header ``X-GraphRAG-Chat-Stream: 1``, returns ``text/event-stream`` where each
+    ``data:`` line is JSON: ``progress`` events then a final ``complete`` or ``error``.
+    """
     base = safe_resolve_results_run_dir(run_dir)
     if base is None:
         return jsonify({"ok": False, "error": "Invalid or missing run directory."}), 404
@@ -154,6 +169,86 @@ def api_session_message(run_dir: str, session_id: str):
     prior = list(data.get("messages") or [])
     carry = str(data.get("carryover_summary") or "").strip()
     had_carryover = bool(carry)
+
+    wants_stream = request.headers.get(_CHAT_STREAM_HEADER, "").strip().lower() in ("1", "true", "yes")
+
+    if wants_stream:
+
+        @stream_with_context
+        def event_stream() -> Iterator[bytes]:
+            events: "queue.Queue[tuple[str, object]]" = queue.Queue()
+
+            def emit_progress(stage: str, detail: str | None) -> None:
+                events.put(("progress", (stage, detail)))
+
+            def worker() -> None:
+                try:
+                    result = svc.answer(
+                        base,
+                        message,
+                        conversation_history=prior,
+                        carryover_summary=carry if carry else None,
+                        progress_hook=emit_progress,
+                    )
+                    if not result.get("ok"):
+                        events.put(("error", result))
+                        return
+                    reply = str(result.get("reply", "") or "")
+                    updated = append_message_pair(
+                        base,
+                        session_id,
+                        user_text=message,
+                        assistant_text=reply,
+                        title_if_empty=message[:80],
+                        clear_carryover=had_carryover,
+                    )
+                    if updated is None:
+                        events.put(("error", {"ok": False, "error": "Session could not be updated."}))
+                        return
+                    out = {k: v for k, v in result.items() if k != "reply"}
+                    out["ok"] = True
+                    out["reply"] = reply
+                    out["session"] = updated
+                    events.put(("complete", out))
+                except Exception as exc:  # noqa: BLE001 — surfaced to client as SSE
+                    logger.exception("graphrag_workspace_message stream worker failed")
+                    events.put(("error", {"ok": False, "error": str(exc)}))
+
+            threading.Thread(target=worker, daemon=True).start()
+            while True:
+                kind, payload = events.get()
+                if kind == "progress":
+                    stage, detail = payload  # type: ignore[misc]
+                    if detail:
+                        msg = f"{stage}: {detail}"
+                    else:
+                        msg = stage
+                    yield _sse_chat_event({"type": "progress", "stage": stage, "message": msg})
+                elif kind == "error":
+                    err_body = payload if isinstance(payload, dict) else {"ok": False, "error": str(payload)}
+                    yield _sse_chat_event({"type": "error", **err_body})
+                    return
+                elif kind == "complete":
+                    body = payload if isinstance(payload, dict) else {}
+                    yield _sse_chat_event({"type": "complete", **body})
+                    return
+
+        logger.info(
+            "graphrag_workspace_message_sse run_dir=%s session_id=%s prior_turns=%d carryover=%s",
+            run_dir,
+            session_id,
+            len(prior),
+            bool(carry),
+        )
+        return Response(
+            event_stream(),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
 
     logger.info(
         "graphrag_workspace_message run_dir=%s session_id=%s prior_turns=%d carryover=%s",

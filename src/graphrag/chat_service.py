@@ -6,7 +6,8 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any, Dict, List, Mapping
 
 from src.graph.json_document import load_graph_document
 from src.graphrag.analysis_context import format_analysis_view_summary
@@ -103,8 +104,13 @@ class GraphRagChatService:
         max_subgraph_chars: int = 22_000,
         max_metrics_chars: int = 5_000,
         max_source_chars: int = 14_000,
+        progress_hook: Callable[[str, str | None], None] | None = None,
     ) -> Dict[str, Any]:
-        """Build the RAG user block and diagnostics for *user_message* (no LLM call)."""
+        """Build the RAG user block and diagnostics for *user_message* (no LLM call).
+
+        Optional *progress_hook* receives ``(stage_id, human_message)`` for long phases
+        (embeddings, Neo4j sync, etc.) so HTTP layers can stream status to the client.
+        """
         msg = (user_message or "").strip()
         if not msg:
             return {"ok": False, "error": "Empty message."}
@@ -117,6 +123,12 @@ class GraphRagChatService:
         nodes: List[Dict[str, Any]] = list(doc.get("nodes") or [])
         edges: List[Dict[str, Any]] = list(doc.get("edges") or [])
 
+        if progress_hook:
+            progress_hook(
+                "loading_graph",
+                f"Loaded graph ({len(nodes)} nodes, {len(edges)} edges).",
+            )
+
         analysis_view: Dict[str, Any] = {}
         view_path = run_dir_path / "analysis_view.json"
         if view_path.is_file():
@@ -127,14 +139,24 @@ class GraphRagChatService:
             except (OSError, json.JSONDecodeError) as exc:
                 logger.warning("GraphRAG: could not read analysis_view.json: %s", exc)
 
+        if progress_hook:
+            progress_hook("lexical_seeds", "Ranking lexical seeds and scanning communities…")
+
         ranked = rank_seed_node_ids(nodes, msg, top_k=top_seeds)
         lexical_seeds = [nid for nid, _s in ranked]
         comm_seeds = community_member_seeds_from_view(msg, analysis_view)
+        if progress_hook:
+            progress_hook(
+                "embedding_seeds",
+                "Dense embedding seeds (batched API; first run may build a cache)…",
+            )
+        embed_cb = (lambda detail: progress_hook("embedding_seeds", detail)) if progress_hook else None
         embed_seeds, embed_diag = try_embedding_seed_ids(
             run_dir_path,
             nodes,
             msg,
             top_k=min(12, top_seeds),
+            progress=embed_cb,
         )
         seed_order: List[str] = []
         seen_seed: set[str] = set()
@@ -142,6 +164,9 @@ class GraphRagChatService:
             if nid and nid not in seen_seed:
                 seen_seed.add(nid)
                 seed_order.append(nid)
+
+        if progress_hook:
+            progress_hook("graph_index", "Building in-memory graph index for expansion…")
 
         g = build_multidigraph(nodes, edges)
         allowed = default_edge_types_for_query(msg)
@@ -186,7 +211,15 @@ class GraphRagChatService:
                 max_nodes=max_nodes,
             )
 
+        if progress_hook:
+            progress_hook("format_context", "Formatting metrics, subgraph text, and source excerpts…")
+
         sub_edges = induced_subgraph_edges(g, subgraph_ids, allowed)
+        if progress_hook:
+            progress_hook(
+                "subgraph_expand",
+                f"Subgraph: {len(subgraph_ids)} nodes, {len(sub_edges)} edges ({retrieval_backend}).",
+            )
         node_subset = [n for n in nodes if str(n.get("id", "")) in subgraph_ids]
         subgraph_text = format_subgraph_for_llm(
             node_subset,
@@ -289,6 +322,7 @@ class GraphRagChatService:
         carryover_summary: str | None = None,
         max_history_messages: int = 24,
         max_history_chars_per_message: int = 12_000,
+        progress_hook: Callable[[str, str | None], None] | None = None,
     ) -> Dict[str, Any]:
         """Retrieve a subgraph for *user_message* and return an LLM reply.
 
@@ -305,6 +339,7 @@ class GraphRagChatService:
             carryover_summary: Optional short summary from a forked session.
             max_history_messages: Max prior turns to include (each message counts as one).
             max_history_chars_per_message: Truncate each stored message to this length.
+            progress_hook: Optional ``(stage, message)`` updates for streaming UIs (e.g. SSE).
 
         Returns:
             Dict with ``ok`` (bool), optional ``reply``, diagnostics, ``approx_input_chars``,
@@ -329,6 +364,7 @@ class GraphRagChatService:
             max_subgraph_chars=max_subgraph_chars,
             max_metrics_chars=max_metrics_chars,
             max_source_chars=max_source_chars,
+            progress_hook=progress_hook,
         )
         if not ret.get("ok"):
             return ret

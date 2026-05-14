@@ -236,6 +236,7 @@
 <script>
 (function () {
     var API = '/graphrag/api';
+    var CHAT_STREAM_HDR = 'X-GraphRAG-Chat-Stream';
     var initialRun = {{ (initial_run_dir or '')|tojson }};
 
     var state = {
@@ -258,6 +259,92 @@
         } catch (e) {
             return null;
         }
+    }
+
+    function updateAssistantPendingBody(text) {
+        var box = el('messages');
+        var nodes = box.querySelectorAll('.bubble.assistant .inner');
+        if (!nodes.length) return;
+        nodes[nodes.length - 1].textContent = text;
+    }
+
+    function readChatEventStream(res, userTextSnap, sessionSnap) {
+        if (!res.body || typeof res.body.getReader !== 'function') {
+            return Promise.reject(new Error('No readable stream body.'));
+        }
+        var reader = res.body.getReader();
+        var dec = new TextDecoder();
+        var buf = '';
+        var progressLines = [];
+        function pushProgressLine(s) {
+            if (!s) return;
+            progressLines.push(s);
+            if (progressLines.length > 12) progressLines.shift();
+            updateAssistantPendingBody(progressLines.join('\n'));
+        }
+        function handlePayload(obj) {
+            if (!obj || typeof obj !== 'object') return false;
+            if (obj.type === 'progress') {
+                pushProgressLine(obj.message || obj.stage || '…');
+                return false;
+            }
+            if (obj.type === 'error') {
+                state.session = sessionSnap;
+                el('input').value = userTextSnap;
+                renderMessages();
+                alert(obj.error || 'Request failed');
+                return true;
+            }
+            if (obj.type === 'complete') {
+                state.session = obj.session;
+                renderMessages();
+                setWarnBanner(obj.context_warn, obj.approx_input_chars);
+                refreshSessionList();
+                return true;
+            }
+            return false;
+        }
+        function processBlock(block) {
+            var lines = block.split(/\r?\n/);
+            for (var j = 0; j < lines.length; j++) {
+                var line = lines[j];
+                if (line.indexOf('data: ') !== 0) continue;
+                var payload;
+                try {
+                    payload = JSON.parse(line.slice(6));
+                } catch (err) {
+                    continue;
+                }
+                if (handlePayload(payload)) return true;
+            }
+            return false;
+        }
+        function pump() {
+            return reader.read().then(function (result) {
+                if (result.value) {
+                    buf += dec.decode(result.value, { stream: !result.done });
+                }
+                if (result.done) {
+                    try {
+                        buf += dec.decode();
+                    } catch (e1) { /* ignore */ }
+                }
+                var parts = buf.split(/\r?\n\r?\n/);
+                buf = parts.pop() || '';
+                for (var i = 0; i < parts.length; i++) {
+                    if (processBlock(parts[i])) return;
+                }
+                if (result.done) {
+                    if (buf.trim() && processBlock(buf)) return;
+                    if (buf.trim()) {
+                        console.warn('chat SSE ended with unparsed tail:', buf.slice(0, 400));
+                    }
+                    return;
+                }
+                return pump();
+            });
+        }
+        return pump();
     }
 
     function parseLabelParts(label) {
@@ -564,31 +651,57 @@
         el('input').value = '';
         renderMessages();
 
-        api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(state.sessionId) + '/message', {
+        var msgUrl =
+            API +
+            '/' +
+            encodeURIComponent(state.runDir) +
+            '/sessions/' +
+            encodeURIComponent(state.sessionId) +
+            '/message';
+        var headers = { 'Content-Type': 'application/json' };
+        headers[CHAT_STREAM_HDR] = '1';
+
+        fetch(msgUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({ message: text })
-        }).then(function (res) {
-            if (!res.body.ok) {
+        })
+            .then(function (res) {
+                var ct = (res.headers.get('Content-Type') || '').toLowerCase();
+                if (ct.indexOf('text/event-stream') !== -1) {
+                    if (!res.ok) {
+                        state.session = snap;
+                        el('input').value = text;
+                        renderMessages();
+                        alert('Chat stream failed (HTTP ' + res.status + ').');
+                        return;
+                    }
+                    return readChatEventStream(res, text, snap);
+                }
+                return res.json().then(function (body) {
+                    if (!res.ok || !body.ok) {
+                        state.session = snap;
+                        el('input').value = text;
+                        renderMessages();
+                        alert((body && body.error) || 'Request failed (' + res.status + ')');
+                        return;
+                    }
+                    state.session = body.session;
+                    renderMessages();
+                    setWarnBanner(body.context_warn, body.approx_input_chars);
+                    refreshSessionList();
+                });
+            })
+            .catch(function (e) {
                 state.session = snap;
                 el('input').value = text;
                 renderMessages();
-                alert(res.body.error || 'Request failed');
-                return;
-            }
-            state.session = res.body.session;
-            renderMessages();
-            setWarnBanner(res.body.context_warn, res.body.approx_input_chars);
-            refreshSessionList();
-        }).catch(function (e) {
-            state.session = snap;
-            el('input').value = text;
-            renderMessages();
-            alert('Network: ' + e);
-        }).then(function () {
-            state.sending = false;
-            btn.classList.remove('is-busy');
-        });
+                alert('Network: ' + e);
+            })
+            .then(function () {
+                state.sending = false;
+                btn.classList.remove('is-busy');
+            });
     }
 
     el('btn-new-session').onclick = newSession;
