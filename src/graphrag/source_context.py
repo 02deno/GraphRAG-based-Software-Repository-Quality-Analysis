@@ -2,9 +2,11 @@
 
 Chunks are written to ``graphrag_source_chunks.jsonl``: ``.py`` excerpts from
 ``File`` nodes in ``graph.json``, optional repo-wide ``*.md`` and other root
-documentation, and optional **analysis run** excerpts (``analysis_view`` summary,
-``analysis.txt``, ``visual_summary.txt``) under virtual ``_analysis/`` paths for
-the same lexical scoring at retrieval time.
+documentation, optional **analysis run** excerpts (``analysis_view`` summary,
+``analysis.txt``, ``visual_summary.txt``) under virtual ``_analysis/`` paths, and
+optional **cached LLM interpretation** (``graphrag_llm_insights.json`` flattened
+to ``_analysis/graphrag_llm_insights.txt``) for the same lexical scoring at
+retrieval time.
 """
 
 from __future__ import annotations
@@ -17,6 +19,11 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 from src.graph.json_document import load_graph_document
 from src.graphrag.analysis_context import format_analysis_view_summary
+from src.graphrag.analysis_llm_insights import (
+    LLM_INSIGHTS_SOURCE_VIRTUAL_PATH,
+    format_llm_insights_for_source_index,
+    load_llm_insights_file,
+)
 from src.graphrag.query_index import score_query_against_blob
 
 logger = logging.getLogger(__name__)
@@ -24,6 +31,7 @@ logger = logging.getLogger(__name__)
 _RUN_META = "graphrag_run_meta.json"
 _CHUNKS_JSONL = "graphrag_source_chunks.jsonl"
 _INDEX_META = "graphrag_source_index_meta.json"
+_LLM_INSIGHTS_CHUNK_KIND = "llm_insights"
 
 
 def write_run_meta(results_dir: Path, source_repo_root: str | None) -> None:
@@ -224,6 +232,39 @@ def _write_jsonl_chunks_for_rel(
     return count
 
 
+def _chunk_records_for_virtual_path(
+    *,
+    virtual_path: str,
+    text: str,
+    window: int,
+    overlap: int,
+    max_blob_chars: int,
+    max_chunks: int,
+    kind: str,
+) -> List[Dict[str, Any]]:
+    """Build chunk dicts for synthetic *virtual_path* content (e.g. analysis bundle)."""
+    out: List[Dict[str, Any]] = []
+    if not text.strip() or max_chunks <= 0:
+        return out
+    blob = text[:max_blob_chars]
+    lines = blob.splitlines(keepends=True)
+    for start, end, chunk in _chunk_lines(lines, window=window, overlap=overlap):
+        if not chunk.strip():
+            continue
+        out.append(
+            {
+                "path": virtual_path,
+                "start_line": start,
+                "end_line": end,
+                "text": chunk[:12000],
+                "kind": kind,
+            }
+        )
+        if len(out) >= max_chunks:
+            break
+    return out
+
+
 def _write_virtual_text_chunks(
     fh,
     *,
@@ -236,26 +277,18 @@ def _write_virtual_text_chunks(
     kind: str,
 ) -> int:
     """Write JSONL chunk lines for synthetic *virtual_path* content (e.g. analysis bundle)."""
-    if not text.strip() or max_chunks <= 0:
-        return 0
-    blob = text[:max_blob_chars]
-    lines = blob.splitlines(keepends=True)
-    count = 0
-    for start, end, chunk in _chunk_lines(lines, window=window, overlap=overlap):
-        if not chunk.strip():
-            continue
-        rec: Dict[str, Any] = {
-            "path": virtual_path,
-            "start_line": start,
-            "end_line": end,
-            "text": chunk[:12000],
-            "kind": kind,
-        }
+    records = _chunk_records_for_virtual_path(
+        virtual_path=virtual_path,
+        text=text,
+        window=window,
+        overlap=overlap,
+        max_blob_chars=max_blob_chars,
+        max_chunks=max_chunks,
+        kind=kind,
+    )
+    for rec in records:
         fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-        count += 1
-        if count >= max_chunks:
-            break
-    return count
+    return len(records)
 
 
 def _write_analysis_run_chunks(fh, results_dir: Path) -> int:
@@ -334,6 +367,197 @@ def _write_analysis_run_chunks(fh, results_dir: Path) -> int:
     return total
 
 
+def _write_llm_insights_chunks(fh, results_dir: Path) -> int:
+    """Append chunks from ``graphrag_llm_insights.json`` when present (virtual path)."""
+    flag = os.environ.get("GRAPHRAG_SOURCE_DISABLE_LLM_INSIGHTS_CHUNKS", "").strip().lower()
+    if flag in ("1", "true", "yes", "on"):
+        return 0
+    data = load_llm_insights_file(results_dir)
+    if not data:
+        return 0
+    text = format_llm_insights_for_source_index(data)
+    if not text.strip():
+        return 0
+    win = max(
+        10,
+        int(
+            os.environ.get(
+                "GRAPHRAG_SOURCE_LLM_INSIGHTS_CHUNK_LINES",
+                os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_CHUNK_LINES", "80"),
+            )
+        ),
+    )
+    ovl = max(
+        0,
+        int(
+            os.environ.get(
+                "GRAPHRAG_SOURCE_LLM_INSIGHTS_CHUNK_OVERLAP_LINES",
+                os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_CHUNK_OVERLAP_LINES", "12"),
+            )
+        ),
+    )
+    max_blob = max(
+        4096,
+        int(
+            os.environ.get(
+                "GRAPHRAG_SOURCE_LLM_INSIGHTS_MAX_BYTES",
+                os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_MAX_BYTES", "400000"),
+            )
+        ),
+    )
+    per_file_cap = max(1, int(os.environ.get("GRAPHRAG_SOURCE_MAX_CHUNKS_PER_LLM_INSIGHTS_FILE", "48")))
+    records = _chunk_records_for_virtual_path(
+        virtual_path=LLM_INSIGHTS_SOURCE_VIRTUAL_PATH,
+        text=text,
+        window=win,
+        overlap=ovl,
+        max_blob_chars=max_blob,
+        max_chunks=per_file_cap,
+        kind=_LLM_INSIGHTS_CHUNK_KIND,
+    )
+    for rec in records:
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return len(records)
+
+
+def _write_source_index_meta(
+    results_dir: Path,
+    chunk_count: int,
+    *,
+    repo_root: str | None = None,
+) -> None:
+    """Write ``graphrag_source_index_meta.json``; preserve ``repo_root`` when not supplied."""
+    meta_path = results_dir / _INDEX_META
+    rr = repo_root if repo_root is not None else ""
+    if rr == "" and meta_path.is_file():
+        try:
+            prev = json.loads(meta_path.read_text(encoding="utf-8"))
+            if isinstance(prev, dict):
+                r = prev.get("repo_root")
+                if isinstance(r, str):
+                    rr = r
+        except (OSError, json.JSONDecodeError):
+            pass
+    try:
+        meta_path.write_text(
+            json.dumps(
+                {"schema_version": 1, "chunk_count": chunk_count, "repo_root": rr},
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        logger.warning("Could not write %s: %s", meta_path.name, exc)
+
+
+def refresh_llm_insights_source_chunks(run_dir: Path) -> int:
+    """Remove prior LLM-insights virtual chunks from JSONL and append current file contents.
+
+    Call after ``graphrag_llm_insights.json`` is written so workspace chat can retrieve
+    the cached narrative without a full pipeline re-run.
+
+    Args:
+        run_dir: ``results/web_analysis_*`` directory.
+
+    Returns:
+        Number of new JSONL records written for LLM insights (``0`` when disabled,
+        no chunk file, or no insights text).
+    """
+    chunks_path = run_dir / _CHUNKS_JSONL
+    if not chunks_path.is_file():
+        return 0
+    flag = os.environ.get("GRAPHRAG_SOURCE_DISABLE_LLM_INSIGHTS_CHUNKS", "").strip().lower()
+    if flag in ("1", "true", "yes", "on"):
+        return 0
+
+    kept_lines: List[str] = []
+    try:
+        with chunks_path.open(encoding="utf-8") as fh:
+            for line in fh:
+                raw = line.strip()
+                if not raw:
+                    continue
+                try:
+                    rec = json.loads(raw)
+                except json.JSONDecodeError:
+                    kept_lines.append(line.rstrip("\n"))
+                    continue
+                if isinstance(rec, dict):
+                    if rec.get("kind") == _LLM_INSIGHTS_CHUNK_KIND:
+                        continue
+                    if str(rec.get("path", "")) == LLM_INSIGHTS_SOURCE_VIRTUAL_PATH:
+                        continue
+                kept_lines.append(line.rstrip("\n"))
+    except OSError as exc:
+        logger.warning("LLM insights chunk refresh could not read %s: %s", chunks_path, exc)
+        return 0
+
+    data = load_llm_insights_file(run_dir)
+    new_records: List[Dict[str, Any]] = []
+    if data:
+        text = format_llm_insights_for_source_index(data)
+        if text.strip():
+            win = max(
+                10,
+                int(
+                    os.environ.get(
+                        "GRAPHRAG_SOURCE_LLM_INSIGHTS_CHUNK_LINES",
+                        os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_CHUNK_LINES", "80"),
+                    )
+                ),
+            )
+            ovl = max(
+                0,
+                int(
+                    os.environ.get(
+                        "GRAPHRAG_SOURCE_LLM_INSIGHTS_CHUNK_OVERLAP_LINES",
+                        os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_CHUNK_OVERLAP_LINES", "12"),
+                    )
+                ),
+            )
+            max_blob = max(
+                4096,
+                int(
+                    os.environ.get(
+                        "GRAPHRAG_SOURCE_LLM_INSIGHTS_MAX_BYTES",
+                        os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_MAX_BYTES", "400000"),
+                    )
+                ),
+            )
+            per_file_cap = max(1, int(os.environ.get("GRAPHRAG_SOURCE_MAX_CHUNKS_PER_LLM_INSIGHTS_FILE", "48")))
+            new_records = _chunk_records_for_virtual_path(
+                virtual_path=LLM_INSIGHTS_SOURCE_VIRTUAL_PATH,
+                text=text,
+                window=win,
+                overlap=ovl,
+                max_blob_chars=max_blob,
+                max_chunks=per_file_cap,
+                kind=_LLM_INSIGHTS_CHUNK_KIND,
+            )
+
+    try:
+        with chunks_path.open("w", encoding="utf-8", newline="\n") as out:
+            for ln in kept_lines:
+                out.write(ln + "\n")
+            for rec in new_records:
+                out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        logger.warning("LLM insights chunk refresh could not write %s: %s", chunks_path, exc)
+        return 0
+
+    total_lines = len(kept_lines) + len(new_records)
+    _write_source_index_meta(run_dir, total_lines)
+    logger.info(
+        "GraphRAG source index LLM insights refresh run=%s kept=%d added=%d total=%d",
+        run_dir.name,
+        len(kept_lines),
+        len(new_records),
+        total_lines,
+    )
+    return len(new_records)
+
+
 def _fence_lang_for_source_path(path: str) -> str:
     """Return a Markdown code-fence language tag for *path*."""
     low = path.lower()
@@ -359,7 +583,9 @@ def build_source_chunk_index(
     chunks include root README-style files and **all** ``*.md`` paths under the
     repository (subject to ``GRAPHRAG_SOURCE_MAX_DOC_FILES``). **Analysis** chunks
     append formatted ``analysis_view`` metrics plus ``analysis.txt`` /
-    ``visual_summary*.txt|json`` under virtual ``_analysis/`` paths.
+    ``visual_summary*.txt|json`` under virtual ``_analysis/`` paths. When
+    ``graphrag_llm_insights.json`` exists, **LLM interpretation** chunks are appended
+    as ``_analysis/graphrag_llm_insights.txt`` (``kind``: ``llm_insights``).
 
     Args:
         results_dir: Run output directory.
@@ -392,6 +618,7 @@ def build_source_chunk_index(
     out_path = results_dir / _CHUNKS_JSONL
     count = 0
     analysis_chunk_count = 0
+    insights_chunk_count = 0
     try:
         with out_path.open("w", encoding="utf-8", newline="\n") as fh:
             for rel in py_paths:
@@ -404,28 +631,20 @@ def build_source_chunk_index(
                 )
             analysis_chunk_count = _write_analysis_run_chunks(fh, results_dir)
             count += analysis_chunk_count
+            insights_chunk_count = _write_llm_insights_chunks(fh, results_dir)
+            count += insights_chunk_count
     except OSError as exc:
         logger.warning("Could not write source chunk index: %s", exc)
         return 0
 
-    meta_path = results_dir / _INDEX_META
-    try:
-        meta_path.write_text(
-            json.dumps(
-                {"schema_version": 1, "chunk_count": count, "repo_root": str(root)},
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-    except OSError as exc:
-        logger.warning("Could not write %s: %s", meta_path.name, exc)
+    _write_source_index_meta(results_dir, count, repo_root=str(root))
     logger.info(
-        "GraphRAG source index wrote %d chunks (%d py files, %d doc paths, %d analysis) under %s",
+        "GraphRAG source index wrote %d chunks (%d py files, %d doc paths, %d analysis, %d llm_insights) under %s",
         count,
         len(py_paths),
         len(doc_only),
         analysis_chunk_count,
+        insights_chunk_count,
         results_dir.name,
     )
     return count
@@ -481,6 +700,36 @@ def _wants_graph_pipeline_metrics(query: str) -> bool:
         "risk analiz",
         "analiz sonuç",
         "analiz sonuçları",
+    )
+    return any(n in q for n in needles_en) or any(n in q for n in needles_tr)
+
+
+def _wants_llm_insights_intent(query: str) -> bool:
+    """True when the user likely refers to the cached AI interpretation (results insights)."""
+    q = (query or "").lower()
+    needles_en = (
+        "llm insights",
+        "ai insights",
+        "ai interpretation",
+        "ai summary",
+        "quality analysis narrative",
+        "executive summary",
+        "graphrag insights",
+        "graphrag_llm_insights",
+        "suggested actions from",
+        "key findings from",
+        "what did the ai",
+        "what does the ai say",
+        "cached interpretation",
+        "generated narrative",
+    )
+    needles_tr = (
+        "yapay zeka özeti",
+        "ai özet",
+        "kalite özeti",
+        "yorumları neler",
+        "önerilen aksiyon",
+        "özet ne diyor",
     )
     return any(n in q for n in needles_en) or any(n in q for n in needles_tr)
 
@@ -551,6 +800,15 @@ def _analysis_chunk_score_boost(query: str, rec: Dict[str, Any]) -> float:
     return 72.0
 
 
+def _llm_insights_chunk_score_boost(query: str, rec: Dict[str, Any]) -> float:
+    """Raise lexical rank for ``llm_insights`` chunks when the query targets the cached narrative."""
+    if not _wants_llm_insights_intent(query):
+        return 0.0
+    if rec.get("kind") != _LLM_INSIGHTS_CHUNK_KIND:
+        return 0.0
+    return 78.0
+
+
 def _diagnostic_excerpt_char_limit() -> int:
     """Max characters of raw chunk text to embed in ``included_chunks`` for the UI (0 = off)."""
     raw = os.environ.get("GRAPHRAG_SOURCE_DIAGNOSTIC_EXCERPT_CHARS", "4000").strip()
@@ -583,6 +841,8 @@ def retrieve_source_context_for_llm(
         are not drowned out by generic Markdown documentation hits. When the question is
         about the **product repository** (not graph metrics), ``_analysis/*`` excerpts are
         **demoted** so absolute host paths and schema headers do not override real source files.
+        Chunks with ``kind`` ``llm_insights`` get a **score bonus** when the question clearly
+        targets the cached results-page AI interpretation.
         When ``enabled`` is true, diagnostics may include ``included_chunks`` (ordered
         list of path/line/score metadata for excerpts actually packed into the block),
         optional per-chunk ``excerpt`` text for UI (length capped by
@@ -625,6 +885,7 @@ def retrieve_source_context_for_llm(
                 blob = f"{rec.get('path', '')}\n{rec.get('text', '')}"
                 s = score_query_against_blob(query, blob.lower())
                 s += _analysis_chunk_score_boost(query, rec)
+                s += _llm_insights_chunk_score_boost(query, rec)
                 s += _analysis_chunk_repo_intent_penalty(query, rec)
                 if s > 0:
                     scored.append((s, rec))

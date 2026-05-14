@@ -18,6 +18,8 @@ from src.web.results_paths import is_safe_visual_png_filename
 logger = logging.getLogger(__name__)
 
 LLM_INSIGHTS_FILENAME = "graphrag_llm_insights.json"
+# Virtual path for lexical chunks in ``graphrag_source_chunks.jsonl`` (chat RAG).
+LLM_INSIGHTS_SOURCE_VIRTUAL_PATH = "_analysis/graphrag_llm_insights.txt"
 INSIGHTS_PROMPT_VERSION = "insights-v2"
 INSIGHTS_SCHEMA_VERSION = 1
 
@@ -362,6 +364,86 @@ def load_llm_insights_file(run_dir: Path) -> dict[str, Any] | None:
     return data
 
 
+def format_llm_insights_for_source_index(data: Mapping[str, Any]) -> str:
+    """Flatten cached LLM insights JSON to plain text for lexical source chunk indexing.
+
+    Used as the body of virtual ``_analysis/graphrag_llm_insights.txt`` chunks so the
+    workspace chat retriever can surface the same narrative when questions match.
+
+    Args:
+        data: Parsed ``graphrag_llm_insights.json`` (``schema_version`` 1).
+
+    Returns:
+        Multi-line UTF-8 text (may be empty if there is no usable summary content).
+    """
+    lines: list[str] = []
+    model = str(data.get("model", "")).strip()
+    gen_at = str(data.get("generated_at", "")).strip()
+    if model or gen_at:
+        lines.append("## Metadata")
+        if model:
+            lines.append(f"- model: {model}")
+        if gen_at:
+            lines.append(f"- generated_at: {gen_at}")
+        lines.append("")
+
+    summary = str(data.get("executive_summary", "")).strip()
+    if summary:
+        lines.append("## Executive summary")
+        lines.append(summary)
+        lines.append("")
+
+    def _append_bullets(title: str, key: str) -> None:
+        raw = data.get(key)
+        if not isinstance(raw, list) or not raw:
+            return
+        items = [str(x).strip() for x in raw if str(x).strip()]
+        if not items:
+            return
+        lines.append(f"## {title}")
+        for it in items[:32]:
+            lines.append(f"- {it}")
+        lines.append("")
+
+    _append_bullets("Key findings", "key_findings")
+    _append_bullets("Suggested actions", "suggested_actions")
+    _append_bullets("Testing observations", "testing_observations")
+
+    hotspots = data.get("bug_risk_hotspots")
+    if isinstance(hotspots, list) and hotspots:
+        lines.append("## Bug / risk hotspots")
+        for item in hotspots[:24]:
+            if not isinstance(item, dict):
+                continue
+            loc = str(item.get("location", "")).strip()
+            rat = str(item.get("rationale", "")).strip()
+            conf = str(item.get("confidence", "")).strip()
+            if loc or rat:
+                lines.append(f"- ({conf}) {loc}: {rat}")
+        lines.append("")
+
+    risks = data.get("high_risk_areas")
+    if isinstance(risks, list) and risks:
+        lines.append("## High-risk areas")
+        for item in risks[:24]:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title", "")).strip()
+            detail = str(item.get("detail", "")).strip()
+            sev = str(item.get("severity", "")).strip()
+            if title or detail:
+                lines.append(f"- ({sev}) {title}: {detail}")
+        lines.append("")
+
+    caveats = str(data.get("caveats", "")).strip()
+    if caveats:
+        lines.append("## Caveats")
+        lines.append(caveats)
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
+
 def build_insights_user_message(
     run_dir: Path,
     *,
@@ -427,6 +509,12 @@ def generate_and_save_llm_insights(
     if not regenerate and out_path.is_file():
         cached = load_llm_insights_file(run_dir)
         if cached:
+            try:
+                from src.graphrag.source_context import refresh_llm_insights_source_chunks
+
+                refresh_llm_insights_source_chunks(run_dir)
+            except Exception as exc:
+                logger.warning("LLM insights source chunk refresh skipped: %s", exc)
             return {"ok": True, "insights": cached, "cached": True}
     try:
         client = load_chat_client_from_env()
@@ -518,4 +606,11 @@ def generate_and_save_llm_insights(
         return {"ok": False, "error": f"Could not save insights file: {exc!s}"}
 
     logger.info("Wrote LLM insights run_dir=%s path=%s", run_dir.name, out_path.name)
+    try:
+        from src.graphrag.source_context import refresh_llm_insights_source_chunks
+
+        added = refresh_llm_insights_source_chunks(run_dir)
+        logger.info("LLM insights source chunk refresh run_dir=%s records=%s", run_dir.name, added)
+    except Exception as exc:
+        logger.warning("LLM insights source chunk refresh failed: %s", exc)
     return {"ok": True, "insights": envelope, "cached": False}
