@@ -449,6 +449,53 @@ def _ensure_chunk_index(run_dir_path: Path) -> int:
     return build_source_chunk_index(run_dir_path, repo, nodes)
 
 
+def _wants_graph_pipeline_metrics(query: str) -> bool:
+    """True when the user is likely asking for this run's graph analysis artifacts."""
+    q = (query or "").lower()
+    needles_en = (
+        "graph analysis",
+        "analysis result",
+        "analysis results",
+        "centrality",
+        "betweenness",
+        "pagerank",
+        "community",
+        "communities",
+        "louvain",
+        "modularity",
+        "risk candidate",
+        "composite z-score",
+        "visual summary",
+        "degree centrality",
+        "pipeline metrics",
+        "precomputed metrics",
+        "graph metrics",
+        "graph statistic",
+        "graph statistics",
+    )
+    needles_tr = (
+        "graf analiz",
+        "grafik analiz",
+        "merkeziyet",
+        "topluluk",
+        "risk analiz",
+        "analiz sonuç",
+        "analiz sonuçları",
+    )
+    return any(n in q for n in needles_en) or any(n in q for n in needles_tr)
+
+
+def _analysis_chunk_score_boost(query: str, rec: Dict[str, Any]) -> float:
+    """Raise lexical rank for persisted ``_analysis/*`` chunks when the query targets metrics."""
+    if not _wants_graph_pipeline_metrics(query):
+        return 0.0
+    path = str(rec.get("path", ""))
+    if rec.get("kind") != "analysis_report" and not path.startswith("_analysis/"):
+        return 0.0
+    # Typical doc overlap scores are ~5–25; keep bonus below substring hit (+80) but above docs.
+    return 72.0
+
+
 def _diagnostic_excerpt_char_limit() -> int:
     """Max characters of raw chunk text to embed in ``included_chunks`` for the UI (0 = off)."""
     raw = os.environ.get("GRAPHRAG_SOURCE_DIAGNOSTIC_EXCERPT_CHARS", "4000").strip()
@@ -476,6 +523,9 @@ def retrieve_source_context_for_llm(
 
     Returns:
         ``(excerpt_block, diagnostics)``; block may be empty when no index or repo.
+        Chunks whose paths start with ``_analysis/`` (pipeline metrics text) receive a
+        **score bonus** when the question clearly targets graph-analysis metrics, so they
+        are not drowned out by generic Markdown documentation hits.
         When ``enabled`` is true, diagnostics may include ``included_chunks`` (ordered
         list of path/line/score metadata for excerpts actually packed into the block),
         optional per-chunk ``excerpt`` text for UI (length capped by
@@ -517,6 +567,7 @@ def retrieve_source_context_for_llm(
                     continue
                 blob = f"{rec.get('path', '')}\n{rec.get('text', '')}"
                 s = score_query_against_blob(query, blob.lower())
+                s += _analysis_chunk_score_boost(query, rec)
                 if s > 0:
                     scored.append((s, rec))
     except OSError as exc:

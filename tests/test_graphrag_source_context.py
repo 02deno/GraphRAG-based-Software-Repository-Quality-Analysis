@@ -145,3 +145,42 @@ def test_analysis_report_chunks_in_source_index(tmp_path: Path) -> None:
     paths = [c.get("path") for c in chunks]
     assert any(p and str(p).startswith("_analysis/") for p in paths)
     assert any(c.get("excerpt") for c in chunks)
+
+
+def test_metrics_intent_prioritizes_analysis_over_docs(tmp_path: Path) -> None:
+    """Graph-metrics style questions should rank ``_analysis/*`` chunks above generic docs."""
+    repo = tmp_path / "r4"
+    (repo / "docs").mkdir(parents=True)
+    (repo / "docs" / "USAGE.md").write_text(
+        "# Usage\n\ngraph repository documentation filler text.\n" * 40,
+        encoding="utf-8",
+    )
+    pkg = repo / "pkg"
+    pkg.mkdir(parents=True)
+    (pkg / "x.py").write_text("def x():\n    return 0\n", encoding="utf-8")
+    run_dir = tmp_path / "run4"
+    run_dir.mkdir()
+    view = {
+        "schema_version": 1,
+        "totals": {"nodes": 3, "edges": 2},
+        "risk": {"empty": True},
+    }
+    (run_dir / "analysis_view.json").write_text(json.dumps(view), encoding="utf-8")
+    (run_dir / "analysis.txt").write_text("Centrality and communities summary line.\n", encoding="utf-8")
+
+    nodes = [{"id": "file:pkg/x.py", "type": "File", "path": "pkg/x.py"}]
+    write_run_meta(run_dir, str(repo.resolve()))
+    n = build_source_chunk_index(run_dir, repo, nodes)
+    assert n >= 1
+
+    block, diag = retrieve_source_context_for_llm(
+        run_dir,
+        "what are graph analysis results for this repo",
+        max_chars=12000,
+        top_rank=12,
+    )
+    assert "_analysis/" in block
+    chunks = diag.get("included_chunks") or []
+    assert chunks, "expected ranked chunks"
+    top_paths = [str(c.get("path") or "") for c in chunks[:5]]
+    assert any(p.startswith("_analysis/") for p in top_paths), top_paths
