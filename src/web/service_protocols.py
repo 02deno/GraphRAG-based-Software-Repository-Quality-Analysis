@@ -40,7 +40,12 @@ class AnalysisPipelineService(Protocol):
 
 
 class ChatCompletionClient(Protocol):
-    """Minimal port for OpenAI-compatible chat completion HTTP APIs."""
+    """Minimal port for OpenAI-compatible chat completion HTTP APIs.
+
+    Implementations may also define ``stream_chat_completion(...) -> Iterator[str]``
+    for the same ``POST /chat/completions`` endpoint with ``stream: true``; the
+    workspace SSE path uses it for token-by-token assistant text.
+    """
 
     def complete_chat(
         self,

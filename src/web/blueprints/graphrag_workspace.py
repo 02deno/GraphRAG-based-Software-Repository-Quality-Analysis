@@ -27,7 +27,7 @@ _CHAT_STREAM_HEADER = "X-GraphRAG-Chat-Stream"
 
 
 def _sse_chat_event(obj: dict[str, object]) -> bytes:
-    """Serialize one SSE ``data:`` frame for workspace chat progress."""
+    """Serialize one SSE ``data:`` frame (progress, token, complete, or error JSON)."""
     return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n".encode("utf-8")
 
 graphrag_ws_bp = Blueprint("graphrag_ws", __name__, url_prefix="/graphrag")
@@ -150,7 +150,8 @@ def api_session_message(run_dir: str, session_id: str):
     """Append a user message, run GraphRAG + LLM, store the assistant reply.
 
     With header ``X-GraphRAG-Chat-Stream: 1``, returns ``text/event-stream`` where each
-    ``data:`` line is JSON: ``progress`` events then a final ``complete`` or ``error``.
+    ``data:`` line is JSON: ``progress`` (retrieval), ``token`` (assistant text fragments
+    from a streamed chat completion), then ``complete`` or ``error``.
     """
     base = safe_resolve_results_run_dir(run_dir)
     if base is None:
@@ -181,6 +182,10 @@ def api_session_message(run_dir: str, session_id: str):
             def emit_progress(stage: str, detail: str | None) -> None:
                 events.put(("progress", (stage, detail)))
 
+            def emit_token(fragment: str) -> None:
+                if fragment:
+                    events.put(("token", fragment))
+
             def worker() -> None:
                 try:
                     result = svc.answer(
@@ -189,6 +194,7 @@ def api_session_message(run_dir: str, session_id: str):
                         conversation_history=prior,
                         carryover_summary=carry if carry else None,
                         progress_hook=emit_progress,
+                        token_hook=emit_token,
                     )
                     if not result.get("ok"):
                         events.put(("error", result))
@@ -224,6 +230,9 @@ def api_session_message(run_dir: str, session_id: str):
                     else:
                         msg = stage
                     yield _sse_chat_event({"type": "progress", "stage": stage, "message": msg})
+                elif kind == "token":
+                    text_chunk = str(payload)
+                    yield _sse_chat_event({"type": "token", "text": text_chunk})
                 elif kind == "error":
                     err_body = payload if isinstance(payload, dict) else {"ok": False, "error": str(payload)}
                     yield _sse_chat_event({"type": "error", **err_body})

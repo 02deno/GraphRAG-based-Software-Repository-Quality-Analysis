@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
-from typing import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 
 import httpx
 
@@ -61,6 +62,81 @@ class OpenAICompatibleChatClient:
         if content is None or str(content).strip() == "":
             raise RuntimeError("chat completion returned empty assistant content")
         return str(content).strip()
+
+    def stream_chat_completion(
+        self,
+        messages: Sequence[Mapping[str, str]],
+        *,
+        max_tokens: int | None = None,
+        temperature: float = 0.2,
+    ) -> Iterator[str]:
+        """Yield assistant text fragments from a streaming ``POST /chat/completions``.
+
+        OpenAI-compatible servers (including Ollama ``/v1``) return ``text/event-stream``
+        lines of the form ``data: { ... "choices":[{"delta":{"content":"..."}}] ... }``.
+
+        Yields:
+            Non-empty text fragments as they arrive.
+
+        Raises:
+            RuntimeError: If the stream ends without any assistant text or an API error object appears.
+        """
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        payload: dict[str, object] = {
+            "model": self._model,
+            "messages": [dict(m) for m in messages],
+            "temperature": temperature,
+            "stream": True,
+        }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
+        yielded_any = False
+        with self._client.stream(
+            "POST",
+            "/chat/completions",
+            headers=headers,
+            json=payload,
+        ) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                line_st = line.strip() if isinstance(line, str) else line.decode("utf-8", errors="replace").strip()
+                if not line_st:
+                    continue
+                if not line_st.startswith("data:"):
+                    continue
+                data_s = line_st[5:].strip()
+                if data_s == "[DONE]":
+                    break
+                try:
+                    data = json.loads(data_s)
+                except json.JSONDecodeError:
+                    continue
+                err = data.get("error")
+                if err:
+                    if isinstance(err, dict):
+                        msg = str(err.get("message") or err)
+                    else:
+                        msg = str(err)
+                    raise RuntimeError(msg)
+                choices = data.get("choices") or []
+                if not choices:
+                    continue
+                ch0 = choices[0] if isinstance(choices[0], dict) else {}
+                delta = ch0.get("delta") if isinstance(ch0.get("delta"), dict) else {}
+                piece = delta.get("content")
+                if piece is None:
+                    msg_obj = ch0.get("message")
+                    if isinstance(msg_obj, dict):
+                        piece = msg_obj.get("content")
+                if piece:
+                    yielded_any = True
+                    yield str(piece)
+        if not yielded_any:
+            raise RuntimeError("stream ended without assistant content")
 
     def close(self) -> None:
         """Close the underlying HTTP client."""

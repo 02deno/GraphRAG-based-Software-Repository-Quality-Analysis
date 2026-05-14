@@ -329,6 +329,7 @@ class GraphRagChatService:
         max_history_messages: int = 24,
         max_history_chars_per_message: int = 12_000,
         progress_hook: Callable[[str, str | None], None] | None = None,
+        token_hook: Callable[[str], None] | None = None,
     ) -> Dict[str, Any]:
         """Retrieve a subgraph for *user_message* and return an LLM reply.
 
@@ -346,6 +347,9 @@ class GraphRagChatService:
             max_history_messages: Max prior turns to include (each message counts as one).
             max_history_chars_per_message: Truncate each stored message to this length.
             progress_hook: Optional ``(stage, message)`` updates for streaming UIs (e.g. SSE).
+            token_hook: Optional callback receiving each **assistant text fragment** when the
+                HTTP client supports streaming (``stream_chat_completion``); otherwise one call
+                with the full reply after a buffered completion.
 
         Returns:
             Dict with ``ok`` (bool), optional ``reply``, diagnostics, ``approx_input_chars``,
@@ -416,8 +420,20 @@ class GraphRagChatService:
             )
         logger.info("GraphRAG LLM request starting approx_input_chars=%d", approx)
 
+        stream_fn = getattr(self._llm, "stream_chat_completion", None)
         try:
-            reply = self._llm.complete_chat(messages_out, temperature=0.2)
+            if token_hook is not None and callable(stream_fn):
+                parts: List[str] = []
+                for piece in stream_fn(messages_out, temperature=0.2):
+                    parts.append(piece)
+                    token_hook(piece)
+                reply = "".join(parts).strip()
+                if not reply:
+                    raise RuntimeError("stream returned empty assistant text")
+            else:
+                reply = self._llm.complete_chat(messages_out, temperature=0.2)
+                if token_hook is not None and reply:
+                    token_hook(reply)
         except Exception as exc:
             logger.exception("GraphRAG LLM call failed")
             return {"ok": False, "error": f"LLM request failed: {exc!s}"}
