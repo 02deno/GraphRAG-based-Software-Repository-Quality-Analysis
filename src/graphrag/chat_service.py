@@ -383,7 +383,7 @@ class GraphRagChatService:
             Dict with ``ok`` (bool), optional ``reply``, diagnostics, ``approx_input_chars``,
             ``context_warn`` (``none`` | ``approaching`` | ``critical``), and when enabled via
             ``GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS`` (and enough prior turns exist), the boolean
-            ``context_auto_fork`` so the workspace can run **Summary → new chat** automatically.
+            ``context_auto_fork`` so the workspace can trigger an automatic session fork (same as ``POST …/sessions/fork``).
         """
         if self._llm is None:
             return {

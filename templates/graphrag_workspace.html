@@ -425,7 +425,6 @@
             <h1 id="chat-title">Select a project</h1>
             <div class="topbar-actions">
                 <button type="button" class="btn btn-primary" id="btn-new-session" disabled>New chat</button>
-                <button type="button" class="btn" id="btn-fork-summary" disabled>Summary → new chat</button>
                 <button type="button" class="btn btn-danger" id="btn-delete-session" disabled>Delete chat</button>
             </div>
         </div>
@@ -445,11 +444,11 @@
 </div>
 <div id="delete-chat-modal" class="modal-overlay" aria-hidden="true">
     <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="delete-chat-modal-title">
-        <h2 id="delete-chat-modal-title">Sohbeti sil</h2>
-        <p>Bu sohbet kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+        <h2 id="delete-chat-modal-title">Delete chat</h2>
+        <p>This chat will be permanently deleted. This action cannot be undone.</p>
         <div class="modal-actions">
-            <button type="button" class="btn" id="delete-chat-cancel">İptal</button>
-            <button type="button" class="btn btn-danger" id="delete-chat-confirm">Sil</button>
+            <button type="button" class="btn" id="delete-chat-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="delete-chat-confirm">Delete</button>
         </div>
     </div>
 </div>
@@ -554,7 +553,7 @@
         }).then(function (res) {
             if (!res.body.ok) {
                 showAppNotice(
-                    res.body.error || 'Otomatik özet sohbeti oluşturulamadı. “Summary → new chat” ile deneyin.',
+                    res.body.error || 'Could not create the automatic summary session. Try starting a new chat or contact your administrator.',
                     22000
                 );
                 return;
@@ -562,7 +561,7 @@
             refreshSessionList();
             selectSession(res.body.session.id);
             showAppNotice(
-                'Bağlam çok büyüdü; özet yeni bir sohbete taşındı. Aşağıdan devam edebilirsiniz.',
+                'Context grew very large; a summary was moved to a new chat. You can continue below.',
                 22000
             );
         });
@@ -813,12 +812,12 @@
         if (level === 'approaching') {
             var d = document.createElement('div');
             d.className = 'warn-banner approaching';
-            d.textContent = 'Context is getting large. Start a new chat soon, or use “Summary → new chat” to continue with a fresh session.';
+            d.textContent = 'Context is getting large. Start a new chat soon, or rely on automatic summary when configured (GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS).';
             slot.appendChild(d);
         } else if (level === 'critical') {
             var c = document.createElement('div');
             c.className = 'warn-banner critical';
-            c.textContent = 'Context is very large — start a new session now to avoid truncation or failures. You can carry a summary into the new chat.';
+            c.textContent = 'Context is very large — start a new session now to avoid truncation or failures. Use New chat, or enable GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS for automatic summary carryover.';
             slot.appendChild(c);
         }
     }
@@ -898,7 +897,7 @@
         chev.setAttribute('aria-hidden', 'true');
         chev.textContent = '>';
         sum.appendChild(chev);
-        var sumLabel = d.enabled ? (' Kaynak parçaları (' + (d.chunks_used != null ? d.chunks_used : 0) + ')') : ' Kaynak bağlamı';
+        var sumLabel = d.enabled ? (' Source snippets (' + (d.chunks_used != null ? d.chunks_used : 0) + ')') : ' Source context';
         sum.appendChild(document.createTextNode(sumLabel));
         det.appendChild(sum);
         var bodyEl = document.createElement('div');
@@ -910,8 +909,8 @@
             var cap = d.top_rank_cap != null ? d.top_rank_cap : '?';
             var bud = d.max_chars_budget != null ? d.max_chars_budget : '?';
             meta.textContent =
-                'Parçalar sorguya göre skorlanır; en fazla ' + cap + ' aday arasından, toplam ~' + bud +
-                ' karaktere kadar metin modele gider (tüm repo değil). İndeksteki aday sayısı: ' + cs + '.';
+                'Chunks are scored against the query; from up to ' + cap + ' candidates, roughly up to ~' + bud +
+                ' characters of text are sent to the model (not the whole repo). Candidates in index: ' + cs + '.';
             bodyEl.appendChild(meta);
             var ol = document.createElement('ol');
             d.included_chunks.forEach(function (ch) {
@@ -921,10 +920,10 @@
                 parts2.push('#' + (ch.rank != null ? ch.rank : ''));
                 if (ch.path) parts2.push(ch.path);
                 if (ch.start_line != null && ch.end_line != null) {
-                    parts2.push('sat. ' + ch.start_line + '–' + ch.end_line);
+                    parts2.push('lines ' + ch.start_line + '–' + ch.end_line);
                 }
-                if (typeof ch.score === 'number') parts2.push('skor ' + ch.score);
-                if (ch.truncated) parts2.push('kısaltıldı');
+                if (typeof ch.score === 'number') parts2.push('score ' + ch.score);
+                if (ch.truncated) parts2.push('truncated');
                 li.textContent = parts2.join(' · ');
                 ol.appendChild(li);
             });
@@ -933,11 +932,11 @@
             var p = document.createElement('p');
             p.className = 'source-diag-muted';
             if (d.reason) {
-                p.textContent = 'Kaynak kullanılamadı: ' + d.reason;
+                p.textContent = 'Source unavailable: ' + d.reason;
             } else if (d.enabled) {
-                p.textContent = 'Bu tur için kaynak parçası seçilmedi (bütçe veya boş indeks).';
+                p.textContent = 'No source snippets were selected for this turn (budget or empty index).';
             } else {
-                p.textContent = 'Kaynak bağlamı kapalı veya kullanılamıyor.';
+                p.textContent = 'Source context is disabled or unavailable.';
             }
             bodyEl.appendChild(p);
         }
@@ -974,7 +973,7 @@
                 var inner = document.createElement('div');
                 inner.className = 'inner stream-reply-inner markdown-body';
                 inner.setAttribute('aria-live', 'polite');
-                inner.innerHTML = '<span class="typing-dots" aria-label="Yazılıyor"><span>.</span><span>.</span><span>.</span></span>';
+                inner.innerHTML = '<span class="typing-dots" aria-label="Typing"><span>.</span><span>.</span><span>.</span></span>';
                 wrap.appendChild(inner);
                 block.appendChild(wrap);
                 var det = document.createElement('details');
@@ -985,7 +984,7 @@
                 chev.setAttribute('aria-hidden', 'true');
                 chev.textContent = '>';
                 sum.appendChild(chev);
-                sum.appendChild(document.createTextNode(' Adımlar'));
+                sum.appendChild(document.createTextNode(' Steps'));
                 var pre = document.createElement('pre');
                 pre.className = 'assistant-steps-pre stream-steps-pre';
                 pre.textContent = '';
@@ -1017,7 +1016,6 @@
     function updateChrome() {
         var hasRun = !!state.runDir;
         el('btn-new-session').disabled = !hasRun;
-        el('btn-fork-summary').disabled = !hasRun || !state.sessionId;
         el('btn-delete-session').disabled = !hasRun || !state.sessionId;
         el('input').disabled = !hasRun || !state.sessionId;
         el('btn-send').disabled = !hasRun || !state.sessionId;
@@ -1088,22 +1086,6 @@
         }).then(function (res) {
             if (!res.body.ok) {
                 showAppNotice(res.body.error || 'Failed');
-                return;
-            }
-            refreshSessionList();
-            selectSession(res.body.session.id);
-        });
-    }
-
-    function forkSummary() {
-        if (!state.runDir || !state.sessionId) return;
-        api('/' + encodeURIComponent(state.runDir) + '/sessions/fork', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from_session_id: state.sessionId, title: 'Continued chat' })
-        }).then(function (res) {
-            if (!res.body.ok) {
-                showAppNotice(res.body.error || 'Fork failed');
                 return;
             }
             refreshSessionList();
@@ -1224,7 +1206,6 @@
     })();
 
     el('btn-new-session').onclick = newSession;
-    el('btn-fork-summary').onclick = forkSummary;
     el('btn-delete-session').onclick = openDeleteChatModal;
     el('btn-send').onclick = send;
     el('input').addEventListener('keydown', function (e) {
