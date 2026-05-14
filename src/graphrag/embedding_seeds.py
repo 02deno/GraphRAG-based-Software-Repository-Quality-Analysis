@@ -1,4 +1,4 @@
-"""Dense embedding seeds via OpenAI-compatible ``/embeddings`` + on-disk cache."""
+"""Dense embedding seeds via OpenAI-compatible ``/v1/embeddings`` + on-disk cache."""
 
 from __future__ import annotations
 
@@ -18,6 +18,20 @@ logger = logging.getLogger(__name__)
 _CACHE_FILE = "graphrag_embedding_cache.npz"
 _META_FILE = "graphrag_embedding_cache_meta.json"
 _EMBED_BATCH = 64
+
+
+def _openai_compatible_embeddings_url(base_url: str) -> str:
+    """Return the full URL for ``POST …/v1/embeddings`` without duplicating ``/v1``.
+
+    ``GRAPHRAG_OPENAI_BASE_URL`` is commonly already suffixed with ``/v1`` (Ollama,
+    OpenAI). Joining ``/v1/embeddings`` onto that base would produce ``…/v1/v1/embeddings``.
+    """
+    root = base_url.strip().rstrip("/")
+    if not root:
+        raise ValueError("OpenAI-compatible base URL is empty")
+    while root.endswith("/v1"):
+        root = root[:-3].rstrip("/")
+    return f"{root}/v1/embeddings"
 
 
 def build_node_embed_text(node: Dict[str, Any]) -> str:
@@ -40,17 +54,17 @@ def embed_texts_openai_compatible(
     model: str,
     timeout_s: float = 120.0,
 ) -> List[List[float]]:
-    """POST batches to ``/v1/embeddings`` and return vectors in order."""
-    root = base_url.rstrip("/")
+    """POST batches to OpenAI-compatible ``/v1/embeddings`` and return vectors in order."""
+    endpoint = _openai_compatible_embeddings_url(base_url)
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     out: List[List[float]] = []
-    with httpx.Client(base_url=root, timeout=timeout_s) as client:
+    with httpx.Client(timeout=timeout_s) as client:
         for i in range(0, len(texts), _EMBED_BATCH):
             batch = list(texts[i : i + _EMBED_BATCH])
             resp = client.post(
-                "/v1/embeddings",
+                endpoint,
                 headers=headers,
                 json={"model": model, "input": batch},
             )

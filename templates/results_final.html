@@ -472,15 +472,13 @@
             border-bottom: 1px solid #bbf7d0;
             padding-bottom: 10px;
         }
-        .graphrag-panel textarea {
-            width: 100%;
-            min-height: 72px;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 14px;
-            box-sizing: border-box;
+        .graphrag-panel a {
+            color: #15803d;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .graphrag-panel a:hover {
+            text-decoration: underline;
         }
         .graphrag-meta {
             font-size: 12px;
@@ -488,18 +486,6 @@
             margin-top: 8px;
             white-space: pre-wrap;
             word-break: break-word;
-        }
-        .graphrag-reply {
-            margin-top: 14px;
-            padding: 14px;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 14px;
-            line-height: 1.55;
-            white-space: pre-wrap;
-            max-height: 420px;
-            overflow-y: auto;
         }
         .neo4j-pg-details {
             margin-top: 16px;
@@ -535,18 +521,54 @@
             border-radius: 8px;
             background: #fafafa;
         }
-        .neo4j-pg-legend {
+        .neo4j-pg-filters {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 12px 14px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .neo4j-pg-filter-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            font-size: 11px;
-            margin-top: 8px;
+            align-items: center;
+            gap: 8px;
         }
-        .neo4j-pg-legend span {
-            padding: 2px 8px;
-            border-radius: 4px;
+        .neo4j-pg-filter-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #64748b;
+            min-width: 52px;
+            flex-shrink: 0;
+        }
+        .neo4j-pg-chip {
+            border: 2px solid rgba(15, 23, 42, 0.15);
+            border-radius: 999px;
+            padding: 4px 11px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
             color: #fff;
-            font-weight: 500;
+            background: #64748b;
+            transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s;
+        }
+        .neo4j-pg-chip:hover { transform: translateY(-1px); }
+        .neo4j-pg-chip:focus { outline: 2px solid #22c55e; outline-offset: 2px; }
+        .neo4j-pg-chip.neo4j-pg-chip-dim { opacity: 0.35; }
+        .neo4j-pg-chip.neo4j-pg-chip-active {
+            opacity: 1;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.25);
+        }
+        .neo4j-pg-filter-hint {
+            font-size: 11px;
+            color: #64748b;
+            margin: 0;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -566,15 +588,12 @@
         </div>
         {% if results and results.results_run_dir and results.graph_data %}
         <div class="results-section graphrag-panel">
-            <h3>GraphRAG assistant</h3>
+            <h3>Graph preview</h3>
             <p class="qv-side-section-note">
-                Ask about structure, tests, commits, or risk. Answers use <strong>subgraph retrieval</strong>
-                from this run&rsquo;s <code>graph.json</code> and summaries from <code>analysis_view.json</code>.
-                Set <code>GRAPHRAG_OPENAI_BASE_URL</code> and <code>GRAPHRAG_CHAT_MODEL</code> before starting the app;
-                use <code>GRAPHRAG_OPENAI_API_KEY</code> for hosted APIs. For Ollama, use base URL
-                <code>http://127.0.0.1:11434/v1</code>.
-                Optional: <code>GRAPHRAG_EMBEDDING_MODEL</code> (same API, caches vectors under the run folder) and
-                Neo4j expansion via <code>GRAPHRAG_NEO4J_URI</code>, <code>GRAPHRAG_NEO4J_USER</code>, <code>GRAPHRAG_NEO4J_PASSWORD</code>.
+                <strong>GraphRAG Q&amp;A</strong> (multi-turn chat, sessions, context hints) runs only in the
+                <a href="{{ url_for('graphrag_ws.workspace_page', run_dir=results.results_run_dir) }}">full chat workspace</a>
+                — use the green button above. Configure <code>GRAPHRAG_OPENAI_BASE_URL</code>, <code>GRAPHRAG_CHAT_MODEL</code>,
+                and optional <code>GRAPHRAG_EMBEDDING_MODEL</code> / Neo4j there.
             </p>
             <details class="neo4j-pg-details" id="neo4j-pg-details">
                 <summary>Neo4j property graph (this run)</summary>
@@ -590,12 +609,24 @@
                     <button type="button" class="btn btn-secondary" id="neo4j-pg-fit" style="padding:8px 16px;font-size:14px;display:none;">Fit view</button>
                 </div>
                 <div id="neo4j-pg-canvas" class="neo4j-pg-canvas" role="img" aria-label="Neo4j property graph"></div>
-                <div class="neo4j-pg-legend" id="neo4j-pg-legend" style="display:none;" aria-hidden="true">
-                    <span style="background:#4e79a7;">File</span>
-                    <span style="background:#59a14f;">Function</span>
-                    <span style="background:#e15759;">Class</span>
-                    <span style="background:#edc948;color:#333;">Test</span>
-                    <span style="background:#af7aa1;">Commit</span>
+                <div id="neo4j-pg-filters" class="neo4j-pg-filters" aria-label="Graph filters">
+                    <p class="neo4j-pg-filter-hint">Click a <strong>node</strong> or <strong>edge</strong> tag to narrow the view (click the same tag again to clear). <strong>Node only</strong>: only vertices of that type and edges between them. <strong>Edge only</strong>: only that edge type, with both endpoints shown. <strong>Node + edge</strong>: edges of that type where at least one endpoint has the chosen node type — every endpoint of those edges is shown (e.g. <code>MODIFIED_BY</code> with <code>Commit</code> still shows linked <code>File</code> nodes).</p>
+                    <div class="neo4j-pg-filter-row" id="neo4j-pg-node-chips">
+                        <span class="neo4j-pg-filter-label">Nodes</span>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-node neo4j-pg-chip-active" data-node-type="File" style="background:#4e79a7;">File</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-node neo4j-pg-chip-active" data-node-type="Function" style="background:#59a14f;">Function</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-node neo4j-pg-chip-active" data-node-type="Class" style="background:#e15759;">Class</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-node neo4j-pg-chip-active" data-node-type="Test" style="background:#ca8a04;color:#111;">Test</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-node neo4j-pg-chip-active" data-node-type="Commit" style="background:#af7aa1;">Commit</button>
+                    </div>
+                    <div class="neo4j-pg-filter-row" id="neo4j-pg-edge-chips">
+                        <span class="neo4j-pg-filter-label">Edges</span>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-edge neo4j-pg-chip-active" data-edge-type="IMPORTS" style="background:#4e79a7;">IMPORTS</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-edge neo4j-pg-chip-active" data-edge-type="IN_FILE" style="background:#9c755f;">IN_FILE</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-edge neo4j-pg-chip-active" data-edge-type="CALLS" style="background:#59a14f;">CALLS</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-edge neo4j-pg-chip-active" data-edge-type="TESTS" style="background:#ca8a04;color:#111;">TESTS</button>
+                        <button type="button" class="neo4j-pg-chip neo4j-pg-chip-edge neo4j-pg-chip-active" data-edge-type="MODIFIED_BY" style="background:#8b5cf6;">MODIFIED_BY</button>
+                    </div>
                 </div>
                 <p id="neo4j-pg-status" class="graphrag-meta" style="margin-top:8px;"></p>
                 {% else %}
@@ -605,58 +636,7 @@
                 </p>
                 {% endif %}
             </details>
-            <label for="graphrag-input" class="qv-side-section-note"><strong>Your question</strong></label>
-            <textarea id="graphrag-input" placeholder="e.g. What calls into module X? Which areas lack tests?" aria-label="GraphRAG question"></textarea>
-            <div style="margin-top:10px;">
-                <button type="button" class="btn btn-success" id="graphrag-send">Ask</button>
-            </div>
-            <div id="graphrag-meta" class="graphrag-meta" aria-live="polite"></div>
-            <div id="graphrag-reply" class="graphrag-reply" style="display:none;" aria-live="polite"></div>
         </div>
-        <script>
-        (function () {
-            var sendBtn = document.getElementById('graphrag-send');
-            var inputEl = document.getElementById('graphrag-input');
-            var metaEl = document.getElementById('graphrag-meta');
-            var replyEl = document.getElementById('graphrag-reply');
-            if (!sendBtn || !inputEl || !metaEl || !replyEl) return;
-            sendBtn.addEventListener('click', function () {
-                var msg = (inputEl.value || '').trim();
-                if (!msg) {
-                    metaEl.textContent = 'Enter a question first.';
-                    return;
-                }
-                metaEl.textContent = 'Retrieving subgraph and calling the model…';
-                replyEl.style.display = 'none';
-                replyEl.textContent = '';
-                var url = {{ url_for('web.analysis_results_chat', run_dir=results.results_run_dir)|tojson }};
-                fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
-                }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; }); })
-                .then(function (res) {
-                    var data = res.data || {};
-                    if (!data.ok) {
-                        metaEl.textContent = (data.error || 'Request failed') + (res.status ? ' (HTTP ' + res.status + ')' : '');
-                        return;
-                    }
-                    var extra = [];
-                    if (data.retrieval_backend) extra.push('expand=' + data.retrieval_backend);
-                    if (data.embedding_seeds && data.embedding_seeds.length) extra.push('vec_seeds=' + data.embedding_seeds.length);
-                    metaEl.textContent = 'Seeds: ' + (data.seed_nodes || []).slice(0, 8).join(', ')
-                        + (data.seed_nodes && data.seed_nodes.length > 8 ? '…' : '')
-                        + ' | subgraph nodes=' + (data.subgraph_node_count || 0)
-                        + ', edges=' + (data.subgraph_edge_count || 0)
-                        + (extra.length ? ' | ' + extra.join(' | ') : '');
-                    replyEl.textContent = data.reply || '';
-                    replyEl.style.display = 'block';
-                }).catch(function (err) {
-                    metaEl.textContent = 'Network error: ' + err;
-                });
-            });
-        })();
-        </script>
         {% if neo4j_property_graph_available %}
         <script>
         (function () {
@@ -664,11 +644,21 @@
             var fitBtn = document.getElementById('neo4j-pg-fit');
             var canvas = document.getElementById('neo4j-pg-canvas');
             var statusEl = document.getElementById('neo4j-pg-status');
-            var legend = document.getElementById('neo4j-pg-legend');
+            var filtersEl = document.getElementById('neo4j-pg-filters');
             var maxE = document.getElementById('neo4j-pg-max-edges');
             var maxN = document.getElementById('neo4j-pg-max-nodes');
-            if (!loadBtn || !canvas || !statusEl || !fitBtn || !legend || !maxE || !maxN) return;
+            if (!loadBtn || !canvas || !statusEl || !fitBtn || !filtersEl || !maxE || !maxN) return;
+
             var network = null;
+            var dsNodes = null;
+            var dsEdges = null;
+            var rawNodes = [];
+            var rawEdges = [];
+            var onlyNodeType = null;
+            var onlyEdgeType = null;
+            var filtersWired = false;
+            var lastStatusBase = '';
+
             var visUrl = 'https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js';
             var dataUrl = {{ url_for('web.analysis_results_neo4j_property_graph', run_dir=results.results_run_dir)|tojson }};
 
@@ -680,6 +670,141 @@
                 var c = { IMPORTS: '#4e79a7', IN_FILE: '#9c755f', CALLS: '#59a14f', TESTS: '#ca8a04', MODIFIED_BY: '#8b5cf6' };
                 return c[t] || '#64748b';
             }
+
+            function rawToVisNode(n) {
+                var nt = n.node_type || '';
+                var bg = nodeColor(nt);
+                return {
+                    id: n.id,
+                    label: n.label || n.id,
+                    title: String(n.id) + '\n' + nt,
+                    color: { background: bg, border: '#1e293b', highlight: { background: bg, border: '#0f172a' } },
+                    font: { color: '#0f172a', size: 11 }
+                };
+            }
+            function rawToVisEdge(e) {
+                var et = e.edge_type || e.type || '';
+                var ec = edgeColor(et);
+                return {
+                    id: e.id,
+                    from: e.from,
+                    to: e.to,
+                    label: e.label || et,
+                    arrows: 'to',
+                    color: { color: ec, highlight: ec },
+                    font: { align: 'middle', size: 10, color: '#334155', strokeWidth: 0 }
+                };
+            }
+
+            function computeFilteredRaw() {
+                if (!onlyNodeType && !onlyEdgeType) {
+                    return { nodes: rawNodes.slice(), edges: rawEdges.slice() };
+                }
+                var nodeById = {};
+                rawNodes.forEach(function (n) {
+                    nodeById[n.id] = n;
+                });
+                function ntOf(id) {
+                    var n = nodeById[id];
+                    return ((n && n.node_type) || 'Unknown').trim() || 'Unknown';
+                }
+                // Edge-type only: show those edges and both endpoints.
+                if (!onlyNodeType && onlyEdgeType) {
+                    var edges1 = rawEdges.filter(function (e) {
+                        var et = (e.edge_type || e.type || '').trim() || 'UNKNOWN';
+                        return et === onlyEdgeType;
+                    });
+                    var id1 = {};
+                    edges1.forEach(function (e) {
+                        id1[e.from] = true;
+                        id1[e.to] = true;
+                    });
+                    var nodes1 = rawNodes.filter(function (n) {
+                        return id1[n.id];
+                    });
+                    return { nodes: nodes1, edges: edges1 };
+                }
+                // Node-type only: induced subgraph on that type (strict).
+                if (onlyNodeType && !onlyEdgeType) {
+                    var allowed = [onlyNodeType];
+                    var nodes2 = rawNodes.filter(function (n) {
+                        var nt = (n.node_type || 'Unknown').trim() || 'Unknown';
+                        return allowed.indexOf(nt) >= 0;
+                    });
+                    var id2 = {};
+                    nodes2.forEach(function (n) {
+                        id2[n.id] = true;
+                    });
+                    var edges2 = rawEdges.filter(function (e) {
+                        return id2[e.from] && id2[e.to];
+                    });
+                    return { nodes: nodes2, edges: edges2 };
+                }
+                // Both: edges of that type touching the chosen node type; include every endpoint.
+                var edges3 = rawEdges.filter(function (e) {
+                    var et = (e.edge_type || e.type || '').trim() || 'UNKNOWN';
+                    if (et !== onlyEdgeType) return false;
+                    return ntOf(e.from) === onlyNodeType || ntOf(e.to) === onlyNodeType;
+                });
+                var id3 = {};
+                edges3.forEach(function (e) {
+                    id3[e.from] = true;
+                    id3[e.to] = true;
+                });
+                var nodes3 = rawNodes.filter(function (n) {
+                    return id3[n.id];
+                });
+                return { nodes: nodes3, edges: edges3 };
+            }
+
+            function filterStatusSuffix() {
+                var parts = [];
+                if (onlyNodeType) parts.push('nodes: ' + onlyNodeType);
+                if (onlyEdgeType) parts.push('edges: ' + onlyEdgeType);
+                return parts.length ? (' | Filter: ' + parts.join(', ')) : '';
+            }
+
+            function refreshStatus() {
+                statusEl.textContent = lastStatusBase + filterStatusSuffix();
+            }
+
+            function updateFilterChips() {
+                filtersEl.querySelectorAll('.neo4j-pg-chip-node').forEach(function (chip) {
+                    var t = chip.getAttribute('data-node-type');
+                    var on = !onlyNodeType || t === onlyNodeType;
+                    chip.classList.toggle('neo4j-pg-chip-active', on);
+                    chip.classList.toggle('neo4j-pg-chip-dim', !!onlyNodeType && t !== onlyNodeType);
+                    chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+                });
+                filtersEl.querySelectorAll('.neo4j-pg-chip-edge').forEach(function (chip) {
+                    var t = chip.getAttribute('data-edge-type');
+                    var on = !onlyEdgeType || t === onlyEdgeType;
+                    chip.classList.toggle('neo4j-pg-chip-active', on);
+                    chip.classList.toggle('neo4j-pg-chip-dim', !!onlyEdgeType && t !== onlyEdgeType);
+                    chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+                });
+            }
+
+            function applyFilters() {
+                if (!window.vis || !dsNodes || !dsEdges) return;
+                var f = computeFilteredRaw();
+                dsNodes.clear();
+                dsEdges.clear();
+                dsNodes.add(f.nodes.map(rawToVisNode));
+                dsEdges.add(f.edges.map(rawToVisEdge));
+                if (network) {
+                    network.setData({ nodes: dsNodes, edges: dsEdges });
+                    network.setOptions({ physics: { enabled: true, stabilization: { iterations: 55 } } });
+                    network.once('stabilizationIterationsDone', function () {
+                        network.setOptions({ physics: { enabled: false } });
+                    });
+                    try {
+                        network.fit({ animation: true });
+                    } catch (ignore) {}
+                }
+                refreshStatus();
+            }
+
             function loadVisScript(cb) {
                 if (window.vis && window.vis.Network) {
                     cb();
@@ -694,47 +819,55 @@
                 };
                 document.head.appendChild(s);
             }
-            function buildNetwork(data) {
-                var nodes = new vis.DataSet(data.nodes.map(function (n) {
-                    var nt = n.node_type || '';
-                    var bg = nodeColor(nt);
-                    return {
-                        id: n.id,
-                        label: n.label || n.id,
-                        title: String(n.id) + '\n' + nt,
-                        color: { background: bg, border: '#1e293b', highlight: { background: bg, border: '#0f172a' } },
-                        font: { color: '#0f172a', size: 11 }
-                    };
-                }));
-                var edges = new vis.DataSet(data.edges.map(function (e) {
-                    var et = e.edge_type || e.type || '';
-                    var ec = edgeColor(et);
-                    return {
-                        id: e.id,
-                        from: e.from,
-                        to: e.to,
-                        label: e.label || et,
-                        arrows: 'to',
-                        color: { color: ec, highlight: ec },
-                        font: { align: 'middle', size: 10, color: '#334155', strokeWidth: 0 }
-                    };
-                }));
-                var opts = {
-                    physics: { enabled: true, stabilization: { iterations: 90 } },
-                    interaction: { hover: true, navigationButtons: true, tooltipDelay: 120 }
-                };
+
+            function buildNetworkFromPayload(payload) {
+                rawNodes = payload.nodes || [];
+                rawEdges = payload.edges || [];
+                onlyNodeType = null;
+                onlyEdgeType = null;
+                updateFilterChips();
+
                 if (network) {
                     network.destroy();
                     network = null;
                 }
-                network = new vis.Network(canvas, { nodes: nodes, edges: edges }, opts);
+                dsNodes = new vis.DataSet();
+                dsEdges = new vis.DataSet();
+                var f = computeFilteredRaw();
+                dsNodes.add(f.nodes.map(rawToVisNode));
+                dsEdges.add(f.edges.map(rawToVisEdge));
+
+                var opts = {
+                    physics: { enabled: true, stabilization: { iterations: 90 } },
+                    interaction: { hover: true, navigationButtons: true, tooltipDelay: 120 }
+                };
+                network = new vis.Network(canvas, { nodes: dsNodes, edges: dsEdges }, opts);
                 fitBtn.style.display = 'inline-block';
-                legend.style.display = 'flex';
+                filtersEl.style.display = 'flex';
                 canvas.style.display = 'block';
                 network.once('stabilizationIterationsDone', function () {
                     network.setOptions({ physics: { enabled: false } });
                 });
+
+                if (!filtersWired) {
+                    filtersWired = true;
+                    filtersEl.addEventListener('click', function (ev) {
+                        var chip = ev.target && ev.target.closest ? ev.target.closest('.neo4j-pg-chip') : null;
+                        if (!chip) return;
+                        var nt = chip.getAttribute('data-node-type');
+                        var et = chip.getAttribute('data-edge-type');
+                        if (nt) {
+                            onlyNodeType = onlyNodeType === nt ? null : nt;
+                        } else if (et) {
+                            onlyEdgeType = onlyEdgeType === et ? null : et;
+                        }
+                        updateFilterChips();
+                        applyFilters();
+                    });
+                }
+                refreshStatus();
             }
+
             loadBtn.addEventListener('click', function () {
                 var me = parseInt(maxE.value, 10) || 500;
                 var mn = parseInt(maxN.value, 10) || 400;
@@ -754,11 +887,12 @@
                             }
                             var t = payload.truncation || {};
                             var hint = payload.viewer_hint ? (' ' + payload.viewer_hint) : '';
-                            statusEl.textContent =
+                            lastStatusBase =
                                 'Showing up to ' + (t.nodes_shown || 0) + ' nodes and ' + (t.edges_returned || 0)
                                 + ' edges (server caps: ' + (t.node_cap || '') + ' nodes, ' + (t.edge_limit_requested || '') + ' edges). '
                                 + 'Drag background to pan; pinch or wheel to zoom. Physics stops after layout.' + hint;
-                            buildNetwork(payload);
+                            statusEl.textContent = lastStatusBase;
+                            buildNetworkFromPayload(payload);
                         })
                         .catch(function (e) {
                             statusEl.textContent = 'Request failed: ' + e;

@@ -5,9 +5,19 @@ from __future__ import annotations
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Dict, List, Mapping, MutableMapping
+from typing import Any, Dict, List, Mapping, MutableMapping, Tuple
 
 logger = logging.getLogger(__name__)
+
+# Neo4j preview samples per edge type so a single global LIMIT does not starve rare types
+# (e.g. MODIFIED_BY / Commit endpoints).
+_EDGE_TYPES_FOR_PREVIEW: Tuple[str, ...] = (
+    "IMPORTS",
+    "IN_FILE",
+    "CALLS",
+    "TESTS",
+    "MODIFIED_BY",
+)
 
 
 def _label_for_row(
@@ -61,6 +71,10 @@ def export_graphrag_run_for_visualization(
 ) -> Dict[str, Any]:
     """Read directed ``GRAPHRAG_EDGE`` rows for one ``run`` and cap for browser layout.
 
+    Rows are sampled with a **per edge-type budget** (plus a small spill bucket for any
+    non-standard ``e.t`` values) so rare types such as ``MODIFIED_BY`` are not excluded
+    when the graph has many ``IMPORTS`` / ``CALLS`` edges.
+
     Args:
         driver: Open Neo4j ``Driver``.
         run_id: Same ``run`` property as sync (typically ``web_analysis_*`` folder name).
@@ -78,18 +92,65 @@ def export_graphrag_run_for_visualization(
     cap_nodes = max(20, min(int(max_nodes), 800))
     dbname = os.environ.get("GRAPHRAG_NEO4J_DATABASE", "").strip() or None
 
-    cypher = """
+    n_slots = len(_EDGE_TYPES_FOR_PREVIEW)
+    per_type = max(1, lim // n_slots)
+
+    cypher_typed = """
     MATCH (n:GraphRAGNode {run: $run})-[e:GRAPHRAG_EDGE {run: $run}]->(m:GraphRAGNode {run: $run})
+    WHERE e.t = $etype
     RETURN n.id AS sid, n.type AS st, n.name AS sname, n.path AS spath, n.qualified_name AS sq,
            m.id AS tid, m.type AS mt, m.name AS mname, m.path AS mpath, m.qualified_name AS mq,
            e.t AS etype
-    LIMIT $lim
+    LIMIT $per
     """
 
     rows: List[Mapping[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
     with driver.session(database=dbname) as session:
-        result = session.run(cypher, run=run_id, lim=lim)
-        rows = [dict(r) for r in result]
+        for et in _EDGE_TYPES_FOR_PREVIEW:
+            result = session.run(cypher_typed, run=run_id, etype=et, per=per_type)
+            for r in result:
+                d = dict(r)
+                sid = str(d.get("sid") or "").strip()
+                tid = str(d.get("tid") or "").strip()
+                et_s = str(d.get("etype") or "").strip()
+                if not sid or not tid:
+                    continue
+                key = (sid, tid, et_s)
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows.append(d)
+        if len(rows) < lim:
+            spill = lim - len(rows)
+            cypher_spill = """
+            MATCH (n:GraphRAGNode {run: $run})-[e:GRAPHRAG_EDGE {run: $run}]->(m:GraphRAGNode {run: $run})
+            WHERE NOT e.t IN $known
+            RETURN n.id AS sid, n.type AS st, n.name AS sname, n.path AS spath, n.qualified_name AS sq,
+                   m.id AS tid, m.type AS mt, m.name AS mname, m.path AS mpath, m.qualified_name AS mq,
+                   e.t AS etype
+            LIMIT $spill
+            """
+            result = session.run(
+                cypher_spill,
+                run=run_id,
+                known=list(_EDGE_TYPES_FOR_PREVIEW),
+                spill=spill,
+            )
+            for r in result:
+                d = dict(r)
+                sid = str(d.get("sid") or "").strip()
+                tid = str(d.get("tid") or "").strip()
+                et_s = str(d.get("etype") or "").strip()
+                if not sid or not tid:
+                    continue
+                key = (sid, tid, et_s)
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows.append(d)
+                if len(rows) >= lim:
+                    break
 
     raw_edges: List[Dict[str, Any]] = []
     node_accum: Dict[str, Dict[str, Any]] = {}
@@ -138,5 +199,7 @@ def export_graphrag_run_for_visualization(
             "edges_returned": len(vis_edges),
             "node_cap": cap_nodes,
             "nodes_shown": len(vis_nodes),
+            "per_edge_type_cap": per_type,
+            "sampling": "per_edge_type_then_spill",
         },
     }

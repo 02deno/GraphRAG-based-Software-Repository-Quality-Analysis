@@ -135,6 +135,32 @@
         button.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
         button.btn-primary:hover { filter: brightness(1.05); }
         button.btn-danger { color: #991b1b; border-color: #fecaca; }
+        /* Dedicated send control: avoids native :disabled washing out .btn + .btn-primary */
+        button.composer-send {
+            flex-shrink: 0;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--accent);
+            color: #fff;
+            min-width: 88px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        }
+        button.composer-send:hover:not(:disabled) { filter: brightness(1.06); }
+        button.composer-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--accent);
+            color: #fff;
+        }
+        button.composer-send.is-busy {
+            opacity: 0.75;
+            cursor: wait;
+            pointer-events: none;
+        }
         .messages {
             flex: 1;
             overflow: auto;
@@ -201,7 +227,7 @@
         <div class="composer">
             <div class="composer-inner">
                 <textarea id="input" placeholder="Ask about structure, tests, risk…" rows="2" disabled></textarea>
-                <button type="button" class="btn btn-primary" id="btn-send" disabled>Send</button>
+                <button type="button" class="composer-send" id="btn-send" disabled>Send</button>
             </div>
             <p class="hint" id="token-hint"></p>
         </div>
@@ -219,10 +245,20 @@
         sessionId: null,
         session: null,
         lastContextWarn: 'none',
-        lastApproxChars: 0
+        lastApproxChars: 0,
+        sending: false
     };
 
     function el(id) { return document.getElementById(id); }
+
+    function cloneSession(sess) {
+        if (!sess) return null;
+        try {
+            return JSON.parse(JSON.stringify(sess));
+        } catch (e) {
+            return null;
+        }
+    }
 
     function parseLabelParts(label) {
         var m = (label || '').match(/^(.+)_(\d{8})_(\d{6})$/);
@@ -420,7 +456,13 @@
         setWarnBanner('none', 0);
         api('/' + encodeURIComponent(runDir) + '/sessions').then(function (res) {
             if (!res.body.ok) return;
-            renderSessions(res.body.sessions);
+            var sessions = res.body.sessions || [];
+            renderSessions(sessions);
+            if (!sessions.length) {
+                newSession();
+            } else if (!state.sessionId) {
+                selectSession(sessions[0].id);
+            }
         });
         renderMessages();
     }
@@ -506,26 +548,46 @@
 
     function send() {
         var text = (el('input').value || '').trim();
-        if (!text || !state.runDir || !state.sessionId) return;
-        el('btn-send').disabled = true;
+        if (!text || !state.runDir || !state.sessionId || state.sending) return;
+        if (!state.session) return;
+        var btn = el('btn-send');
+        state.sending = true;
+        btn.classList.add('is-busy');
+        var snap = cloneSession(state.session);
+        var baseMsgs = state.session.messages ? state.session.messages.slice() : [];
+        state.session = Object.assign({}, state.session, {
+            messages: baseMsgs.concat([
+                { role: 'user', content: text },
+                { role: 'assistant', content: 'Thinking…' }
+            ])
+        });
+        el('input').value = '';
+        renderMessages();
+
         api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(state.sessionId) + '/message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text })
         }).then(function (res) {
-            el('btn-send').disabled = false;
             if (!res.body.ok) {
+                state.session = snap;
+                el('input').value = text;
+                renderMessages();
                 alert(res.body.error || 'Request failed');
                 return;
             }
-            el('input').value = '';
             state.session = res.body.session;
             renderMessages();
             setWarnBanner(res.body.context_warn, res.body.approx_input_chars);
             refreshSessionList();
         }).catch(function (e) {
-            el('btn-send').disabled = false;
+            state.session = snap;
+            el('input').value = text;
+            renderMessages();
             alert('Network: ' + e);
+        }).then(function () {
+            state.sending = false;
+            btn.classList.remove('is-busy');
         });
     }
 
@@ -536,7 +598,7 @@
     el('input').addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            send();
+            if (!state.sending) send();
         }
     });
 

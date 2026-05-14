@@ -558,6 +558,9 @@
     var latestResultsUrl = "{{ url_for('web.analysis_results_latest') }}";
     var lastProgressSig = '';
     var highestPercentSeen = 0;
+    var analyzeStreamComplete = false;
+    /** When set, navigate only after the SSE body is fully drained (avoids starving the dev server). */
+    var pendingSseResultsUrl = null;
 
     function setProgressUi(percent, message) {
         var p = Math.min(100, Math.max(0, Number(percent) || 0));
@@ -664,16 +667,18 @@
 
     function openResultsPage(targetUrl, btn) {
         var url = targetUrl || latestResultsUrl;
-        var before = window.location.pathname + window.location.search;
-        window.location.href = url;
-        setTimeout(function () {
-            var after = window.location.pathname + window.location.search;
-            if (after === before) {
-                if (btn) btn.disabled = false;
-                hideOverlay();
-                window.location.assign(url);
-            }
-        }, 900);
+        if (window.__graphRagResultsNav) {
+            return;
+        }
+        window.__graphRagResultsNav = true;
+        try {
+            window.location.assign(url);
+        } catch (e) {
+            window.__graphRagResultsNav = false;
+            if (btn) btn.disabled = false;
+            hideOverlay();
+            alert('Could not open results. Try the link manually or reload.');
+        }
     }
 
     function handleSsePayload(payload, btn) {
@@ -683,14 +688,18 @@
             return false;
         }
         if (payload.type === 'error') {
+            analyzeStreamComplete = true;
+            pendingSseResultsUrl = null;
+            window.__graphRagResultsNav = false;
             hideOverlay();
             if (btn) btn.disabled = false;
             alert(payload.error || 'Analysis failed.');
             return true;
         }
         if (payload.type === 'complete') {
+            analyzeStreamComplete = true;
             appendProgressStep(100, 'Opening results…');
-            openResultsPage(payload.redirect || latestResultsUrl, btn);
+            pendingSseResultsUrl = payload.redirect || latestResultsUrl;
             return true;
         }
         return false;
@@ -731,16 +740,35 @@
                 }
                 var parts = buf.split(/\r?\n\r?\n/);
                 buf = parts.pop() || '';
+                var terminalHandled = false;
                 for (var i = 0; i < parts.length; i++) {
-                    if (processSseTextBlock(parts[i], btn)) return;
+                    if (processSseTextBlock(parts[i], btn)) {
+                        terminalHandled = true;
+                        break;
+                    }
                 }
-                if (result.done) {
-                    if (buf.trim() && processSseTextBlock(buf, btn)) return;
-                    if (buf.trim()) {
+                if (result.done && buf.trim()) {
+                    if (processSseTextBlock(buf, btn)) {
+                        terminalHandled = true;
+                    } else {
                         console.warn('analyze stream ended without complete; tail:', buf.slice(0, 500));
                     }
-                    appendProgressStep(100, 'Finalizing and opening results…');
-                    openResultsPage(latestResultsUrl, btn);
+                    buf = '';
+                }
+                if (result.done && pendingSseResultsUrl) {
+                    var redirectUrl = pendingSseResultsUrl;
+                    pendingSseResultsUrl = null;
+                    openResultsPage(redirectUrl, btn);
+                }
+                if (terminalHandled && !result.done) {
+                    return pump();
+                }
+                if (result.done) {
+                    if (!analyzeStreamComplete) {
+                        analyzeStreamComplete = true;
+                        appendProgressStep(100, 'Finalizing and opening results…');
+                        openResultsPage(latestResultsUrl, btn);
+                    }
                     return;
                 }
                 return pump();
@@ -768,6 +796,9 @@
         e.preventDefault();
         var btn = form.querySelector('button[type="submit"]');
         if (btn) btn.disabled = true;
+        analyzeStreamComplete = false;
+        pendingSseResultsUrl = null;
+        window.__graphRagResultsNav = false;
         try {
             showOverlay();
         } catch (err1) {
