@@ -407,11 +407,31 @@
             padding: 18px 20px;
             margin-bottom: 24px;
         }
-        .graphrag-workspace-cta-wrap {
-            margin: -2px 0 16px 0;
+        .graphrag-panel {
+            margin-bottom: 28px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
         }
-        .graphrag-workspace-cta-wrap.graphrag-workspace-cta-top {
-            margin: 0 0 20px 0;
+        .results-top-hero .graphrag-workspace-cta-wrap {
+            margin: 0;
+            padding: 16px 18px 14px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .results-top-hero .graphrag-workspace-cta-hint {
+            color: #475569;
+        }
+        .results-top-hero .success-header {
+            margin-bottom: 0;
+            border-radius: 0;
+        }
+        .results-top-hero .graphrag-panel {
+            margin-bottom: 0;
+            border-radius: 0;
+            border: none;
+            border-top: 1px solid #bbf7d0;
         }
         a.graphrag-workspace-btn {
             display: block;
@@ -532,8 +552,9 @@
 </head>
 <body>
     <div class="container">
+        <div class="results-top-hero">
         {% if results and results.results_run_dir and results.graph_data %}
-        <div class="graphrag-workspace-cta-wrap graphrag-workspace-cta-top">
+        <div class="graphrag-workspace-cta-wrap">
             <a class="graphrag-workspace-btn"
                href="{{ url_for('graphrag_ws.workspace_page', run_dir=results.results_run_dir) }}">Open full chat workspace</a>
             <span class="graphrag-workspace-cta-hint">Multi-turn sessions, project list, and context-size warnings in the dedicated workspace.</span>
@@ -542,6 +563,217 @@
         <div class="success-header">
             <h1>✅ Graph Analysis Complete!</h1>
             <p>Your repository has been successfully analyzed</p>
+        </div>
+        {% if results and results.results_run_dir and results.graph_data %}
+        <div class="results-section graphrag-panel">
+            <h3>GraphRAG assistant</h3>
+            <p class="qv-side-section-note">
+                Ask about structure, tests, commits, or risk. Answers use <strong>subgraph retrieval</strong>
+                from this run&rsquo;s <code>graph.json</code> and summaries from <code>analysis_view.json</code>.
+                Set <code>GRAPHRAG_OPENAI_BASE_URL</code> and <code>GRAPHRAG_CHAT_MODEL</code> before starting the app;
+                use <code>GRAPHRAG_OPENAI_API_KEY</code> for hosted APIs. For Ollama, use base URL
+                <code>http://127.0.0.1:11434/v1</code>.
+                Optional: <code>GRAPHRAG_EMBEDDING_MODEL</code> (same API, caches vectors under the run folder) and
+                Neo4j expansion via <code>GRAPHRAG_NEO4J_URI</code>, <code>GRAPHRAG_NEO4J_USER</code>, <code>GRAPHRAG_NEO4J_PASSWORD</code>.
+            </p>
+            <details class="neo4j-pg-details" id="neo4j-pg-details">
+                <summary>Neo4j property graph (this run)</summary>
+                {% if neo4j_property_graph_available %}
+                <p class="qv-side-section-note" style="margin-top:10px;">
+                    Live view of <code>:GraphRAGNode</code> / <code>:GRAPHRAG_EDGE</code> rows stored under this run id in Neo4j
+                    (same projection the assistant uses when expansion runs on Bolt). Large graphs are capped for the browser.
+                </p>
+                <div class="neo4j-pg-toolbar">
+                    <label>max edges <input type="number" id="neo4j-pg-max-edges" value="500" min="50" max="2000" step="50"></label>
+                    <label>max nodes <input type="number" id="neo4j-pg-max-nodes" value="400" min="20" max="800" step="20"></label>
+                    <button type="button" class="btn btn-success" id="neo4j-pg-load" style="padding:8px 16px;font-size:14px;">Load graph preview</button>
+                    <button type="button" class="btn btn-secondary" id="neo4j-pg-fit" style="padding:8px 16px;font-size:14px;display:none;">Fit view</button>
+                </div>
+                <div id="neo4j-pg-canvas" class="neo4j-pg-canvas" role="img" aria-label="Neo4j property graph"></div>
+                <div class="neo4j-pg-legend" id="neo4j-pg-legend" style="display:none;" aria-hidden="true">
+                    <span style="background:#4e79a7;">File</span>
+                    <span style="background:#59a14f;">Function</span>
+                    <span style="background:#e15759;">Class</span>
+                    <span style="background:#edc948;color:#333;">Test</span>
+                    <span style="background:#af7aa1;">Commit</span>
+                </div>
+                <p id="neo4j-pg-status" class="graphrag-meta" style="margin-top:8px;"></p>
+                {% else %}
+                <p class="graphrag-meta" style="margin-top:10px;">
+                    Neo4j is not enabled on this server. Set <code>GRAPHRAG_NEO4J_URI</code> and <code>GRAPHRAG_NEO4J_PASSWORD</code>
+                    (and restart the app) to sync this run&rsquo;s graph into Bolt and open the preview here.
+                </p>
+                {% endif %}
+            </details>
+            <label for="graphrag-input" class="qv-side-section-note"><strong>Your question</strong></label>
+            <textarea id="graphrag-input" placeholder="e.g. What calls into module X? Which areas lack tests?" aria-label="GraphRAG question"></textarea>
+            <div style="margin-top:10px;">
+                <button type="button" class="btn btn-success" id="graphrag-send">Ask</button>
+            </div>
+            <div id="graphrag-meta" class="graphrag-meta" aria-live="polite"></div>
+            <div id="graphrag-reply" class="graphrag-reply" style="display:none;" aria-live="polite"></div>
+        </div>
+        <script>
+        (function () {
+            var sendBtn = document.getElementById('graphrag-send');
+            var inputEl = document.getElementById('graphrag-input');
+            var metaEl = document.getElementById('graphrag-meta');
+            var replyEl = document.getElementById('graphrag-reply');
+            if (!sendBtn || !inputEl || !metaEl || !replyEl) return;
+            sendBtn.addEventListener('click', function () {
+                var msg = (inputEl.value || '').trim();
+                if (!msg) {
+                    metaEl.textContent = 'Enter a question first.';
+                    return;
+                }
+                metaEl.textContent = 'Retrieving subgraph and calling the model…';
+                replyEl.style.display = 'none';
+                replyEl.textContent = '';
+                var url = {{ url_for('web.analysis_results_chat', run_dir=results.results_run_dir)|tojson }};
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; }); })
+                .then(function (res) {
+                    var data = res.data || {};
+                    if (!data.ok) {
+                        metaEl.textContent = (data.error || 'Request failed') + (res.status ? ' (HTTP ' + res.status + ')' : '');
+                        return;
+                    }
+                    var extra = [];
+                    if (data.retrieval_backend) extra.push('expand=' + data.retrieval_backend);
+                    if (data.embedding_seeds && data.embedding_seeds.length) extra.push('vec_seeds=' + data.embedding_seeds.length);
+                    metaEl.textContent = 'Seeds: ' + (data.seed_nodes || []).slice(0, 8).join(', ')
+                        + (data.seed_nodes && data.seed_nodes.length > 8 ? '…' : '')
+                        + ' | subgraph nodes=' + (data.subgraph_node_count || 0)
+                        + ', edges=' + (data.subgraph_edge_count || 0)
+                        + (extra.length ? ' | ' + extra.join(' | ') : '');
+                    replyEl.textContent = data.reply || '';
+                    replyEl.style.display = 'block';
+                }).catch(function (err) {
+                    metaEl.textContent = 'Network error: ' + err;
+                });
+            });
+        })();
+        </script>
+        {% if neo4j_property_graph_available %}
+        <script>
+        (function () {
+            var loadBtn = document.getElementById('neo4j-pg-load');
+            var fitBtn = document.getElementById('neo4j-pg-fit');
+            var canvas = document.getElementById('neo4j-pg-canvas');
+            var statusEl = document.getElementById('neo4j-pg-status');
+            var legend = document.getElementById('neo4j-pg-legend');
+            var maxE = document.getElementById('neo4j-pg-max-edges');
+            var maxN = document.getElementById('neo4j-pg-max-nodes');
+            if (!loadBtn || !canvas || !statusEl || !fitBtn || !legend || !maxE || !maxN) return;
+            var network = null;
+            var visUrl = 'https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js';
+            var dataUrl = {{ url_for('web.analysis_results_neo4j_property_graph', run_dir=results.results_run_dir)|tojson }};
+
+            function nodeColor(nt) {
+                var c = { File: '#4e79a7', Function: '#59a14f', Class: '#e15759', Test: '#edc948', Commit: '#af7aa1' };
+                return c[nt] || '#94a3b8';
+            }
+            function edgeColor(t) {
+                var c = { IMPORTS: '#4e79a7', IN_FILE: '#9c755f', CALLS: '#59a14f', TESTS: '#ca8a04', MODIFIED_BY: '#8b5cf6' };
+                return c[t] || '#64748b';
+            }
+            function loadVisScript(cb) {
+                if (window.vis && window.vis.Network) {
+                    cb();
+                    return;
+                }
+                var s = document.createElement('script');
+                s.src = visUrl;
+                s.async = true;
+                s.onload = function () { cb(); };
+                s.onerror = function () {
+                    statusEl.textContent = 'Could not load vis-network (offline or CDN blocked).';
+                };
+                document.head.appendChild(s);
+            }
+            function buildNetwork(data) {
+                var nodes = new vis.DataSet(data.nodes.map(function (n) {
+                    var nt = n.node_type || '';
+                    var bg = nodeColor(nt);
+                    return {
+                        id: n.id,
+                        label: n.label || n.id,
+                        title: String(n.id) + '\n' + nt,
+                        color: { background: bg, border: '#1e293b', highlight: { background: bg, border: '#0f172a' } },
+                        font: { color: '#0f172a', size: 11 }
+                    };
+                }));
+                var edges = new vis.DataSet(data.edges.map(function (e) {
+                    var et = e.edge_type || e.type || '';
+                    var ec = edgeColor(et);
+                    return {
+                        id: e.id,
+                        from: e.from,
+                        to: e.to,
+                        label: e.label || et,
+                        arrows: 'to',
+                        color: { color: ec, highlight: ec },
+                        font: { align: 'middle', size: 10, color: '#334155', strokeWidth: 0 }
+                    };
+                }));
+                var opts = {
+                    physics: { enabled: true, stabilization: { iterations: 90 } },
+                    interaction: { hover: true, navigationButtons: true, tooltipDelay: 120 }
+                };
+                if (network) {
+                    network.destroy();
+                    network = null;
+                }
+                network = new vis.Network(canvas, { nodes: nodes, edges: edges }, opts);
+                fitBtn.style.display = 'inline-block';
+                legend.style.display = 'flex';
+                canvas.style.display = 'block';
+                network.once('stabilizationIterationsDone', function () {
+                    network.setOptions({ physics: { enabled: false } });
+                });
+            }
+            loadBtn.addEventListener('click', function () {
+                var me = parseInt(maxE.value, 10) || 500;
+                var mn = parseInt(maxN.value, 10) || 400;
+                statusEl.textContent = 'Loading…';
+                loadVisScript(function () {
+                    if (!window.vis || !window.vis.Network) {
+                        statusEl.textContent = 'vis-network is not available.';
+                        return;
+                    }
+                    var url = dataUrl + '?max_edges=' + encodeURIComponent(me) + '&max_nodes=' + encodeURIComponent(mn);
+                    fetch(url)
+                        .then(function (r) { return r.json(); })
+                        .then(function (payload) {
+                            if (!payload.ok) {
+                                statusEl.textContent = payload.error || ('HTTP error');
+                                return;
+                            }
+                            var t = payload.truncation || {};
+                            var hint = payload.viewer_hint ? (' ' + payload.viewer_hint) : '';
+                            statusEl.textContent =
+                                'Showing up to ' + (t.nodes_shown || 0) + ' nodes and ' + (t.edges_returned || 0)
+                                + ' edges (server caps: ' + (t.node_cap || '') + ' nodes, ' + (t.edge_limit_requested || '') + ' edges). '
+                                + 'Drag background to pan; pinch or wheel to zoom. Physics stops after layout.' + hint;
+                            buildNetwork(payload);
+                        })
+                        .catch(function (e) {
+                            statusEl.textContent = 'Request failed: ' + e;
+                        });
+                });
+            });
+            fitBtn.addEventListener('click', function () {
+                if (network) {
+                    network.fit({ animation: true });
+                }
+            });
+        })();
+        </script>
+        {% endif %}
+        {% endif %}
         </div>
 
         {% if results %}
@@ -883,217 +1115,6 @@
                 {% endfor %}
             </div>
         </div>
-        {% endif %}
-
-        {% if results.results_run_dir and results.graph_data %}
-        <div class="results-section graphrag-panel">
-            <h3>GraphRAG assistant</h3>
-            <p class="qv-side-section-note">
-                Ask about structure, tests, commits, or risk. Answers use <strong>subgraph retrieval</strong>
-                from this run&rsquo;s <code>graph.json</code> and summaries from <code>analysis_view.json</code>.
-                Set <code>GRAPHRAG_OPENAI_BASE_URL</code> and <code>GRAPHRAG_CHAT_MODEL</code> before starting the app;
-                use <code>GRAPHRAG_OPENAI_API_KEY</code> for hosted APIs. For Ollama, use base URL
-                <code>http://127.0.0.1:11434/v1</code>.
-                Optional: <code>GRAPHRAG_EMBEDDING_MODEL</code> (same API, caches vectors under the run folder) and
-                Neo4j expansion via <code>GRAPHRAG_NEO4J_URI</code>, <code>GRAPHRAG_NEO4J_USER</code>, <code>GRAPHRAG_NEO4J_PASSWORD</code>.
-            </p>
-            <details class="neo4j-pg-details" id="neo4j-pg-details">
-                <summary>Neo4j property graph (this run)</summary>
-                {% if neo4j_property_graph_available %}
-                <p class="qv-side-section-note" style="margin-top:10px;">
-                    Live view of <code>:GraphRAGNode</code> / <code>:GRAPHRAG_EDGE</code> rows stored under this run id in Neo4j
-                    (same projection the assistant uses when expansion runs on Bolt). Large graphs are capped for the browser.
-                </p>
-                <div class="neo4j-pg-toolbar">
-                    <label>max edges <input type="number" id="neo4j-pg-max-edges" value="500" min="50" max="2000" step="50"></label>
-                    <label>max nodes <input type="number" id="neo4j-pg-max-nodes" value="400" min="20" max="800" step="20"></label>
-                    <button type="button" class="btn btn-success" id="neo4j-pg-load" style="padding:8px 16px;font-size:14px;">Load graph preview</button>
-                    <button type="button" class="btn btn-secondary" id="neo4j-pg-fit" style="padding:8px 16px;font-size:14px;display:none;">Fit view</button>
-                </div>
-                <div id="neo4j-pg-canvas" class="neo4j-pg-canvas" role="img" aria-label="Neo4j property graph"></div>
-                <div class="neo4j-pg-legend" id="neo4j-pg-legend" style="display:none;" aria-hidden="true">
-                    <span style="background:#4e79a7;">File</span>
-                    <span style="background:#59a14f;">Function</span>
-                    <span style="background:#e15759;">Class</span>
-                    <span style="background:#edc948;color:#333;">Test</span>
-                    <span style="background:#af7aa1;">Commit</span>
-                </div>
-                <p id="neo4j-pg-status" class="graphrag-meta" style="margin-top:8px;"></p>
-                {% else %}
-                <p class="graphrag-meta" style="margin-top:10px;">
-                    Neo4j is not enabled on this server. Set <code>GRAPHRAG_NEO4J_URI</code> and <code>GRAPHRAG_NEO4J_PASSWORD</code>
-                    (and restart the app) to sync this run&rsquo;s graph into Bolt and open the preview here.
-                </p>
-                {% endif %}
-            </details>
-            <label for="graphrag-input" class="qv-side-section-note"><strong>Your question</strong></label>
-            <textarea id="graphrag-input" placeholder="e.g. What calls into module X? Which areas lack tests?" aria-label="GraphRAG question"></textarea>
-            <div style="margin-top:10px;">
-                <button type="button" class="btn btn-success" id="graphrag-send">Ask</button>
-            </div>
-            <div id="graphrag-meta" class="graphrag-meta" aria-live="polite"></div>
-            <div id="graphrag-reply" class="graphrag-reply" style="display:none;" aria-live="polite"></div>
-        </div>
-        <script>
-        (function () {
-            var sendBtn = document.getElementById('graphrag-send');
-            var inputEl = document.getElementById('graphrag-input');
-            var metaEl = document.getElementById('graphrag-meta');
-            var replyEl = document.getElementById('graphrag-reply');
-            if (!sendBtn || !inputEl || !metaEl || !replyEl) return;
-            sendBtn.addEventListener('click', function () {
-                var msg = (inputEl.value || '').trim();
-                if (!msg) {
-                    metaEl.textContent = 'Enter a question first.';
-                    return;
-                }
-                metaEl.textContent = 'Retrieving subgraph and calling the model…';
-                replyEl.style.display = 'none';
-                replyEl.textContent = '';
-                var url = {{ url_for('web.analysis_results_chat', run_dir=results.results_run_dir)|tojson }};
-                fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
-                }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; }); })
-                .then(function (res) {
-                    var data = res.data || {};
-                    if (!data.ok) {
-                        metaEl.textContent = (data.error || 'Request failed') + (res.status ? ' (HTTP ' + res.status + ')' : '');
-                        return;
-                    }
-                    var extra = [];
-                    if (data.retrieval_backend) extra.push('expand=' + data.retrieval_backend);
-                    if (data.embedding_seeds && data.embedding_seeds.length) extra.push('vec_seeds=' + data.embedding_seeds.length);
-                    metaEl.textContent = 'Seeds: ' + (data.seed_nodes || []).slice(0, 8).join(', ')
-                        + (data.seed_nodes && data.seed_nodes.length > 8 ? '…' : '')
-                        + ' | subgraph nodes=' + (data.subgraph_node_count || 0)
-                        + ', edges=' + (data.subgraph_edge_count || 0)
-                        + (extra.length ? ' | ' + extra.join(' | ') : '');
-                    replyEl.textContent = data.reply || '';
-                    replyEl.style.display = 'block';
-                }).catch(function (err) {
-                    metaEl.textContent = 'Network error: ' + err;
-                });
-            });
-        })();
-        </script>
-        {% if neo4j_property_graph_available %}
-        <script>
-        (function () {
-            var loadBtn = document.getElementById('neo4j-pg-load');
-            var fitBtn = document.getElementById('neo4j-pg-fit');
-            var canvas = document.getElementById('neo4j-pg-canvas');
-            var statusEl = document.getElementById('neo4j-pg-status');
-            var legend = document.getElementById('neo4j-pg-legend');
-            var maxE = document.getElementById('neo4j-pg-max-edges');
-            var maxN = document.getElementById('neo4j-pg-max-nodes');
-            if (!loadBtn || !canvas || !statusEl || !fitBtn || !legend || !maxE || !maxN) return;
-            var network = null;
-            var visUrl = 'https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js';
-            var dataUrl = {{ url_for('web.analysis_results_neo4j_property_graph', run_dir=results.results_run_dir)|tojson }};
-
-            function nodeColor(nt) {
-                var c = { File: '#4e79a7', Function: '#59a14f', Class: '#e15759', Test: '#edc948', Commit: '#af7aa1' };
-                return c[nt] || '#94a3b8';
-            }
-            function edgeColor(t) {
-                var c = { IMPORTS: '#4e79a7', IN_FILE: '#9c755f', CALLS: '#59a14f', TESTS: '#ca8a04', MODIFIED_BY: '#8b5cf6' };
-                return c[t] || '#64748b';
-            }
-            function loadVisScript(cb) {
-                if (window.vis && window.vis.Network) {
-                    cb();
-                    return;
-                }
-                var s = document.createElement('script');
-                s.src = visUrl;
-                s.async = true;
-                s.onload = function () { cb(); };
-                s.onerror = function () {
-                    statusEl.textContent = 'Could not load vis-network (offline or CDN blocked).';
-                };
-                document.head.appendChild(s);
-            }
-            function buildNetwork(data) {
-                var nodes = new vis.DataSet(data.nodes.map(function (n) {
-                    var nt = n.node_type || '';
-                    var bg = nodeColor(nt);
-                    return {
-                        id: n.id,
-                        label: n.label || n.id,
-                        title: String(n.id) + '\n' + nt,
-                        color: { background: bg, border: '#1e293b', highlight: { background: bg, border: '#0f172a' } },
-                        font: { color: '#0f172a', size: 11 }
-                    };
-                }));
-                var edges = new vis.DataSet(data.edges.map(function (e) {
-                    var et = e.edge_type || e.type || '';
-                    var ec = edgeColor(et);
-                    return {
-                        id: e.id,
-                        from: e.from,
-                        to: e.to,
-                        label: e.label || et,
-                        arrows: 'to',
-                        color: { color: ec, highlight: ec },
-                        font: { align: 'middle', size: 10, color: '#334155', strokeWidth: 0 }
-                    };
-                }));
-                var opts = {
-                    physics: { enabled: true, stabilization: { iterations: 90 } },
-                    interaction: { hover: true, navigationButtons: true, tooltipDelay: 120 }
-                };
-                if (network) {
-                    network.destroy();
-                    network = null;
-                }
-                network = new vis.Network(canvas, { nodes: nodes, edges: edges }, opts);
-                fitBtn.style.display = 'inline-block';
-                legend.style.display = 'flex';
-                canvas.style.display = 'block';
-                network.once('stabilizationIterationsDone', function () {
-                    network.setOptions({ physics: { enabled: false } });
-                });
-            }
-            loadBtn.addEventListener('click', function () {
-                var me = parseInt(maxE.value, 10) || 500;
-                var mn = parseInt(maxN.value, 10) || 400;
-                statusEl.textContent = 'Loading…';
-                loadVisScript(function () {
-                    if (!window.vis || !window.vis.Network) {
-                        statusEl.textContent = 'vis-network is not available.';
-                        return;
-                    }
-                    var url = dataUrl + '?max_edges=' + encodeURIComponent(me) + '&max_nodes=' + encodeURIComponent(mn);
-                    fetch(url)
-                        .then(function (r) { return r.json(); })
-                        .then(function (payload) {
-                            if (!payload.ok) {
-                                statusEl.textContent = payload.error || ('HTTP error');
-                                return;
-                            }
-                            var t = payload.truncation || {};
-                            var hint = payload.viewer_hint ? (' ' + payload.viewer_hint) : '';
-                            statusEl.textContent =
-                                'Showing up to ' + (t.nodes_shown || 0) + ' nodes and ' + (t.edges_returned || 0)
-                                + ' edges (server caps: ' + (t.node_cap || '') + ' nodes, ' + (t.edge_limit_requested || '') + ' edges). '
-                                + 'Drag background to pan; pinch or wheel to zoom. Physics stops after layout.' + hint;
-                            buildNetwork(payload);
-                        })
-                        .catch(function (e) {
-                            statusEl.textContent = 'Request failed: ' + e;
-                        });
-                });
-            });
-            fitBtn.addEventListener('click', function () {
-                if (network) {
-                    network.fit({ animation: true });
-                }
-            });
-        })();
-        </script>
-        {% endif %}
         {% endif %}
 
         <!-- Pipeline Output -->

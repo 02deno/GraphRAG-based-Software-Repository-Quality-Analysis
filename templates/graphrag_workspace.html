@@ -22,18 +22,104 @@
         body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--main-bg); color: #111; height: 100vh; display: flex; flex-direction: column; }
         .layout { display: flex; flex: 1; min-height: 0; }
         aside {
-            width: 280px; min-width: 240px; background: var(--sidebar-bg); color: var(--sidebar-text);
-            display: flex; flex-direction: column; border-right: 1px solid #000;
+            width: 300px;
+            min-width: 280px;
+            max-width: min(340px, 40vw);
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #0f0f10;
+            overflow-x: hidden;
         }
-        aside header { padding: 14px 16px; font-weight: 600; font-size: 15px; border-bottom: 1px solid #3e3f42; }
-        aside .nav-scroll { flex: 1; overflow: auto; padding: 8px 0 16px; }
-        .nav-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sidebar-muted); padding: 10px 16px 6px; }
-        .project-row { padding: 10px 16px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; }
-        .project-row:hover { background: var(--sidebar-hover); }
-        .project-row.active { background: var(--sidebar-hover); border-left-color: var(--accent); }
-        .session-row { padding: 8px 16px 8px 28px; cursor: pointer; font-size: 12px; color: #c5c5d2; border-left: 3px solid transparent; }
+        aside header {
+            padding: 14px 16px;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: -0.02em;
+            border-bottom: 1px solid #3e3f42;
+            background: #1a1b1e;
+        }
+        aside .nav-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 6px 0 14px;
+            scrollbar-width: thin;
+            scrollbar-color: #5c5f66 #1a1b1e;
+        }
+        aside .nav-scroll::-webkit-scrollbar { width: 9px; }
+        aside .nav-scroll::-webkit-scrollbar-track { background: #1a1b1e; border-radius: 8px; margin: 4px 0; }
+        aside .nav-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #6b6e76 0%, #4a4d54 100%);
+            border-radius: 8px;
+            border: 2px solid #1a1b1e;
+        }
+        aside .nav-scroll::-webkit-scrollbar-thumb:hover { background: #7c8088; }
+        .nav-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #9b9ba8;
+            padding: 12px 14px 6px;
+        }
+        .project-group { margin-bottom: 4px; }
+        .project-group-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #d1d5db;
+            padding: 8px 14px 4px;
+            line-height: 1.35;
+            word-break: break-word;
+            hyphens: auto;
+            border-left: 3px solid #3d4f3d;
+            margin-left: 0;
+        }
+        .project-row {
+            margin: 0 8px 3px 8px;
+            padding: 9px 11px;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: rgba(255,255,255,0.03);
+            min-width: 0;
+        }
+        .project-row:hover { background: rgba(255,255,255,0.08); border-color: #3e3f42; }
+        .project-row.active {
+            background: linear-gradient(135deg, #1e3a29 0%, #163422 100%);
+            border-color: #22c55e;
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+        }
+        .project-row-primary {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f4f4f5;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .project-row-date {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .session-row {
+            margin: 0 8px 2px 8px;
+            padding: 8px 11px 8px 14px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #c5c5d2;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            min-width: 0;
+        }
         .session-row:hover { background: var(--sidebar-hover); color: #fff; }
-        .session-row.active { background: #343541; border-left-color: #6ea36e; color: #fff; }
+        .session-row.active { background: #343541; border-color: #4b5563; color: #fff; }
         .session-meta { font-size: 10px; color: var(--sidebar-muted); margin-top: 2px; }
         aside footer { padding: 10px 12px; border-top: 1px solid #3e3f42; }
         aside footer a { color: #9ea0ff; font-size: 12px; text-decoration: none; }
@@ -49,7 +135,21 @@
         button.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
         button.btn-primary:hover { filter: brightness(1.05); }
         button.btn-danger { color: #991b1b; border-color: #fecaca; }
-        .messages { flex: 1; overflow: auto; padding: 20px 24px 100px; max-width: 860px; width: 100%; margin: 0 auto; }
+        .messages {
+            flex: 1;
+            overflow: auto;
+            overflow-x: hidden;
+            padding: 20px 24px 100px;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #f1f5f9;
+        }
+        .messages::-webkit-scrollbar { width: 10px; }
+        .messages::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .messages::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 2px solid #f1f5f9; }
+        .messages::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .bubble { margin-bottom: 14px; max-width: 100%; }
         .bubble.user { text-align: right; }
         .bubble .inner { display: inline-block; text-align: left; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
@@ -65,6 +165,7 @@
         }
         .hint { font-size: 11px; color: #666; margin-top: 6px; max-width: 860px; margin-left: auto; margin-right: auto; }
         .empty-state { color: #666; font-size: 14px; padding: 40px 20px; text-align: center; }
+        aside .nav-scroll > .empty-state { color: #a8a8b8; padding: 20px 14px; font-size: 13px; }
         .meta-line { font-size: 12px; color: #555; margin-top: 6px; padding: 0 4px; }
     </style>
 </head>
@@ -113,6 +214,7 @@
 
     var state = {
         projects: [],
+        projectGroups: null,
         runDir: null,
         sessionId: null,
         session: null,
@@ -121,6 +223,58 @@
     };
 
     function el(id) { return document.getElementById(id); }
+
+    function parseLabelParts(label) {
+        var m = (label || '').match(/^(.+)_(\d{8})_(\d{6})$/);
+        if (m) return { group: m[1], ymd: m[2], hms: m[3] };
+        return { group: label || 'Other', ymd: '', hms: '' };
+    }
+
+    function buildProjectGroups(projects) {
+        var map = {};
+        projects.forEach(function (p) {
+            var parts = parseLabelParts(p.label);
+            var g = parts.group;
+            if (!map[g]) map[g] = [];
+            map[g].push({
+                run_dir: p.run_dir,
+                label: p.label,
+                updated_at: p.updated_at || 0,
+                ymd: parts.ymd,
+                hms: parts.hms
+            });
+        });
+        Object.keys(map).forEach(function (g) {
+            map[g].sort(function (a, b) { return (b.updated_at || 0) - (a.updated_at || 0); });
+        });
+        var keys = Object.keys(map).sort(function (a, b) {
+            var maxA = map[a][0] ? map[a][0].updated_at : 0;
+            var maxB = map[b][0] ? map[b][0].updated_at : 0;
+            if (maxB !== maxA) return maxB - maxA;
+            return a.localeCompare(b, undefined, { sensitivity: 'base' });
+        });
+        return { orderedGroups: keys, byGroup: map };
+    }
+
+    function fmtRunTime(ts) {
+        if (!ts) return '—';
+        var d = new Date(ts * 1000);
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function fmtStampLine(ymd, hms) {
+        if (!ymd || !hms || ymd.length !== 8 || hms.length !== 6) return '';
+        return ymd.slice(0, 4) + '-' + ymd.slice(4, 6) + '-' + ymd.slice(6, 8)
+            + ' · ' + hms.slice(0, 2) + ':' + hms.slice(2, 4) + ':' + hms.slice(4, 6);
+    }
+
+    function firstRunInSidebarOrder(struct) {
+        for (var i = 0; i < struct.orderedGroups.length; i++) {
+            var arr = struct.byGroup[struct.orderedGroups[i]];
+            if (arr && arr.length) return arr[0].run_dir;
+        }
+        return null;
+    }
 
     function api(path, opts) {
         opts = opts || {};
@@ -152,17 +306,41 @@
     function renderProjects() {
         var list = el('project-list');
         list.innerHTML = '';
+        list.removeAttribute('style');
         if (!state.projects.length) {
+            list.className = 'empty-state';
+            list.style.padding = '16px';
             list.textContent = 'No completed analyses yet. Run a web analysis first.';
             return;
         }
-        state.projects.forEach(function (p) {
-            var row = document.createElement('div');
-            row.className = 'project-row' + (state.runDir === p.run_dir ? ' active' : '');
-            row.textContent = p.label;
-            row.title = p.run_dir;
-            row.onclick = function () { selectProject(p.run_dir); };
-            list.appendChild(row);
+        list.className = '';
+        var struct = state.projectGroups || buildProjectGroups(state.projects);
+        state.projectGroups = struct;
+        struct.orderedGroups.forEach(function (gk) {
+            var runs = struct.byGroup[gk];
+            var wrap = document.createElement('div');
+            wrap.className = 'project-group';
+            var title = document.createElement('div');
+            title.className = 'project-group-title';
+            title.textContent = gk;
+            title.title = gk;
+            wrap.appendChild(title);
+            runs.forEach(function (p) {
+                var row = document.createElement('div');
+                row.className = 'project-row' + (state.runDir === p.run_dir ? ' active' : '');
+                row.title = p.run_dir;
+                var pr = document.createElement('div');
+                pr.className = 'project-row-primary';
+                pr.textContent = fmtRunTime(p.updated_at);
+                var sub = document.createElement('div');
+                sub.className = 'project-row-date';
+                sub.textContent = fmtStampLine(p.ymd, p.hms) || (p.label || p.run_dir).replace(/^web_analysis_/, '');
+                row.appendChild(pr);
+                row.appendChild(sub);
+                row.onclick = function () { selectProject(p.run_dir); };
+                wrap.appendChild(row);
+            });
+            list.appendChild(wrap);
         });
     }
 
@@ -368,11 +546,13 @@
             return;
         }
         state.projects = res.body.projects || [];
+        state.projectGroups = buildProjectGroups(state.projects);
         renderProjects();
-        if (initialRun && state.projects.some(function (p) { return p.run_dir === initialRun; })) {
-            selectProject(initialRun);
-        } else if (state.projects.length) {
-            selectProject(state.projects[0].run_dir);
+        var pick = (initialRun && state.projects.some(function (p) { return p.run_dir === initialRun; }))
+            ? initialRun
+            : firstRunInSidebarOrder(state.projectGroups);
+        if (pick) {
+            selectProject(pick);
         }
         updateChrome();
     });
