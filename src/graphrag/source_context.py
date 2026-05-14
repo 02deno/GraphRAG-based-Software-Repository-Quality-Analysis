@@ -211,6 +211,9 @@ def retrieve_source_context_for_llm(
 
     Returns:
         ``(excerpt_block, diagnostics)``; block may be empty when no index or repo.
+        When ``enabled`` is true, diagnostics may include ``included_chunks`` (ordered
+        list of path/line/score metadata for excerpts actually packed into the block),
+        ``candidates_scored``, ``top_rank_cap``, and ``max_chars_budget``.
     """
     diag: Dict[str, Any] = {"enabled": False, "chunks_used": 0}
     meta = load_run_meta(run_dir_path)
@@ -273,24 +276,41 @@ def retrieve_source_context_for_llm(
 
     scored.sort(key=lambda x: x[0], reverse=True)
     parts: List[str] = []
+    included: List[Dict[str, Any]] = []
     used = 0
     budget = max_chars
-    for _s, rec in scored[:top_rank]:
+    for rank, (_s, rec) in enumerate(scored[:top_rank], start=1):
         path = str(rec.get("path", ""))
         a = int(rec.get("start_line", 0))
         b = int(rec.get("end_line", 0))
         body = str(rec.get("text", ""))
         block = f"#### {path} (lines {a}-{b})\n```python\n{body}\n```\n"
+        truncated = False
         if len(block) > budget:
+            truncated = True
             block = block[: max(0, budget - 40)] + "\n…[truncated]\n```\n"
         if budget <= 0:
             break
         parts.append(block)
         used += 1
         budget -= len(block)
+        included.append(
+            {
+                "rank": rank,
+                "path": path,
+                "start_line": a,
+                "end_line": b,
+                "score": round(float(_s), 4),
+                "approx_chars": len(block),
+                "truncated": truncated,
+            }
+        )
         if budget <= 0:
             break
 
     diag["chunks_used"] = used
     diag["candidates_scored"] = len(scored)
+    diag["top_rank_cap"] = top_rank
+    diag["max_chars_budget"] = max_chars
+    diag["included_chunks"] = included
     return "\n".join(parts).strip(), diag

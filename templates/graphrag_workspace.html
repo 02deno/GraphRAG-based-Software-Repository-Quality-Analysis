@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GraphRAG workspace</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --sidebar-bg: #202123;
@@ -188,6 +190,56 @@
         .bubble .inner { display: inline-block; text-align: left; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
         .bubble.user .inner { background: var(--user-bubble); max-width: min(92%, 640px); }
         .bubble.assistant .inner { background: var(--assistant-bg); max-width: min(92%, 720px); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
+        .bubble.assistant .inner.markdown-body {
+            white-space: normal;
+            max-width: min(92%, 720px);
+        }
+        .markdown-body { font-size: 14px; line-height: 1.5; color: #111827; }
+        .markdown-body > :first-child { margin-top: 0; }
+        .markdown-body > :last-child { margin-bottom: 0; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            margin: 0.75em 0 0.35em;
+            font-weight: 650;
+            line-height: 1.25;
+            color: #0f172a;
+        }
+        .markdown-body h1 { font-size: 1.25rem; }
+        .markdown-body h2 { font-size: 1.12rem; }
+        .markdown-body h3 { font-size: 1.05rem; }
+        .markdown-body p { margin: 0.45em 0; }
+        .markdown-body ul, .markdown-body ol { margin: 0.4em 0; padding-left: 1.35rem; }
+        .markdown-body li { margin: 0.2em 0; }
+        .markdown-body blockquote {
+            margin: 0.5em 0;
+            padding: 0.35em 0.75em;
+            border-left: 3px solid #cbd5e1;
+            color: #475569;
+            background: #f8fafc;
+            border-radius: 0 6px 6px 0;
+        }
+        .markdown-body pre {
+            margin: 0.5em 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #e2e8f0;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .markdown-body code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.9em;
+            background: #e2e8f0;
+            padding: 0.1em 0.35em;
+            border-radius: 4px;
+        }
+        .markdown-body pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
+        .markdown-body a { color: #1d4ed8; }
+        .markdown-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 0.75em 0; }
+        .markdown-body table { border-collapse: collapse; font-size: 13px; margin: 0.5em 0; }
+        .markdown-body th, .markdown-body td { border: 1px solid #e2e8f0; padding: 6px 8px; }
+        .markdown-body th { background: #f1f5f9; }
         .warn-banner { margin: 0 20px 10px; padding: 10px 14px; border-radius: 8px; font-size: 13px; max-width: 860px; width: calc(100% - 40px); margin-left: auto; margin-right: auto; }
         .warn-banner.approaching { background: #fffbeb; color: var(--warn); border: 1px solid #fde68a; }
         .warn-banner.critical { background: #fef2f2; color: var(--crit); border: 1px solid #fecaca; }
@@ -301,6 +353,55 @@
             background: #e2e8f0;
             border-radius: 6px;
         }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.48);
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.is-open { display: flex; }
+        .modal-panel {
+            background: #fff;
+            border-radius: 14px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
+            padding: 22px 24px;
+            border: 1px solid var(--border);
+        }
+        .modal-panel h2 { margin: 0 0 10px; font-size: 18px; font-weight: 600; color: #0f172a; }
+        .modal-panel p { margin: 0 0 18px; font-size: 14px; color: #475569; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        .modal-actions .btn { min-width: 92px; }
+        .source-diag-block {
+            margin-bottom: 14px;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 4px;
+        }
+        .source-chunks-details { max-width: min(92%, 720px); }
+        .source-chunks-body { margin-top: 6px; }
+        .source-diag-meta {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.45;
+            margin: 0 0 8px;
+        }
+        .source-chunks-body ol {
+            margin: 0;
+            padding-left: 1.25rem;
+            font-size: 12px;
+            color: #334155;
+            line-height: 1.45;
+        }
+        .source-chunk-li { margin-bottom: 5px; }
+        .source-diag-muted { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.45; }
     </style>
 </head>
 <body>
@@ -342,6 +443,16 @@
         </div>
     </main>
 </div>
+<div id="delete-chat-modal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="delete-chat-modal-title">
+        <h2 id="delete-chat-modal-title">Sohbeti sil</h2>
+        <p>Bu sohbet kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn" id="delete-chat-cancel">İptal</button>
+            <button type="button" class="btn btn-danger" id="delete-chat-confirm">Sil</button>
+        </div>
+    </div>
+</div>
 <script>
 (function () {
     var API = '/graphrag/api';
@@ -357,6 +468,7 @@
         session: null,
         lastContextWarn: 'none',
         lastApproxChars: 0,
+        lastSourceDiag: null,
         sending: false
     };
 
@@ -384,7 +496,7 @@
         if (slot) slot.innerHTML = '';
     }
 
-    function showAppNotice(message) {
+    function showAppNotice(message, dismissMs) {
         var slot = el('notice-slot');
         if (!slot) return;
         clearAppNotice();
@@ -409,7 +521,52 @@
         try {
             wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (e1) { /* ignore */ }
-        appNoticeTimer = setTimeout(clearAppNotice, 14000);
+        var ms = dismissMs != null && dismissMs > 0 ? dismissMs : 14000;
+        appNoticeTimer = setTimeout(clearAppNotice, ms);
+    }
+
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function renderAssistantMarkdown(md) {
+        var raw = String(md || '');
+        if (!raw) return '';
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            try {
+                var html = marked.parse(raw, { breaks: true, gfm: true });
+                return DOMPurify.sanitize(html);
+            } catch (e2) {
+                return escapeHtml(raw);
+            }
+        }
+        return escapeHtml(raw);
+    }
+
+    function runAutoSummaryFork() {
+        if (!state.runDir || !state.sessionId) return Promise.resolve();
+        var fromSid = state.sessionId;
+        return api('/' + encodeURIComponent(state.runDir) + '/sessions/fork', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_session_id: fromSid, title: 'Continued chat (auto)' })
+        }).then(function (res) {
+            if (!res.body.ok) {
+                showAppNotice(
+                    res.body.error || 'Otomatik özet sohbeti oluşturulamadı. “Summary → new chat” ile deneyin.',
+                    22000
+                );
+                return;
+            }
+            refreshSessionList();
+            selectSession(res.body.session.id);
+            showAppNotice(
+                'Bağlam çok büyüdü; özet yeni bir sohbete taşındı. Aşağıdan devam edebilirsiniz.',
+                22000
+            );
+        });
     }
 
     function cloneSession(sess) {
@@ -423,6 +580,52 @@
 
     function pendingStreamRoot() {
         return document.querySelector('#messages .pending-stream');
+    }
+
+    function openDeleteChatModal() {
+        if (!state.runDir || !state.sessionId) return;
+        var ov = el('delete-chat-modal');
+        if (!ov) return;
+        ov.classList.add('is-open');
+        ov.setAttribute('aria-hidden', 'false');
+        var c = el('delete-chat-cancel');
+        if (c) c.focus();
+        document.addEventListener('keydown', onDeleteModalEscape);
+    }
+
+    function onDeleteModalEscape(e) {
+        if (e.key === 'Escape') closeDeleteChatModal();
+    }
+
+    function closeDeleteChatModal() {
+        var ov = el('delete-chat-modal');
+        if (!ov) return;
+        ov.classList.remove('is-open');
+        ov.setAttribute('aria-hidden', 'true');
+        document.removeEventListener('keydown', onDeleteModalEscape);
+    }
+
+    function confirmDeleteChatSession() {
+        if (!state.runDir || !state.sessionId) {
+            closeDeleteChatModal();
+            return;
+        }
+        var rd = state.runDir;
+        var sid = state.sessionId;
+        closeDeleteChatModal();
+        api('/' + encodeURIComponent(rd) + '/sessions/' + encodeURIComponent(sid), { method: 'DELETE' }).then(function (res) {
+            if (!res.body.ok) {
+                showAppNotice(res.body.error || 'Delete failed');
+                return;
+            }
+            state.sessionId = null;
+            state.session = null;
+            state.lastSourceDiag = null;
+            refreshSessionList();
+            renderMessages();
+            updateChrome();
+            setWarnBanner('none', 0);
+        });
     }
 
     function appendStreamStepLine(line) {
@@ -448,12 +651,23 @@
         var buf = '';
         var terminal = null;
         var streamReplyBuf = '';
+        var streamStepsCollapsed = false;
+        var lastCompletePayload = null;
         function appendStreamToken(t) {
             if (!t) return;
+            if (!streamStepsCollapsed) {
+                streamStepsCollapsed = true;
+                var root0 = pendingStreamRoot();
+                var det0 = root0 ? root0.querySelector('.assistant-steps') : null;
+                if (det0) det0.open = false;
+            }
             streamReplyBuf += t;
             var root = pendingStreamRoot();
             var inner = root ? root.querySelector('.stream-reply-inner') : null;
-            if (inner) inner.textContent = streamReplyBuf;
+            if (inner) {
+                inner.className = 'inner stream-reply-inner markdown-body';
+                inner.innerHTML = renderAssistantMarkdown(streamReplyBuf);
+            }
             scrollChatToBottom();
         }
         function handlePayload(obj) {
@@ -476,9 +690,11 @@
             }
             if (obj.type === 'complete') {
                 state.session = obj.session;
+                state.lastSourceDiag = obj.source_context_diagnostics != null ? obj.source_context_diagnostics : null;
                 renderMessages();
                 setWarnBanner(obj.context_warn, obj.approx_input_chars);
                 refreshSessionList();
+                lastCompletePayload = obj;
                 terminal = 'complete';
                 return true;
             }
@@ -512,14 +728,18 @@
                 var parts = buf.split(/\r?\n\r?\n/);
                 buf = parts.pop() || '';
                 for (var i = 0; i < parts.length; i++) {
-                    if (processBlock(parts[i])) return terminal;
+                    if (processBlock(parts[i])) {
+                        return { term: terminal, complete: lastCompletePayload };
+                    }
                 }
                 if (result.done) {
-                    if (buf.trim() && processBlock(buf)) return terminal;
+                    if (buf.trim() && processBlock(buf)) {
+                        return { term: terminal, complete: lastCompletePayload };
+                    }
                     if (buf.trim()) {
                         console.warn('chat SSE ended with unparsed tail:', buf.slice(0, 400));
                     }
-                    return terminal;
+                    return { term: terminal, complete: lastCompletePayload };
                 }
                 return pump();
             });
@@ -669,6 +889,67 @@
         });
     }
 
+    function appendSourceDiagPanel(box) {
+        var d = state.lastSourceDiag;
+        if (!d) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'source-diag-block';
+        var det = document.createElement('details');
+        det.className = 'assistant-steps source-chunks-details';
+        var sum = document.createElement('summary');
+        var chev = document.createElement('span');
+        chev.className = 'steps-chev';
+        chev.setAttribute('aria-hidden', 'true');
+        chev.textContent = '>';
+        sum.appendChild(chev);
+        var sumLabel = d.enabled ? (' Kaynak parçaları (' + (d.chunks_used != null ? d.chunks_used : 0) + ')') : ' Kaynak bağlamı';
+        sum.appendChild(document.createTextNode(sumLabel));
+        det.appendChild(sum);
+        var bodyEl = document.createElement('div');
+        bodyEl.className = 'source-chunks-body';
+        if (d.enabled && d.included_chunks && d.included_chunks.length) {
+            var meta = document.createElement('p');
+            meta.className = 'source-diag-meta';
+            var cs = d.candidates_scored != null ? d.candidates_scored : '?';
+            var cap = d.top_rank_cap != null ? d.top_rank_cap : '?';
+            var bud = d.max_chars_budget != null ? d.max_chars_budget : '?';
+            meta.textContent =
+                'Parçalar sorguya göre skorlanır; en fazla ' + cap + ' aday arasından, toplam ~' + bud +
+                ' karaktere kadar metin modele gider (tüm repo değil). İndeksteki aday sayısı: ' + cs + '.';
+            bodyEl.appendChild(meta);
+            var ol = document.createElement('ol');
+            d.included_chunks.forEach(function (ch) {
+                var li = document.createElement('li');
+                li.className = 'source-chunk-li';
+                var parts2 = [];
+                parts2.push('#' + (ch.rank != null ? ch.rank : ''));
+                if (ch.path) parts2.push(ch.path);
+                if (ch.start_line != null && ch.end_line != null) {
+                    parts2.push('sat. ' + ch.start_line + '–' + ch.end_line);
+                }
+                if (typeof ch.score === 'number') parts2.push('skor ' + ch.score);
+                if (ch.truncated) parts2.push('kısaltıldı');
+                li.textContent = parts2.join(' · ');
+                ol.appendChild(li);
+            });
+            bodyEl.appendChild(ol);
+        } else {
+            var p = document.createElement('p');
+            p.className = 'source-diag-muted';
+            if (d.reason) {
+                p.textContent = 'Kaynak kullanılamadı: ' + d.reason;
+            } else if (d.enabled) {
+                p.textContent = 'Bu tur için kaynak parçası seçilmedi (bütçe veya boş indeks).';
+            } else {
+                p.textContent = 'Kaynak bağlamı kapalı veya kullanılamıyor.';
+            }
+            bodyEl.appendChild(p);
+        }
+        det.appendChild(bodyEl);
+        wrap.appendChild(det);
+        box.appendChild(wrap);
+    }
+
     function renderMessages() {
         var box = el('messages');
         if (!state.runDir) {
@@ -695,7 +976,7 @@
                 var wrap = document.createElement('div');
                 wrap.className = 'bubble assistant';
                 var inner = document.createElement('div');
-                inner.className = 'inner stream-reply-inner';
+                inner.className = 'inner stream-reply-inner markdown-body';
                 inner.setAttribute('aria-live', 'polite');
                 inner.innerHTML = '<span class="typing-dots" aria-label="Yazılıyor"><span>.</span><span>.</span><span>.</span></span>';
                 wrap.appendChild(inner);
@@ -714,6 +995,7 @@
                 pre.textContent = '';
                 det.appendChild(sum);
                 det.appendChild(pre);
+                det.open = true;
                 block.appendChild(det);
                 box.appendChild(block);
                 return;
@@ -721,11 +1003,20 @@
             var wrap = document.createElement('div');
             wrap.className = 'bubble ' + (m.role === 'user' ? 'user' : 'assistant');
             var inner = document.createElement('div');
-            inner.className = 'inner';
-            inner.textContent = m.content || '';
+            inner.className = 'inner' + (m.role === 'assistant' ? ' markdown-body' : '');
+            if (m.role === 'assistant') {
+                inner.innerHTML = renderAssistantMarkdown(m.content || '');
+            } else {
+                inner.textContent = m.content || '';
+            }
             wrap.appendChild(inner);
             box.appendChild(wrap);
         });
+        var msgs = state.session.messages;
+        var last = msgs.length ? msgs[msgs.length - 1] : null;
+        if (state.lastSourceDiag && last && last.role === 'assistant' && last.content !== STREAMING_ASSISTANT) {
+            appendSourceDiagPanel(box);
+        }
         scrollChatToBottom();
     }
 
@@ -746,6 +1037,7 @@
         state.runDir = runDir;
         state.sessionId = null;
         state.session = null;
+        state.lastSourceDiag = null;
         el('session-list').innerHTML = '';
         el('session-block').style.display = 'none';
         renderProjects();
@@ -768,6 +1060,7 @@
         if (!state.runDir) return;
         state.sessionId = sessionId;
         state.session = null;
+        state.lastSourceDiag = null;
         renderMessages();
         api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(sessionId)).then(function (res) {
             if (!res.body.ok) {
@@ -826,23 +1119,6 @@
         });
     }
 
-    function deleteSession() {
-        if (!state.runDir || !state.sessionId) return;
-        if (!confirm('Delete this chat session?')) return;
-        api('/' + encodeURIComponent(state.runDir) + '/sessions/' + encodeURIComponent(state.sessionId), { method: 'DELETE' }).then(function (res) {
-            if (!res.body.ok) {
-                showAppNotice(res.body.error || 'Delete failed');
-                return;
-            }
-            state.sessionId = null;
-            state.session = null;
-            refreshSessionList();
-            renderMessages();
-            updateChrome();
-            setWarnBanner('none', 0);
-        });
-    }
-
     function send() {
         var text = (el('input').value || '').trim();
         if (!text || !state.runDir || !state.sessionId || state.sending) return;
@@ -887,7 +1163,9 @@
                         showAppNotice('Chat stream failed (HTTP ' + res.status + ').');
                         return;
                     }
-                    return readChatEventStream(res, text, snap).then(function (term) {
+                    return readChatEventStream(res, text, snap).then(function (out) {
+                        var term = out && out.term;
+                        var payload = out && out.complete;
                         if (term !== 'complete' && term !== 'error') {
                             state.session = snap;
                             el('input').value = text;
@@ -895,6 +1173,10 @@
                             showAppNotice(
                                 'The reply stream ended before a final answer. The chat model may still be running, or the connection timed out. Check that Ollama (or your API) is reachable, then try again or raise GRAPHRAG_CHAT_TIMEOUT_S in .env.'
                             );
+                            return;
+                        }
+                        if (term === 'complete' && payload && payload.context_auto_fork) {
+                            return runAutoSummaryFork();
                         }
                     });
                 }
@@ -907,9 +1189,13 @@
                         return;
                     }
                     state.session = body.session;
+                    state.lastSourceDiag = body.source_context_diagnostics != null ? body.source_context_diagnostics : null;
                     renderMessages();
                     setWarnBanner(body.context_warn, body.approx_input_chars);
                     refreshSessionList();
+                    if (body.context_auto_fork) {
+                        return runAutoSummaryFork();
+                    }
                 });
             })
             .catch(function (e) {
@@ -924,9 +1210,31 @@
             });
     }
 
+    (function wireDeleteModal() {
+        var ov = el('delete-chat-modal');
+        if (!ov) return;
+        var pan = ov.querySelector('.modal-panel');
+        if (pan) {
+            pan.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
+        ov.addEventListener('click', function () {
+            closeDeleteChatModal();
+        });
+        el('delete-chat-cancel').addEventListener('click', function (e) {
+            e.stopPropagation();
+            closeDeleteChatModal();
+        });
+        el('delete-chat-confirm').addEventListener('click', function (e) {
+            e.stopPropagation();
+            confirmDeleteChatSession();
+        });
+    })();
+
     el('btn-new-session').onclick = newSession;
     el('btn-fork-summary').onclick = forkSummary;
-    el('btn-delete-session').onclick = deleteSession;
+    el('btn-delete-session').onclick = openDeleteChatModal;
     el('btn-send').onclick = send;
     el('input').addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {

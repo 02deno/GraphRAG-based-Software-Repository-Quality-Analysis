@@ -37,11 +37,18 @@ _SUMMARY_SYSTEM = (
 _SYSTEM_PROMPT = (
     "You are an expert assistant for software quality, testing, and architecture. "
     "You answer using the supplied graph subgraph, precomputed metrics, and any "
-    "indexed source excerpts. If the evidence is insufficient, say so briefly. "
+    "indexed source excerpts. If the evidence is insufficient, say so clearly and "
+    "state what is missing. "
     "When **Source code excerpts** appear, use them for implementation details and "
     "cite file paths and line ranges when possible. "
     "When you mention graph entities, prefer human-readable labels from the context. "
-    "Respond in the same language as the user's question when possible."
+    "Respond in the same language as the user's question when possible.\n\n"
+    "Format every answer in **Markdown**: use `##` / `###` headings, bullet or numbered "
+    "lists where helpful, and fenced code blocks for short snippets taken from the context. "
+    "Avoid dumping huge code; quote only the lines needed to support a point.\n\n"
+    "Be **substantive**: for non-trivial questions, default to several paragraphs (or "
+    "structured sections) covering main ideas, relationships in the graph, risks, and "
+    "concrete next steps—not a one-line summary unless the user explicitly asks for brevity."
 )
 
 _CARRYOVER_USER_PREFIX = (
@@ -72,6 +79,27 @@ def _context_warn_level(approx_chars: int) -> str:
     if approx_chars >= warn_at:
         return "approaching"
     return "none"
+
+
+def _context_auto_fork_chars() -> int:
+    """Char threshold for optional UI auto fork; ``0`` disables."""
+    raw = (os.getenv("GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS", "0") or "").strip()
+    if not raw or raw == "0":
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _chat_temperature() -> float:
+    """Sampling temperature for the main repository Q&A call."""
+    raw = (os.getenv("GRAPHRAG_CHAT_TEMPERATURE", "0.28") or "").strip()
+    try:
+        t = float(raw)
+    except ValueError:
+        t = 0.28
+    return max(0.0, min(1.5, t))
 
 
 class GraphRagChatService:
@@ -353,7 +381,9 @@ class GraphRagChatService:
 
         Returns:
             Dict with ``ok`` (bool), optional ``reply``, diagnostics, ``approx_input_chars``,
-            and ``context_warn`` (``none`` | ``approaching`` | ``critical``).
+            ``context_warn`` (``none`` | ``approaching`` | ``critical``), and when enabled via
+            ``GRAPHRAG_CHAT_AUTO_SUMMARY_AT_CHARS`` (and enough prior turns exist), the boolean
+            ``context_auto_fork`` so the workspace can run **Summary → new chat** automatically.
         """
         if self._llm is None:
             return {
@@ -427,26 +457,43 @@ class GraphRagChatService:
             )
         logger.info("GraphRAG LLM request starting approx_input_chars=%d", approx)
 
+        chat_temp = _chat_temperature()
         stream_fn = getattr(self._llm, "stream_chat_completion", None)
         try:
             if token_hook is not None and callable(stream_fn):
                 parts: List[str] = []
-                for piece in stream_fn(messages_out, temperature=0.2):
+                for piece in stream_fn(messages_out, temperature=chat_temp):
                     parts.append(piece)
                     token_hook(piece)
                 reply = "".join(parts).strip()
                 if not reply:
                     raise RuntimeError("stream returned empty assistant text")
             else:
-                reply = self._llm.complete_chat(messages_out, temperature=0.2)
+                reply = self._llm.complete_chat(messages_out, temperature=chat_temp)
                 if token_hook is not None and reply:
                     token_hook(reply)
         except Exception as exc:
             logger.exception("GraphRAG LLM call failed")
             return {"ok": False, "error": f"LLM request failed: {exc!s}"}
 
+        fork_thr = _context_auto_fork_chars()
+        prior_hist = list(conversation_history or [])
+        auto_fork = bool(
+            fork_thr > 0
+            and approx >= fork_thr
+            and len(prior_hist) >= 2
+        )
+        if auto_fork:
+            logger.info(
+                "GraphRAG context_auto_fork set approx=%d threshold=%d prior_messages=%d",
+                approx,
+                fork_thr,
+                len(prior_hist),
+            )
+
         ret["ok"] = True
         ret["reply"] = reply
         ret["approx_input_chars"] = approx
         ret["context_warn"] = context_warn
+        ret["context_auto_fork"] = auto_fork
         return ret
