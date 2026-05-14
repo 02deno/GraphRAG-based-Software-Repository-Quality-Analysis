@@ -399,7 +399,29 @@
             color: #334155;
             line-height: 1.45;
         }
-        .source-chunk-li { margin-bottom: 5px; }
+        .source-chunk-li { margin-bottom: 8px; }
+        .source-chunk-line { font-weight: 500; }
+        .source-chunk-excerpt-details { margin-top: 4px; }
+        .source-chunk-excerpt-details > summary {
+            cursor: pointer;
+            font-size: 11px;
+            color: #64748b;
+            user-select: none;
+        }
+        .source-chunk-excerpt-pre {
+            margin: 6px 0 0;
+            padding: 8px 10px;
+            max-height: 280px;
+            overflow: auto;
+            font-size: 11px;
+            line-height: 1.35;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            color: #334155;
+        }
         .source-diag-muted { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.45; }
     </style>
 </head>
@@ -913,12 +935,28 @@
                 var parts2 = [];
                 parts2.push('#' + (ch.rank != null ? ch.rank : ''));
                 if (ch.path) parts2.push(ch.path);
+                if (ch.kind) parts2.push(String(ch.kind));
                 if (ch.start_line != null && ch.end_line != null) {
                     parts2.push('lines ' + ch.start_line + '–' + ch.end_line);
                 }
                 if (typeof ch.score === 'number') parts2.push('score ' + ch.score);
                 if (ch.truncated) parts2.push('truncated');
-                li.textContent = parts2.join(' · ');
+                var line = document.createElement('div');
+                line.className = 'source-chunk-line';
+                line.textContent = parts2.join(' · ');
+                li.appendChild(line);
+                if (ch.excerpt && String(ch.excerpt).trim()) {
+                    var exDet = document.createElement('details');
+                    exDet.className = 'source-chunk-excerpt-details';
+                    var exSum = document.createElement('summary');
+                    exSum.textContent = 'Chunk text (excerpt stored for this reply)';
+                    var pre = document.createElement('pre');
+                    pre.className = 'source-chunk-excerpt-pre';
+                    pre.textContent = String(ch.excerpt);
+                    exDet.appendChild(exSum);
+                    exDet.appendChild(pre);
+                    li.appendChild(exDet);
+                }
                 ol.appendChild(li);
             });
             bodyEl.appendChild(ol);

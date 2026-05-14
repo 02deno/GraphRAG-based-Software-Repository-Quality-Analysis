@@ -1,8 +1,10 @@
 """Persist repository root metadata and lexical source chunks for GraphRAG chat.
 
 Chunks are written to ``graphrag_source_chunks.jsonl``: ``.py`` excerpts from
-``File`` nodes in ``graph.json``, plus optional documentation (README, ``docs/``
-markdown/text) for the same lexical scoring at retrieval time.
+``File`` nodes in ``graph.json``, optional repo-wide ``*.md`` and other root
+documentation, and optional **analysis run** excerpts (``analysis_view`` summary,
+``analysis.txt``, ``visual_summary.txt``) under virtual ``_analysis/`` paths for
+the same lexical scoring at retrieval time.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
 
 from src.graph.json_document import load_graph_document
+from src.graphrag.analysis_context import format_analysis_view_summary
 from src.graphrag.query_index import score_query_against_blob
 
 logger = logging.getLogger(__name__)
@@ -127,12 +130,12 @@ def _doc_rel_excluded(rel: str) -> bool:
 
 
 def _documentation_paths(repo_root: Path) -> List[str]:
-    """Return repo-relative paths to README and ``docs/**`` prose for chunk indexing.
+    """Return repo-relative paths: root README-style files and all ``*.md`` under the repo.
 
-    Controlled by ``GRAPHRAG_SOURCE_MAX_DOC_FILES`` (``0`` disables documentation
-    chunks; default ``48``). Skips paths under venv, ``.git``, etc.
+    Controlled by ``GRAPHRAG_SOURCE_MAX_DOC_FILES`` (``0`` disables; default ``120``).
+    Skips paths under venv, ``.git``, ``node_modules``, etc.
     """
-    max_doc = int(os.environ.get("GRAPHRAG_SOURCE_MAX_DOC_FILES", "48"))
+    max_doc = int(os.environ.get("GRAPHRAG_SOURCE_MAX_DOC_FILES", "120"))
     if max_doc <= 0:
         return []
     out: List[str] = []
@@ -160,28 +163,19 @@ def _documentation_paths(repo_root: Path) -> List[str]:
             seen.add(rel)
             out.append(rel)
 
-    docs_dir = root / "docs"
-    if docs_dir.is_dir() and len(out) < max_doc:
-        for p in sorted(docs_dir.rglob("*")):
-            if len(out) >= max_doc:
-                break
-            if not p.is_file():
-                continue
-            name_low = p.name.lower()
-            if not (
-                name_low.endswith(".md")
-                or name_low.endswith(".rst")
-                or name_low.endswith(".txt")
-            ):
-                continue
-            try:
-                rel = str(p.resolve().relative_to(root)).replace("\\", "/")
-            except ValueError:
-                continue
-            if _doc_rel_excluded(rel) or rel in seen:
-                continue
-            seen.add(rel)
-            out.append(rel)
+    for p in sorted(root.rglob("*.md")):
+        if len(out) >= max_doc:
+            break
+        if not p.is_file():
+            continue
+        try:
+            rel = str(p.resolve().relative_to(root)).replace("\\", "/")
+        except ValueError:
+            continue
+        if _doc_rel_excluded(rel) or rel in seen:
+            continue
+        seen.add(rel)
+        out.append(rel)
 
     return out
 
@@ -230,9 +224,121 @@ def _write_jsonl_chunks_for_rel(
     return count
 
 
+def _write_virtual_text_chunks(
+    fh,
+    *,
+    virtual_path: str,
+    text: str,
+    window: int,
+    overlap: int,
+    max_blob_chars: int,
+    max_chunks: int,
+    kind: str,
+) -> int:
+    """Write JSONL chunk lines for synthetic *virtual_path* content (e.g. analysis bundle)."""
+    if not text.strip() or max_chunks <= 0:
+        return 0
+    blob = text[:max_blob_chars]
+    lines = blob.splitlines(keepends=True)
+    count = 0
+    for start, end, chunk in _chunk_lines(lines, window=window, overlap=overlap):
+        if not chunk.strip():
+            continue
+        rec: Dict[str, Any] = {
+            "path": virtual_path,
+            "start_line": start,
+            "end_line": end,
+            "text": chunk[:12000],
+            "kind": kind,
+        }
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        count += 1
+        if count >= max_chunks:
+            break
+    return count
+
+
+def _write_analysis_run_chunks(fh, results_dir: Path) -> int:
+    """Append chunks derived from this run's graph analysis artifacts (virtual ``_analysis/`` paths)."""
+    flag = os.environ.get("GRAPHRAG_SOURCE_DISABLE_ANALYSIS_CHUNKS", "").strip().lower()
+    if flag in ("1", "true", "yes", "on"):
+        return 0
+    win = max(10, int(os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_CHUNK_LINES", "80")))
+    ovl = max(0, int(os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_CHUNK_OVERLAP_LINES", "12")))
+    max_blob = max(4096, int(os.environ.get("GRAPHRAG_SOURCE_ANALYSIS_MAX_BYTES", "400000")))
+    per_file_cap = max(1, int(os.environ.get("GRAPHRAG_SOURCE_MAX_CHUNKS_PER_ANALYSIS_FILE", "60")))
+    total = 0
+    view_path = results_dir / "analysis_view.json"
+    if view_path.is_file():
+        try:
+            raw_v = view_path.read_text(encoding="utf-8")
+            view = json.loads(raw_v)
+            if isinstance(view, dict):
+                formatted = format_analysis_view_summary(view, max_chars=min(120_000, max_blob))
+                total += _write_virtual_text_chunks(
+                    fh,
+                    virtual_path="_analysis/analysis_view.txt",
+                    text=formatted,
+                    window=win,
+                    overlap=ovl,
+                    max_blob_chars=max_blob,
+                    max_chunks=per_file_cap,
+                    kind="analysis_report",
+                )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            logger.debug("Skipping analysis_view.json chunks: %s", exc)
+
+    for fname, vpath in (
+        ("analysis.txt", "_analysis/analysis.txt"),
+        ("visual_summary.txt", "_analysis/visual_summary.txt"),
+    ):
+        p = results_dir / fname
+        if not p.is_file():
+            continue
+        try:
+            txt = p.read_text(encoding="utf-8", errors="replace")[:max_blob]
+        except OSError as exc:
+            logger.debug("Skipping %s chunks: %s", fname, exc)
+            continue
+        total += _write_virtual_text_chunks(
+            fh,
+            virtual_path=vpath,
+            text=txt,
+            window=win,
+            overlap=ovl,
+            max_blob_chars=max_blob,
+            max_chunks=per_file_cap,
+            kind="analysis_report",
+        )
+
+    vsum = results_dir / "visual_summary_view.json"
+    if vsum.is_file():
+        try:
+            raw_j = vsum.read_text(encoding="utf-8", errors="replace")[:max_blob]
+            obj = json.loads(raw_j)
+            if isinstance(obj, dict):
+                pretty = json.dumps(obj, indent=2, ensure_ascii=False)[:max_blob]
+                total += _write_virtual_text_chunks(
+                    fh,
+                    virtual_path="_analysis/visual_summary_view.txt",
+                    text=pretty,
+                    window=win,
+                    overlap=ovl,
+                    max_blob_chars=max_blob,
+                    max_chunks=per_file_cap,
+                    kind="analysis_report",
+                )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
+            logger.debug("Skipping visual_summary_view.json chunks: %s", exc)
+
+    return total
+
+
 def _fence_lang_for_source_path(path: str) -> str:
     """Return a Markdown code-fence language tag for *path*."""
     low = path.lower()
+    if low.startswith("_analysis/"):
+        return "text"
     if low.endswith(".py"):
         return "python"
     if low.endswith(".md"):
@@ -250,8 +356,10 @@ def build_source_chunk_index(
     """Write ``graphrag_source_chunks.jsonl`` from ``File`` nodes and documentation.
 
     Python chunks use ``File`` ``*.py`` paths from *nodes* (unchanged). Documentation
-    chunks append README / common root prose and ``docs/**/*.md`` (and ``.rst`` /
-    ``.txt``) when present, using slightly larger line windows by default.
+    chunks include root README-style files and **all** ``*.md`` paths under the
+    repository (subject to ``GRAPHRAG_SOURCE_MAX_DOC_FILES``). **Analysis** chunks
+    append formatted ``analysis_view`` metrics plus ``analysis.txt`` /
+    ``visual_summary*.txt|json`` under virtual ``_analysis/`` paths.
 
     Args:
         results_dir: Run output directory.
@@ -283,6 +391,7 @@ def build_source_chunk_index(
 
     out_path = results_dir / _CHUNKS_JSONL
     count = 0
+    analysis_chunk_count = 0
     try:
         with out_path.open("w", encoding="utf-8", newline="\n") as fh:
             for rel in py_paths:
@@ -293,6 +402,8 @@ def build_source_chunk_index(
                 count += _write_jsonl_chunks_for_rel(
                     fh, root, rel, window=doc_window, overlap=doc_overlap, max_bytes=max_bytes
                 )
+            analysis_chunk_count = _write_analysis_run_chunks(fh, results_dir)
+            count += analysis_chunk_count
     except OSError as exc:
         logger.warning("Could not write source chunk index: %s", exc)
         return 0
@@ -310,10 +421,11 @@ def build_source_chunk_index(
     except OSError as exc:
         logger.warning("Could not write %s: %s", meta_path.name, exc)
     logger.info(
-        "GraphRAG source index wrote %d chunks (%d py files, +%d doc paths) under %s",
+        "GraphRAG source index wrote %d chunks (%d py files, %d doc paths, %d analysis) under %s",
         count,
         len(py_paths),
         len(doc_only),
+        analysis_chunk_count,
         results_dir.name,
     )
     return count
@@ -337,6 +449,16 @@ def _ensure_chunk_index(run_dir_path: Path) -> int:
     return build_source_chunk_index(run_dir_path, repo, nodes)
 
 
+def _diagnostic_excerpt_char_limit() -> int:
+    """Max characters of raw chunk text to embed in ``included_chunks`` for the UI (0 = off)."""
+    raw = os.environ.get("GRAPHRAG_SOURCE_DIAGNOSTIC_EXCERPT_CHARS", "4000").strip()
+    try:
+        n = int(raw)
+    except ValueError:
+        return 4000
+    return max(0, n)
+
+
 def retrieve_source_context_for_llm(
     run_dir_path: Path,
     query: str,
@@ -356,6 +478,8 @@ def retrieve_source_context_for_llm(
         ``(excerpt_block, diagnostics)``; block may be empty when no index or repo.
         When ``enabled`` is true, diagnostics may include ``included_chunks`` (ordered
         list of path/line/score metadata for excerpts actually packed into the block),
+        optional per-chunk ``excerpt`` text for UI (length capped by
+        ``GRAPHRAG_SOURCE_DIAGNOSTIC_EXCERPT_CHARS``), optional ``kind``, plus
         ``candidates_scored``, ``top_rank_cap``, and ``max_chars_budget``.
     """
     diag: Dict[str, Any] = {"enabled": False, "chunks_used": 0}
@@ -438,18 +562,21 @@ def retrieve_source_context_for_llm(
         parts.append(block)
         used += 1
         budget -= len(block)
-        included.append(
-            {
-                "rank": rank,
-                "path": path,
-                "start_line": a,
-                "end_line": b,
-                "score": round(float(_s), 4),
-                "approx_chars": len(block),
-                "truncated": truncated,
-                **({"kind": rec["kind"]} if isinstance(rec.get("kind"), str) else {}),
-            }
-        )
+        ex_cap = _diagnostic_excerpt_char_limit()
+        entry: Dict[str, Any] = {
+            "rank": rank,
+            "path": path,
+            "start_line": a,
+            "end_line": b,
+            "score": round(float(_s), 4),
+            "approx_chars": len(block),
+            "truncated": truncated,
+        }
+        if isinstance(rec.get("kind"), str):
+            entry["kind"] = rec["kind"]
+        if ex_cap > 0 and body:
+            entry["excerpt"] = body[:ex_cap]
+        included.append(entry)
         if budget <= 0:
             break
 

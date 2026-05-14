@@ -1,168 +1,309 @@
 # Project Delivery Report — GraphRAG-Based Repository Quality Analysis
 
-**Course / context:** Graph Theory (graduate project) — *adjust title if required by your department*  
-**Project:** GraphRAG_Project — software repository modeling, analysis, and conversational retrieval over a code graph  
+**Course / context:** Graph Theory (graduate project) — *adjust to your department template*  
+**Project:** GraphRAG_Project — graph-theoretic modeling of Python repositories, automated analysis, and conversational retrieval  
 **Author(s):** *[YOUR NAME(S)]*  
-**Institution:** Istanbul Technical University (İTÜ) — *[YOUR PROGRAM]*  
+**Institution:** Istanbul Technical University (İTÜ) — *[YOUR PROGRAM / COURSE CODE]*  
 **Submission date:** *[YYYY-MM-DD]*  
-**Repository / artifact root:** `GraphRAG_Project/`
+**Repository root:** `GraphRAG_Project/`
+
+---
+
+## Table of contents
+
+1. [Executive summary](#executive-summary)  
+2. [Problem statement and objectives](#problem-statement-and-objectives)  
+3. [System overview](#system-overview)  
+4. [Architecture](#architecture)  
+5. [End-to-end pipelines and data flow](#end-to-end-pipelines-and-data-flow)  
+6. [Graph model and analysis](#graph-model-and-analysis)  
+7. [GraphRAG assistant (retrieval + LLM)](#graphrag-assistant-retrieval--llm)  
+8. [Web application features](#web-application-features)  
+9. [Configuration, logging, and operations](#configuration-logging-and-operations)  
+10. [Testing and quality](#testing-and-quality)  
+11. [Limitations and future work](#limitations-and-future-work)  
+12. [Conclusion](#conclusion)  
+13. [Figures (placeholders)](#figures-placeholders--add-your-screenshots-under-docsassets)  
+14. [Appendices](#appendices)
 
 ---
 
 ## Executive summary
 
-This deliverable is a **web-first Python application** that ingests Python repositories, builds a **property graph** of files, symbols, tests, and commits, runs **graph-theoretic analyses** (e.g. degree-based metrics, relationship typing), and exposes results through a browser UI with optional **Neo4j**-backed subgraph views and a **GraphRAG** assistant. The assistant combines **bounded graph retrieval**, a short structured **analysis summary**, and **lexically ranked source chunks** (with optional **embedding-augmented seeds**) before calling an **OpenAI-compatible** chat API (hosted or local, e.g. Ollama). Outputs include JSON/text reports, charts, session-persisted chat, and optional **Word (.docx)** export.
+This project delivers a **web-first Python stack** that turns a target Python repository into a **typed property graph**, computes **graph-theoretic and statistical summaries** (centralities, communities, composite risk signals), renders **charts and text reports**, and exposes everything through a **Flask** UI. A **GraphRAG** assistant answers natural-language questions by combining **bounded subgraph retrieval** over the graph, **precomputed analysis text**, and **lexically ranked source chunks** from:
+
+- indexed **Python** files (`File` nodes in `graph.json`);
+- **Markdown documentation** across the repository (`*.md`, plus selected root text files);
+- **persisted analysis artifacts** for the same run (formatted `analysis_view` metrics, `analysis.txt`, `visual_summary` payloads) under virtual `_analysis/` paths in the same chunk index.
+
+The assistant calls an **OpenAI-compatible** HTTP API (hosted providers or **Ollama** locally). Optional **Neo4j** accelerates subgraph expansion; optional **embedding** calls improve seed ranking. Multi-turn chat is **session-persisted**; the workspace can show **which chunks** were sent to the model, including an **expandable excerpt** of each chunk for traceability.
 
 ---
 
-## 1. Objectives and motivation
+## Problem statement and objectives
 
-| Objective | How the project addresses it |
-|-----------|-------------------------------|
-| Represent a codebase as a graph | Nodes and typed edges (`IMPORTS`, `IN_FILE`, `CALLS`, `TESTS`, `MODIFIED_BY`, …) per `docs/GRAPH_SCHEMA.md` |
-| Apply graph-based quality insight | Centrality and structural metrics in `src/analysis/`; visualizations under each run’s `results/` |
-| Make analysis accessible | Flask web app: compatibility gate, pipeline, results dashboard, GraphRAG workspace |
-| Connect graphs to LLM use cases | GraphRAG pipeline: seeds → subgraph expansion → formatted context → chat completions |
-
----
-
-## 2. Scope of delivery
-
-**In scope**
-
-- End-to-end **web workflow**: repository input → compatibility scoring → full pipeline → results page.
-- **CLI** entry points for graph build, analysis, and full pipeline (`README.md`).
-- **GraphRAG chat**: multi-turn sessions, SSE streaming, Markdown rendering, persisted **source snippet diagnostics** per assistant turn.
-- **Optional integrations** (configuration-driven): Neo4j Bolt expansion, embedding model for seed ranking, automatic session fork when context size thresholds are met.
-
-**Out of scope / future work**
-
-- Vector database backends and multimodal chart URLs are captured as design notes in `docs/GRAPHRAG_CHAT_ROADMAP.md` (not required for this delivery).
+| Goal | Outcome in this project |
+|------|-------------------------|
+| Represent software as a graph | Nodes: `File`, `Function`, `Class`, `Test`, `Commit`; edges: `IMPORTS`, `IN_FILE`, `CALLS`, `TESTS`, `MODIFIED_BY`, … (`docs/GRAPH_SCHEMA.md`) |
+| Quantify structure and risk | Degree / betweenness / PageRank tables, Louvain-style community summaries, composite **risk** rows derived from z-scores on files |
+| Make results inspectable | Web results page, downloads (JSON, text, PNG, optional `.docx`), optional Neo4j preview |
+| Support exploratory Q&A | GraphRAG workspace: streaming replies, Markdown, source diagnostics with excerpts |
 
 ---
 
-## 3. Technical approach
+## System overview
 
-### 3.1 Graph model
+At a high level the product is three cooperating planes:
 
-The repository is abstracted as a **directed graph** (see `src/graph/`). Nodes include **File**, **Function**, **Class**, **Test**, and **Commit** (when `.git` history is available). Edges encode containment, imports, calls, tests, and file modification by commit. This supports standard analyses (e.g. degree by edge type, commit churn via `MODIFIED_BY`).
-
-### 3.2 Pipeline
-
-Orchestration uses `src/pipeline/run_pipeline.py` (`run_repository_pipeline`), invoked consistently from the web layer (no subprocess shell-out to the pipeline script from in-process code).
-
-### 3.3 GraphRAG retrieval (high level)
-
-1. **Seeding** from query text (lexical / community / optional embeddings).  
-2. **Subgraph expansion** (NetworkX or Neo4j when configured).  
-3. **Source context** from on-disk `graphrag_source_chunks.jsonl` per analysis run (Python ``File`` excerpts plus README / ``docs/**`` prose), capped by character budget and top-`k` rank.  
-4. **LLM** call with system instructions, analysis snippet, graph/context block, and conversation history.
-
-Detailed module map: `docs/PROJECT_STRUCTURE.md`.
+1. **Ingestion & graph build** — discover `*.py`, parse symbols/imports/tests, attach git commits when available, serialize `graph.json`.  
+2. **Analysis & visualization** — run metrics, write `analysis.txt`, structured `analysis_view.json`, `visual_summary` artifacts, and chart PNGs under the run folder.  
+3. **Conversation layer** — for each chat turn, rank seeds, expand a **typed, budgeted subgraph**, merge **metrics + subgraph + source chunks**, then call the LLM.
 
 ---
 
-## 4. Figures *(placeholders — add your screenshots under `docs/assets/`)*
+## Architecture
 
-Create a folder `docs/assets/` if it does not exist. Replace each filename with your own image; keep paths as below so this report resolves correctly when viewed from the `docs/` directory.
+The codebase follows a **layered** layout under `src/`: web and HTTP wiring stay in `src/web/`; graph construction in `src/graph/`; analysis in `src/analysis/`; GraphRAG orchestration in `src/graphrag/`; pipeline orchestration in `src/pipeline/`. The web app never shells out to the CLI pipeline script in-process; it calls `run_repository_pipeline` from Python.
 
-<!-- PLACEHOLDER FIGURE 1: Home / repository input page (index) -->
-![Figure 1 — Home page: repository URL or path input (PLACEHOLDER: add image)](assets/delivery_fig01_home.png)
+### C4-style context (containers)
 
-**Caption (edit after inserting image):** Main entry point for submitting a repository for analysis.
+```mermaid
+flowchart TB
+    subgraph Browser
+        UI[Flask templates + JS]
+    end
+    subgraph App["GraphRAG_Project (Python)"]
+        WEB[Flask web + blueprints]
+        PIPE[Pipeline runner]
+        GR[GraphRAG services]
+    end
+    subgraph Data["Per-run artifacts"]
+        GJ[graph.json]
+        AV[analysis_view.json / analysis.txt]
+        CH[graphrag_source_chunks.jsonl]
+        SESS[graphrag_chat_sessions/*.json]
+    end
+    subgraph Optional["Optional backends"]
+        NEO[(Neo4j)]
+        LLM[[OpenAI-compatible API]]
+    end
+    UI --> WEB
+    WEB --> PIPE
+    WEB --> GR
+    PIPE --> GJ
+    PIPE --> AV
+    PIPE --> CH
+    GR --> GJ
+    GR --> AV
+    GR --> CH
+    GR --> LLM
+    GR --> NEO
+    WEB --> SESS
+```
 
----
+### Layer responsibilities (concise)
 
-<!-- PLACEHOLDER FIGURE 2: Compatibility results with score breakdown -->
-![Figure 2 — Compatibility check results (PLACEHOLDER: add image)](assets/delivery_fig02_compatibility.png)
-
-**Caption:** Compatibility scoring and gating before running the full pipeline.
-
----
-
-<!-- PLACEHOLDER FIGURE 3: Analysis progress (SSE overlay or results milestone view) -->
-![Figure 3 — Analysis progress (streaming or milestone UI) (PLACEHOLDER: add image)](assets/delivery_fig03_analysis_progress.png)
-
-**Caption:** User-visible progress during graph build, analysis, and chart generation.
-
----
-
-<!-- PLACEHOLDER FIGURE 4: Results dashboard (metrics + charts) -->
-![Figure 4 — Analysis results dashboard (PLACEHOLDER: add image)](assets/delivery_fig04_results_dashboard.png)
-
-**Caption:** Aggregated metrics, textual reports, and chart thumbnails for the analyzed run.
-
----
-
-<!-- PLACEHOLDER FIGURE 5: Optional Neo4j / graph preview -->
-![Figure 5 — Graph preview (optional Neo4j property graph) (PLACEHOLDER: add image)](assets/delivery_fig05_graph_preview.png)
-
-**Caption:** Interactive or capped graph preview (skip this figure if you did not configure Neo4j).
-
----
-
-<!-- PLACEHOLDER FIGURE 6: GraphRAG workspace (chat + Steps + Source snippets) -->
-![Figure 6 — GraphRAG workspace: multi-turn chat (PLACEHOLDER: add image)](assets/delivery_fig06_graphrag_workspace.png)
-
-**Caption:** Full-page chat workspace with streamed reply, collapsible **Steps**, and **Source snippets** panel.
-
----
-
-<!-- PLACEHOLDER FIGURE 7: Export or documentation bundle (optional) -->
-![Figure 7 — Export: JSON / docx / downloads (PLACEHOLDER: add image)](assets/delivery_fig07_exports.png)
-
-**Caption:** Example of downloadable artifacts (omit if not used).
-
----
-
-## 5. Reproducibility
-
-1. **Environment:** Python 3.x; `pip install -r requirements.txt`.  
-2. **Configuration:** Copy `.env.example` to `.env`; set at least `FLASK_SECRET_KEY` and any `GRAPHRAG_*` variables you use (LLM base URL, model, optional Neo4j, optional embeddings).  
-3. **Run:** `python run_web_app.py` → open `http://localhost:5000` (or the host/port shown in the console).  
-4. **Evidence:** Attach screenshots above and, if required by the grader, a sample `results/web_analysis_*` folder listing or a zipped **non-sensitive** run output.
+| Layer | Role |
+|-------|------|
+| `src/web/` | HTTP routes, sessions, wiring to services, SSE for long operations |
+| `src/pipeline/` | Single orchestrated run: build graph → analyze → visualize |
+| `src/graph/` | Schema, builder, JSON load helpers |
+| `src/analysis/` | Centrality, communities, risk scoring, textual report |
+| `src/graphrag/` | Seed ranking, subgraph expansion (NetworkX or Neo4j), context formatting, **source chunk index + retrieval**, LLM HTTP client, chat orchestration |
+| `src/compatibility/` | Pre-flight repo scoring before expensive runs |
 
 ---
 
-## 6. Testing and quality checks
+## End-to-end pipelines and data flow
 
-- Automated tests exist under `tests/` (e.g. session persistence for GraphRAG chat metadata).  
-- *Optional for your submission:* record the command `pytest -q` and its outcome as a short note in an appendix.
+### Web analysis pipeline (primary user journey)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Web UI
+    participant P as Pipeline
+    participant FS as Filesystem
+    U->>W: Submit repo URL / path
+    W->>W: Compatibility check (scoring)
+    U->>W: Confirm analyze (if low score)
+    W->>P: run_repository_pipeline(repo)
+    P->>FS: Write graph.json, analysis.txt, charts, analysis_view.json
+    P->>FS: graphrag_run_meta.json + graphrag_source_chunks.jsonl
+    W->>U: Redirect to results page
+    U->>W: Open GraphRAG workspace
+    W->>FS: Load / update chat sessions JSON
+```
+
+### GraphRAG chat turn (logical steps)
+
+```mermaid
+flowchart LR
+    Q[User message] --> S[Lexical + community + optional embedding seeds]
+    S --> E[Subgraph expansion BFS / Neo4j]
+    E --> F[Format subgraph + analysis summary]
+    Q --> C[Lexical chunk retrieval JSONL]
+    F --> M[Merge user_block]
+    C --> M
+    M --> L[LLM chat/completions + optional SSE stream]
+    L --> D[Persist assistant + source_context_diagnostics]
+```
+
+**Source index (`graphrag_source_chunks.jsonl`)** — single newline-delimited JSON stream consumed by `retrieve_source_context_for_llm`:
+
+1. Chunks from each indexed `.py` file (line windows from env).  
+2. Chunks from documentation: root README-style files, then **every** `*.md` under the repo (subject to `GRAPHRAG_SOURCE_MAX_DOC_FILES` and path exclusions).  
+3. Chunks from **this run’s** analysis bundle: formatted `analysis_view` text, `analysis.txt`, `visual_summary` files — stored under paths such as `_analysis/analysis_view.txt` so queries like “riskiest file” overlap with **centrality and risk** sections.
+
+Retrieval uses the same **lexical scorer** (`score_query_against_blob`) for every chunk line: substring bonus plus token overlap between the user question and `path + chunk_text`.
 
 ---
 
-## 7. Limitations and honesty statement
+## Graph model and analysis
 
-- Chat **source index** is built from Python files represented in `graph.json`; broad Markdown/docs-only RAG is not merged into the same index yet.  
-- **LLM answers** depend on model quality, timeout settings, and prompt size; very large repositories may require chunk-tuning (`GRAPHRAG_SOURCE_*`) or session fork settings.  
-- **Neo4j** and **embeddings** are optional; the core delivery remains valid without them.
-
----
-
-## 8. Conclusion
-
-The project delivers a **coherent graph-theoretic representation** of Python repositories, **automated metrics and visuals**, and a **GraphRAG-style assistant** grounded in retrieved graph and source context, packaged as a maintainable Flask application with documented architecture and extension points.
+- **Construction:** `src/graph/graph_builder.py` (and extractors) walk the repository, normalize paths, and emit a JSON graph document.  
+- **Metrics:** `src/analysis/graph_analysis.py` produces summaries consumed by the UI cards and `analysis_view.json`.  
+- **Risk signal (conceptual):** combines normalized signals such as centrality, commit churn (`MODIFIED_BY`), test presence gaps, and cross-community exposure where available — surfaced as ranked **file** candidates in `analysis_view` and echoed into indexed `_analysis/` text for chat.
 
 ---
 
-## Appendix A — Suggested asset filenames
+## GraphRAG assistant (retrieval + LLM)
 
-| File | Suggested content |
-|------|-------------------|
-| `docs/assets/delivery_fig01_home.png` | Landing / upload |
-| `docs/assets/delivery_fig02_compatibility.png` | Compatibility page |
-| `docs/assets/delivery_fig03_analysis_progress.png` | Progress UI |
+- **Seeding:** `query_index.rank_seed_node_ids` plus optional community and embedding merges (`embedding_seeds.py`).  
+- **Subgraph:** Undirected BFS with edge-type filters; Neo4j path mirrors the same semantics when Bolt is configured.  
+- **Context package:** `context_formatter.py` for subgraph text; `analysis_context.format_analysis_view_summary` for a short metrics digest (still sent separately in the prompt); **source excerpts** add code, docs, and analysis-derived text.  
+- **Streaming:** Workspace sends `X-GraphRAG-Chat-Stream: 1`; server emits SSE `progress` / `token` / `complete`.  
+- **Diagnostics:** `source_context_diagnostics` stores `included_chunks` with `path`, `score`, `lines`, optional `kind` (`documentation`, `analysis_report`), and **`excerpt`** (truncated raw chunk text for the UI expandable panel).
+
+---
+
+## Web application features
+
+- **Landing / upload:** GitHub clone or local path (ZIP reserved).  
+- **Compatibility:** Weighted checklist with user confirmation on low scores.  
+- **Progress:** SSE during analyze; client waits for stream completion before navigation where required.  
+- **Results:** Metrics cards, downloads, chart gallery, optional Neo4j property-graph preview.  
+- **GraphRAG workspace:** Project list, sessions, Markdown rendering (`marked` + `DOMPurify`), delete modal, optional automatic session fork when prompts exceed configured character thresholds.  
+- **Source panel:** Collapsible “Source snippets” with per-hit **chunk text** preview when excerpts are present in saved diagnostics.
+
+---
+
+## Configuration, logging, and operations
+
+- **Secrets / API:** `.env` (see `.env.example`): `FLASK_SECRET_KEY`, `GRAPHRAG_OPENAI_BASE_URL`, `GRAPHRAG_CHAT_MODEL`, optional `GRAPHRAG_OPENAI_API_KEY`, `GRAPHRAG_CHAT_TIMEOUT_S`.  
+- **Neo4j:** `GRAPHRAG_NEO4J_URI`, user, password, optional database.  
+- **Embeddings:** `GRAPHRAG_EMBEDDING_MODEL` + cache file `graphrag_embedding_cache.npz` per run.  
+- **Source index tuning:** `GRAPHRAG_SOURCE_*` for Python windows; `GRAPHRAG_SOURCE_MAX_DOC_FILES`, `GRAPHRAG_SOURCE_DOC_CHUNK_*` for Markdown; `GRAPHRAG_SOURCE_ANALYSIS_*` and `GRAPHRAG_SOURCE_DISABLE_ANALYSIS_CHUNKS` for analysis chunks; `GRAPHRAG_SOURCE_DIAGNOSTIC_EXCERPT_CHARS` for UI excerpts (set `0` to omit).  
+- **Logging:** `GRAPHRAG_LOG_LEVEL`, rotating `logs/graphrag.log` per project rules.
+
+**Operational note:** If you change indexing rules, **re-run the web pipeline** for a given `results/web_analysis_*` folder or delete `graphrag_source_chunks.jsonl` so it can be rebuilt (on-demand rebuild requires `graphrag_run_meta.json` and a still-valid `source_repo_root`).
+
+---
+
+## Testing and quality
+
+- Automated tests under `tests/` cover session persistence and **source index / retrieval** (Python, Markdown, and `_analysis/` chunks).  
+- Recommended manual smoke: `pytest -q`, start `python run_web_app.py`, run one analysis, open workspace, ask a **risk** question and confirm `_analysis/` hits appear in Source snippets.
+
+---
+
+## Limitations and future work
+
+- Retrieval is still **lexical** at the chunk stage; vector DB backends and chart `image_url` hints are described in `docs/GRAPHRAG_CHAT_ROADMAP.md`.  
+- Very large monorepos may require raising caps or excluding noisy subtrees (future: configurable ignore globs).  
+- LLM answers remain **probabilistic**; diagnostics show what was retrieved, not a formal proof of correctness.
+
+---
+
+## Conclusion
+
+The system closes the loop from **repository → graph → metrics → persisted artifacts → grounded chat**, with explicit extension points (Neo4j, embeddings, richer retrieval backends) documented for future iterations.
+
+---
+
+## Figures *(placeholders — add your screenshots under `docs/assets/`)*
+
+Create `docs/assets/` if needed. Keep filenames so links resolve from this `docs/` path.
+
+<!-- PLACEHOLDER FIGURE 1 -->
+![Figure 1 — Home / repository input (PLACEHOLDER)](assets/delivery_fig01_home.png)
+
+**Caption:** Landing page and repository submission.
+
+---
+
+<!-- PLACEHOLDER FIGURE 2 -->
+![Figure 2 — Compatibility results (PLACEHOLDER)](assets/delivery_fig02_compatibility.png)
+
+**Caption:** Compatibility scoring and confirmation flow.
+
+---
+
+<!-- PLACEHOLDER FIGURE 3 -->
+![Figure 3 — Analysis progress SSE (PLACEHOLDER)](assets/delivery_fig03_analysis_progress.png)
+
+**Caption:** Streaming pipeline progress.
+
+---
+
+<!-- PLACEHOLDER FIGURE 4 -->
+![Figure 4 — Results dashboard (PLACEHOLDER)](assets/delivery_fig04_results_dashboard.png)
+
+**Caption:** Metrics, charts, and download actions.
+
+---
+
+<!-- PLACEHOLDER FIGURE 5 -->
+![Figure 5 — Neo4j / graph preview (PLACEHOLDER)](assets/delivery_fig05_graph_preview.png)
+
+**Caption:** Optional interactive graph preview.
+
+---
+
+<!-- PLACEHOLDER FIGURE 6 -->
+![Figure 6 — GraphRAG workspace (PLACEHOLDER)](assets/delivery_fig06_graphrag_workspace.png)
+
+**Caption:** Chat, Steps panel, Source snippets with expandable chunk excerpts.
+
+---
+
+<!-- PLACEHOLDER FIGURE 7 -->
+![Figure 7 — Exports (PLACEHOLDER)](assets/delivery_fig07_exports.png)
+
+**Caption:** JSON / text / docx exports.
+
+---
+
+## Appendices
+
+### Appendix A — Suggested screenshot filenames
+
+| File | Content |
+|------|---------|
+| `docs/assets/delivery_fig01_home.png` | Upload / clone entry |
+| `docs/assets/delivery_fig02_compatibility.png` | Compatibility |
+| `docs/assets/delivery_fig03_analysis_progress.png` | SSE progress |
 | `docs/assets/delivery_fig04_results_dashboard.png` | Results |
-| `docs/assets/delivery_fig05_graph_preview.png` | Graph / Neo4j preview |
-| `docs/assets/delivery_fig06_graphrag_workspace.png` | Chat workspace |
-| `docs/assets/delivery_fig07_exports.png` | Downloads / docx |
+| `docs/assets/delivery_fig05_graph_preview.png` | Graph preview |
+| `docs/assets/delivery_fig06_graphrag_workspace.png` | Workspace + source excerpts |
+| `docs/assets/delivery_fig07_exports.png` | Downloads |
 
-## Appendix B — Key references inside the repo
+### Appendix B — Key internal references
 
-- `README.md` — quick start and feature list  
-- `docs/PROJECT_STRUCTURE.md` — layers and data flow  
-- `docs/GRAPH_SCHEMA.md` — node and edge types  
-- `docs/GRAPHRAG_CHAT_ROADMAP.md` — optional future retrieval backends  
+- `README.md` — install, env vars, feature list  
+- `docs/PROJECT_STRUCTURE.md` — modules and flow  
+- `docs/GRAPH_SCHEMA.md` — node/edge definitions  
+- `docs/GRAPHRAG_CHAT_ROADMAP.md` — vector store / multimodal follow-ups  
+
+### Appendix C — Glossary
+
+| Term | Meaning |
+|------|---------|
+| GraphRAG | Graph-first retrieval augmented generation: subgraph + text artifacts + LLM |
+| `graph.json` | Serialized property graph for one analyzed repository snapshot |
+| `analysis_view.json` | Structured metrics for the results UI and short LLM digest |
+| `graphrag_source_chunks.jsonl` | Mixed index: code + docs + `_analysis/` virtual paths |
+| SSE | Server-Sent Events for streaming HTTP responses |
 
 ---
 

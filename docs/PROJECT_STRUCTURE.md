@@ -78,13 +78,13 @@ GraphRAG_Project/
 - **`result.py`**: ``PipelineRunResult`` structured return type
 
 ### GraphRAG layer (`src/graphrag/`)
-**Purpose**: Graph-first retrieval (bounded BFS on a typed ``networkx.MultiDiGraph``), optional lexical **source chunk** retrieval from each web run’s ``graphrag_source_chunks.jsonl`` (Python plus README / ``docs/**`` prose), plus optional LLM answering for the web assistant.
+**Purpose**: Graph-first retrieval (bounded BFS on a typed ``networkx.MultiDiGraph``), optional lexical **source chunk** retrieval from each web run’s ``graphrag_source_chunks.jsonl`` (Python, repo-wide Markdown, and persisted **analysis report** text under ``_analysis/``), plus optional LLM answering for the web assistant.
 - **`query_index.py`**: Lexical seed ranking over node fields (substring + token overlap); shared scoring for source blobs.
 - **`subgraph_retriever.py`**: Multigraph build, undirected expansion, induced edge listing; query-aware default edge-type sets.
 - **`context_formatter.py`**: Serialize an induced subgraph to a capped plain-text block for the model.
 - **`analysis_context.py`**: Short text summary from persisted ``analysis_view.json`` (risk, centrality, communities).
 - **`community_seeds.py`**: Extra seeds from Louvain community rows when previews overlap the question (uses ``member_ids`` from ``analysis_view``).
-- **`source_context.py`**: Writes ``graphrag_run_meta.json`` (repo root at analyze time), builds ``graphrag_source_chunks.jsonl`` from ``File`` ``*.py`` paths plus documentation (README / common root markdown, ``docs/**/*.md`` etc.), and ranks all chunks lexically for chat; diagnostics include ``included_chunks`` (paths and scores actually sent to the LLM within the character budget).
+- **`source_context.py`**: Writes ``graphrag_run_meta.json``, builds ``graphrag_source_chunks.jsonl`` from ``File`` ``*.py`` paths, repo-wide ``*.md`` (and root ``.rst``/``.txt`` readmes), and virtual ``_analysis/*`` chunks from pipeline metrics/text; ranks all chunks lexically for chat; ``included_chunks`` may include ``kind``, ``excerpt`` (for UI), path, line span, score.
 - **`neo4j_driver.py`**: Optional Bolt driver from ``GRAPHRAG_NEO4J_*`` environment variables.
 - **`neo4j_property_graph_export.py`**: Bounded Cypher export of ``GraphRAGNode`` / ``GRAPHRAG_EDGE`` for the results-page Neo4j preview (per edge-type row budget so ``MODIFIED_BY`` is not starved by a single global ``LIMIT``); ``web.analysis_results_neo4j_property_graph`` calls ``Neo4jSubgraphExpander.ensure_synced`` from ``graph.json`` before export so the browser view is populated even if chat was never used.
 - **`neo4j_subgraph.py`**: ``Neo4jSubgraphExpander`` syncs ``graph.json`` into Neo4j and performs typed BFS expansion when a driver is configured.

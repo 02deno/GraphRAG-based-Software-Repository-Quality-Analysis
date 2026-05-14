@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from src.graphrag.source_context import (
@@ -92,3 +93,55 @@ def test_readme_and_docs_indexed_for_lexical_retrieval(tmp_path: Path) -> None:
     assert "```markdown" in block
     chunks = diag.get("included_chunks") or []
     assert any(c.get("path") == "README.md" for c in chunks)
+    assert any(c.get("excerpt") for c in chunks), "included_chunks should carry excerpt previews"
+
+
+def test_analysis_report_chunks_in_source_index(tmp_path: Path) -> None:
+    """Pipeline analysis artifacts are indexed under _analysis/ virtual paths."""
+    repo = tmp_path / "repo3"
+    pkg = repo / "pkg"
+    pkg.mkdir(parents=True)
+    (pkg / "x.py").write_text("def x():\n    return 0\n", encoding="utf-8")
+    run_dir = tmp_path / "run3"
+    run_dir.mkdir()
+    view = {
+        "schema_version": 1,
+        "totals": {"nodes": 2, "edges": 1},
+        "risk": {
+            "empty": False,
+            "candidates": [
+                {
+                    "rank": 1,
+                    "file_path": "pkg/x.py",
+                    "total": 9.9,
+                    "centrality_z": 2,
+                    "churn_z": 1,
+                    "test_gap_z": 0,
+                    "cross_community_z": 0,
+                }
+            ],
+        },
+    }
+    (run_dir / "analysis_view.json").write_text(json.dumps(view), encoding="utf-8")
+    (run_dir / "analysis.txt").write_text(
+        "Unique analysis body token zeta_analysis_blob_77.\n",
+        encoding="utf-8",
+    )
+
+    nodes = [{"id": "file:pkg/x.py", "type": "File", "path": "pkg/x.py"}]
+    write_run_meta(run_dir, str(repo.resolve()))
+    n = build_source_chunk_index(run_dir, repo, nodes)
+    assert n >= 1
+
+    block, diag = retrieve_source_context_for_llm(
+        run_dir,
+        "zeta_analysis_blob_77",
+        max_chars=12000,
+        top_rank=20,
+    )
+    assert "_analysis/" in block
+    assert "zeta_analysis_blob_77" in block
+    chunks = diag.get("included_chunks") or []
+    paths = [c.get("path") for c in chunks]
+    assert any(p and str(p).startswith("_analysis/") for p in paths)
+    assert any(c.get("excerpt") for c in chunks)

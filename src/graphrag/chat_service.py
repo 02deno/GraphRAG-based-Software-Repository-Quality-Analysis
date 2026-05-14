@@ -266,7 +266,7 @@ class GraphRagChatService:
             f"### Retrieved subgraph\n{subgraph_text}"
         )
         if source_block.strip():
-            user_block += "\n\n### Source code excerpts (indexed repository)\n" + source_block
+            user_block += "\n\n### Source excerpts (repository, docs, and analysis reports)\n" + source_block
 
         if progress_hook:
             progress_hook(
